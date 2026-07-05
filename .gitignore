@@ -12,3 +12,4 @@ data/reports/
 .streamlit/secrets.toml
 dist/
 build/
+.claude/settings.local.json
