@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+data/dsarp.db*
+data/raw_imports/
+data/exports/
+data/reports/
+.pytest_cache/
+.streamlit/secrets.toml
+dist/
+build/

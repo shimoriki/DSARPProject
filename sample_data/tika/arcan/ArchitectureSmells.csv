@@ -1,0 +1,5 @@
+ID,SmellType,AffectedElements,Severity,Size,ATDI
+CD_1,cyclicDep,org.apache.tika.parser;org.apache.tika.detect;org.apache.tika.mime,high,3,0.71
+CD_2,cyclicDep,org.apache.tika.metadata;org.apache.tika.utils,medium,2,0.44
+HL_1,hubLikeDep,org.apache.tika.core,medium,,0.42
+UD_1,unstableDep,org.apache.tika.parser.pdf,low,,0.18

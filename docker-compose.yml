@@ -1,0 +1,24 @@
+# Optional. The app runs without Docker; this just wires api + ui together.
+# Point DSARP_MODEL_BASE_URL at your host's model server (e.g. Ollama).
+services:
+  api:
+    build: .
+    ports: ["8600:8600"]
+    environment:
+      - DSARP_MODEL_PROVIDER=${DSARP_MODEL_PROVIDER:-ollama}
+      - DSARP_MODEL_BASE_URL=${DSARP_MODEL_BASE_URL:-http://host.docker.internal:11434}
+      - DSARP_MODEL_ID=${DSARP_MODEL_ID:-qwen2.5-coder:7b}
+    volumes:
+      - ./data:/app/data
+      - ./skills:/app/skills
+  ui:
+    build: .
+    command: streamlit run ui/app.py --server.port 8501 --server.address 0.0.0.0
+    ports: ["8501:8501"]
+    environment:
+      - DSARP_MODEL_PROVIDER=${DSARP_MODEL_PROVIDER:-ollama}
+      - DSARP_MODEL_BASE_URL=${DSARP_MODEL_BASE_URL:-http://host.docker.internal:11434}
+      - DSARP_MODEL_ID=${DSARP_MODEL_ID:-qwen2.5-coder:7b}
+    volumes:
+      - ./data:/app/data
+      - ./skills:/app/skills

@@ -1,0 +1,62 @@
+# DSARP Refactoring Suggestion Studio configuration.
+# Copy to config/config.yaml and adjust. Environment variables (see .env.example)
+# override values in this file.
+
+data_dir: ./data
+db_path: ./data/dsarp.db
+skills_dir: ./skills
+reviewer_id: local_user
+
+# Primary local model. No cloud API or Hugging Face token is required.
+model:
+  provider: ollama          # ollama | openai_compat | llamacpp | hf_endpoint | mock
+  base_url: http://localhost:11434
+  model_id: qwen2.5-coder:7b
+  temperature: 0.2
+  max_tokens: 1400
+  timeout_seconds: 300
+  api_key: ""               # only for endpoints that demand one; leave blank for local
+
+# Optional critic agent that pre-fills suggested HGRS values.
+# It NEVER replaces human scores; suggestions are labeled in the console.
+critic:
+  enabled: false
+  provider: null            # null -> reuse the primary model settings
+  model_id: null
+
+# Execution-mode commands for locally installed tools. DSARP never ships or
+# bypasses proprietary binaries; you must have legal local access.
+# Placeholders: {project_path} {output_dir} plus any custom keys below.
+tools:
+  arcan:
+    command: 'java -jar "{arcan_jar}" analyze -i "{project_path}" -o "{output_dir}" -l JAVA'
+    arcan_jar: C:/tools/arcan/arcan-cli.jar
+  designite:
+    command: 'java -jar "{designite_jar}" -i "{project_path}" -o "{output_dir}"'
+    designite_jar: C:/tools/designite/DesigniteJava.jar
+
+# HGRS rubric weights (must sum to 1.0)
+hgrs_weights:
+  evidence_grounding: 0.25
+  refactoring_relevance: 0.20
+  architectural_reasoning: 0.15
+  minimality_and_safety: 0.15
+  actionability: 0.10
+  human_confidence: 0.10
+  cost_efficiency: 0.05
+
+# Train/validation splitting: whole projects go to validation first when more
+# than one project exists; otherwise smell instances are split. The same smell
+# instance can never appear in both sets.
+split:
+  strategy: by_project_then_instance
+  validation_fraction: 0.3
+  seed: 13
+
+# Skill promotion gate (SkillOpt loop)
+promotion:
+  min_hgrs_improvement: 0.10   # held-out mean HGRS must improve by at least this
+  max_grounding_drop: 0.0      # evidence grounding must not decrease
+
+# Safety flag: allow agents to read project source files for inspection notes.
+allow_source_inspection: true

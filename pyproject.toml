@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dsarp"
+version = "0.1.0"
+description = "DSARP Refactoring Suggestion Studio - local-first, evidence-grounded architectural refactoring suggestions with human HGRS review and SkillOpt-style skill optimization"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pydantic>=2.6",
+    "streamlit>=1.33",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "pandas>=2.0",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+dsarp = "dsarp.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+include = ["dsarp*"]
+
+[tool.setuptools.package-data]
+dsarp = ["store/migrations/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]

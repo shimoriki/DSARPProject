@@ -1,0 +1,22 @@
+# Apache Tika demonstration project.
+# Nothing Tika-specific is hardcoded in DSARP itself; this file plus the
+# sample exports under sample_data/tika/ fully describe the demo.
+name: tika
+path: C:/work/apache-tika          # local clone location (only needed for execute mode / source inspection)
+architecture_type: package-based-java
+source_revision: main
+
+# Import-mode inputs (existing tool exports). Run:
+#   dsarp import --project tika --tool arcan --path sample_data/tika/arcan/ArchitectureSmells.csv
+#   dsarp import --project tika --tool arcan --path sample_data/tika/arcan/DependencyEdges.csv
+#   dsarp import --project tika --tool designite --path sample_data/tika/designite/ArchitectureSmells.csv
+#   dsarp import --project tika --tool static_graph --path sample_data/tika/graph/edges.csv
+imports:
+  - tool: arcan
+    path: sample_data/tika/arcan/ArchitectureSmells.csv
+  - tool: arcan
+    path: sample_data/tika/arcan/DependencyEdges.csv
+  - tool: designite
+    path: sample_data/tika/designite/ArchitectureSmells.csv
+  - tool: static_graph
+    path: sample_data/tika/graph/edges.csv

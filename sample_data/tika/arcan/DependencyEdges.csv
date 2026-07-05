@@ -1,0 +1,10 @@
+Source,Target,Weight
+org.apache.tika.parser,org.apache.tika.detect,14
+org.apache.tika.detect,org.apache.tika.mime,9
+org.apache.tika.mime,org.apache.tika.parser,3
+org.apache.tika.metadata,org.apache.tika.utils,6
+org.apache.tika.utils,org.apache.tika.metadata,2
+org.apache.tika.core,org.apache.tika.parser,22
+org.apache.tika.core,org.apache.tika.detect,11
+org.apache.tika.core,org.apache.tika.metadata,8
+org.apache.tika.parser.pdf,org.apache.tika.parser,5

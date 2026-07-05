@@ -1,0 +1,5 @@
+Project Name,Package Name,Architecture Smell,Cause of the Smell
+tika,org.apache.tika.detect,Cyclic Dependency,"Participates in a dependency cycle with: org.apache.tika.mime, org.apache.tika.parser"
+tika,org.apache.tika.metadata,Cyclic Dependency,"Participates in a dependency cycle with: org.apache.tika.utils"
+tika,org.apache.tika.core,God Component,"Contains a disproportionate number of classes; LOC threshold exceeded"
+tika,org.apache.tika.parser.pdf,Unstable Dependency,"Depends on components that are less stable than itself"
