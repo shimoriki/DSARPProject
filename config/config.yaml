@@ -1,0 +1,49 @@
+# Active DSARP configuration for this machine (see config.example.yaml for docs).
+# Ollama was installed locally; qwen2.5-coder:3b fits the 15 GB RAM / CPU setup.
+# Switch provider to 'mock' to work fully offline without a model.
+
+data_dir: ./data
+db_path: ./data/dsarp.db
+skills_dir: ./skills
+reviewer_id: local_user
+
+model:
+  provider: ollama
+  base_url: http://localhost:11434
+  model_id: qwen2.5-coder:3b
+  temperature: 0.2
+  max_tokens: 1400
+  timeout_seconds: 600        # CPU inference is slow; be patient
+
+critic:
+  enabled: false
+  provider: null
+  model_id: null
+
+tools:
+  arcan:
+    command: 'java -jar "{arcan_jar}" analyze -i "{project_path}" -o "{output_dir}" -l JAVA'
+    arcan_jar: C:/tools/arcan/arcan-cli.jar
+  designite:
+    command: 'java -jar "{designite_jar}" -i "{project_path}" -o "{output_dir}"'
+    designite_jar: C:/tools/designite/DesigniteJava.jar
+
+hgrs_weights:
+  evidence_grounding: 0.25
+  refactoring_relevance: 0.20
+  architectural_reasoning: 0.15
+  minimality_and_safety: 0.15
+  actionability: 0.10
+  human_confidence: 0.10
+  cost_efficiency: 0.05
+
+split:
+  strategy: by_project_then_instance
+  validation_fraction: 0.3
+  seed: 13
+
+promotion:
+  min_hgrs_improvement: 0.10
+  max_grounding_drop: 0.0
+
+allow_source_inspection: true

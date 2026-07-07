@@ -26,10 +26,14 @@ if pname and names:
         v0 = st.selectbox("Baseline version", versions)
         v1 = st.selectbox("Candidate version", versions,
                           index=len(versions) - 1)
+        max_cases = st.number_input(
+            "Max held-out cases (0 = all; cap this for slow CPU models)",
+            min_value=0, value=10)
         if st.form_submit_button("Run held-out validation"):
             try:
                 with st.spinner("Running both versions on validation cases..."):
-                    report = services.validate(ctx, pname, name, v0, v1)
+                    report = services.validate(ctx, pname, name, v0, v1,
+                                               max_cases=int(max_cases) or None)
                 st.session_state["last_report"] = report
             except Exception as exc:
                 st.error(str(exc))

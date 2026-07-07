@@ -365,10 +365,12 @@ def optimize(ctx: AppContext, skill_name: str, skill_version: str,
 
 def validate(ctx: AppContext, project_name: str, skill_name: str,
              baseline_version: str, candidate_version: str,
-             provider_name: str | None = None, model_id: str | None = None) -> dict:
+             provider_name: str | None = None, model_id: str | None = None,
+             max_cases: int | None = None) -> dict:
     provider = ctx.provider(provider_name, model_id)
     return validate_skills(ctx.cfg, ctx.store, provider, project_name,
-                           skill_name, baseline_version, candidate_version)
+                           skill_name, baseline_version, candidate_version,
+                           max_cases=max_cases)
 
 
 def approve_and_promote(ctx: AppContext, report_id: str,

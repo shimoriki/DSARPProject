@@ -127,8 +127,12 @@ def validate(project: str = typer.Option(...),
              skill_v0: str = typer.Option(..., "--skill-v0"),
              skill_v1: str = typer.Option(..., "--skill-v1"),
              provider: Optional[str] = typer.Option(None),
-             model: Optional[str] = typer.Option(None)):
-    _emit(services.validate(_ctx(), project, skill, skill_v0, skill_v1, provider, model))
+             model: Optional[str] = typer.Option(None),
+             max_cases: Optional[int] = typer.Option(
+                 None, "--max-cases",
+                 help="cap held-out cases (useful for slow CPU models)")):
+    _emit(services.validate(_ctx(), project, skill, skill_v0, skill_v1,
+                            provider, model, max_cases))
 
 
 @cli.command("promote")

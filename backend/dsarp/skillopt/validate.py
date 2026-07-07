@@ -80,12 +80,16 @@ def _evaluate_version(cfg: AppConfig, store: Store, provider: ModelProvider,
 
 def validate_skills(cfg: AppConfig, store: Store, provider: ModelProvider,
                     project_name: str, skill_name: str,
-                    baseline_version: str, candidate_version: str) -> dict:
+                    baseline_version: str, candidate_version: str,
+                    max_cases: int | None = None) -> dict:
     case_rows = store.list_cases(project_id=project_name, split="validation")
     if not case_rows:
         raise ValueError(
             f"project '{project_name}' has no validation-split cases; "
             "run the split first (dsarp evidence split)")
+    if max_cases:
+        # deterministic subset (sorted by smell_id) so reruns are comparable
+        case_rows = sorted(case_rows, key=lambda r: r["smell_id"])[:max_cases]
     cases = [store.get_case(r["id"]) for r in case_rows]
 
     log.info("validating %s: %s vs %s on %d held-out cases",
@@ -118,6 +122,10 @@ def validate_skills(cfg: AppConfig, store: Store, provider: ModelProvider,
         "project": project_name,
         "skill_name": skill_name,
         "held_out_cases": [c.case_id for c in cases],
+        "validation_subset": (f"first {len(cases)} of "
+                              f"{len(store.list_cases(project_id=project_name, split='validation'))} "
+                              "validation cases (sorted by smell_id)"
+                              if max_cases else "all validation cases"),
         "baseline": base_eval,
         "candidate": cand_eval,
         "hgrs_improvement": improvement,
