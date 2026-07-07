@@ -46,6 +46,10 @@ def test_mock_run_produces_valid_grounded_suggestion(ctx, tmp_path):
         "evidence_grounding", "refactoring_relevance", "architectural_reasoning",
         "minimality_and_safety", "actionability", "human_confidence",
         "cost_efficiency"}
+    # critical scoring: automation never pre-fills human confidence above floor
+    assert scores["deterministic"]["human_confidence"]["score"] == 1
+    # grounded run earns its evidence score through verified checks
+    assert scores["deterministic"]["evidence_grounding"]["score"] >= 4
 
 
 class _BrokenProvider:
@@ -106,4 +110,5 @@ def test_hallucination_flagged_and_grounding_penalized(ctx, tmp_path):
     checks = json.loads(run["structural_checks_json"])
     assert checks["critical_hallucination"] is True
     assert "TOTALLY_FAKE_ID" in checks["unsupported_evidence_ids"]
-    assert checks["suggested_scores"]["evidence_grounding"]["score"] <= 2
+    # any fabricated claim floors evidence grounding to 1
+    assert checks["suggested_scores"]["evidence_grounding"]["score"] == 1

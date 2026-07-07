@@ -213,6 +213,45 @@ def split_evidence(ctx: AppContext, project_name: str | None = None) -> dict:
 
 # ---------------- suggestions ----------------
 
+def check_model_endpoint(ctx: AppContext, provider_name: str | None = None,
+                         model_id: str | None = None) -> dict:
+    """Preflight: is the configured model endpoint reachable and the model there?"""
+    import httpx
+
+    mc = ctx.cfg.model.model_copy()
+    if provider_name:
+        mc.provider = provider_name
+    if model_id:
+        mc.model_id = model_id
+    provider = (mc.provider or "mock").lower()
+    if provider == "mock":
+        return {"ok": True, "provider": "mock", "model_id": mc.model_id,
+                "message": "mock provider is always available (offline)"}
+    base = mc.base_url.rstrip("/")
+    try:
+        if provider == "ollama":
+            resp = httpx.get(f"{base}/api/tags", timeout=5)
+            resp.raise_for_status()
+            models = [m.get("name", "") for m in resp.json().get("models", [])]
+            if not any(m == mc.model_id or m.split(":")[0] == mc.model_id
+                       for m in models):
+                return {"ok": False, "provider": provider, "model_id": mc.model_id,
+                        "message": f"Ollama is running but model '{mc.model_id}' is "
+                                   f"not pulled. Available: {models or 'none'}. "
+                                   f"Run: ollama pull {mc.model_id}"}
+        else:
+            url = base + ("/models" if base.endswith("/v1") else "/v1/models")
+            headers = {"Authorization": f"Bearer {mc.api_key}"} if mc.api_key else {}
+            httpx.get(url, headers=headers, timeout=5).raise_for_status()
+    except httpx.HTTPError as exc:
+        return {"ok": False, "provider": provider, "model_id": mc.model_id,
+                "message": f"Model endpoint not reachable at {base} ({exc.__class__.__name__}). "
+                           "Start your local server (e.g. 'ollama serve', vLLM, "
+                           "llama.cpp) or use provider 'mock' to work offline."}
+    return {"ok": True, "provider": provider, "model_id": mc.model_id,
+            "message": f"endpoint at {base} is reachable and model is available"}
+
+
 def resolve_skill(ctx: AppContext, smell_key: str,
                   skill_name: str | None = None,
                   skill_version: str | None = None) -> tuple[str | None, str | None, str | None]:
@@ -237,6 +276,9 @@ def run_agents(ctx: AppContext, project_name: str, agent_mode: str,
                split: str | None = None, with_critic: bool | None = None,
                experiment_id: str | None = None) -> list[dict]:
     mode = AgentMode(agent_mode)
+    health = check_model_endpoint(ctx, provider_name, model_id)
+    if not health["ok"]:
+        raise RuntimeError(health["message"])
     provider = ctx.provider(provider_name, model_id)
     rows = ctx.store.list_cases(project_id=project_name, split=split)
     if case_ids:
@@ -262,6 +304,30 @@ def run_agents(ctx: AppContext, project_name: str, agent_mode: str,
                        run["suggestion_json"])
         runs.append(run)
     return runs
+
+
+def rescore_runs(ctx: AppContext, project_name: str) -> int:
+    """Recompute structural checks + deterministic suggested scores for all
+    successful runs (e.g. after the scoring rules changed). Human reviews are
+    never touched."""
+    from .checks import run_structural_checks
+    from .models.suggestion import RefactoringSuggestion
+
+    n = 0
+    for run in ctx.store.list_runs(project_id=project_name, status="ok"):
+        case = ctx.store.get_case(run["case_id"])
+        if not case or not run.get("suggestion_json"):
+            continue
+        suggestion = RefactoringSuggestion.model_validate(
+            json.loads(run["suggestion_json"]))
+        structural = run_structural_checks(suggestion, case, run, ctx.store)
+        ctx.store.update_run_checks(run["run_id"], json.dumps(structural, default=str))
+        ctx.store.save_suggested_scores(run["run_id"], "deterministic",
+                                        structural["suggested_scores"])
+        n += 1
+    ctx.store.audit("agent_run", project_name, "rescored",
+                    details={"runs": n, "reason": "scoring rules updated"})
+    return n
 
 
 # ---------------- reviews ----------------

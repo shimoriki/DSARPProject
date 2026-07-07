@@ -36,6 +36,18 @@ class OllamaProvider:
             resp = httpx.post(f"{self.base_url}/api/chat", json=payload,
                               timeout=self.cfg.timeout_seconds)
             resp.raise_for_status()
+        except httpx.ConnectError as exc:
+            raise ProviderError(
+                f"Ollama server is not reachable at {self.base_url}. "
+                "Install Ollama (https://ollama.com) and start it with "
+                "'ollama serve' (or the desktop app), or switch the provider "
+                "to 'mock' in config/config.yaml to work offline.") from exc
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                raise ProviderError(
+                    f"Model '{self.model_id}' is not available in Ollama. "
+                    f"Pull it first:  ollama pull {self.model_id}") from exc
+            raise ProviderError(f"ollama request failed: {exc}") from exc
         except httpx.HTTPError as exc:
             raise ProviderError(f"ollama request failed: {exc}") from exc
         elapsed = time.perf_counter() - start

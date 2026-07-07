@@ -25,7 +25,9 @@ log = get_logger("validate")
 def _score_run(store: Store, cfg: AppConfig, run: dict) -> dict | None:
     """Human HGRS when reviewed; deterministic proxy otherwise."""
     if run["status"] != "ok":
-        return {"hgrs": None, "grounding": None, "source": "failed_run",
+        # a failed run is scored at the rubric floor, not excluded — skills and
+        # models must not look better by producing invalid output
+        return {"hgrs": 1.0, "grounding": 1, "source": "failed_run_floor",
                 "critical_hallucination": False, "run_failed": True}
     review = store.review_for_run(run["run_id"])
     checks = json.loads(run.get("structural_checks_json") or "{}")

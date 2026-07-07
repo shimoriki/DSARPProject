@@ -264,6 +264,11 @@ class Store:
             params.extend(case_ids)
         return [dict(r) for r in self.db.query(sql + " ORDER BY created_at DESC", tuple(params))]
 
+    def update_run_checks(self, run_id: str, structural_checks_json: str) -> None:
+        self.db.execute(
+            "UPDATE agent_runs SET structural_checks_json = ? WHERE run_id = ?",
+            (structural_checks_json, run_id))
+
     def save_malformed(self, run_id: str, raw_text: str, error: str) -> None:
         self.db.execute(
             "INSERT INTO malformed_outputs(id, run_id, raw_text, error, created_at)"

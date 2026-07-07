@@ -93,6 +93,12 @@ def suggest_run(project: str = typer.Option(...),
                               "runtime_seconds")} for r in runs])
 
 
+@suggest_app.command("rescore")
+def suggest_rescore(project: str = typer.Option(...)):
+    """Recompute structural checks and suggested scores for stored runs."""
+    _emit({"rescored": services.rescore_runs(_ctx(), project)})
+
+
 @review_app.command("export")
 def review_export(project: Optional[str] = typer.Option(None)):
     _emit(_ctx().store.list_reviews(project_id=project))
@@ -156,6 +162,13 @@ def experiment_run(name: str = typer.Option(...), project: str = typer.Option(..
 def experiment_compare(project: Optional[str] = typer.Option(None),
                        experiment_id: Optional[str] = typer.Option(None)):
     _emit(services.comparison_table(_ctx(), project, experiment_id))
+
+
+@cli.command("doctor")
+def doctor(provider: Optional[str] = typer.Option(None),
+           model: Optional[str] = typer.Option(None)):
+    """Check that the configured local model endpoint is reachable."""
+    _emit(services.check_model_endpoint(_ctx(), provider, model))
 
 
 @cli.command("serve-api")
