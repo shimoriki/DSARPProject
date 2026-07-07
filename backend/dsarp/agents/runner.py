@@ -58,10 +58,46 @@ def extract_json(text: str) -> str:
     raise ValueError("unbalanced JSON object in model output")
 
 
+_STRING_LIST_FIELDS = ("evidence_used", "observed_tool_evidence",
+                       "implementation_steps", "affected_components",
+                       "risks_and_tradeoffs", "assumptions_and_questions")
+
+
+def _flatten_string_lists(payload: dict) -> dict:
+    """Mechanical format repair for list-of-string fields.
+
+    Small local models sometimes wrap list items in objects (e.g.
+    {"fact": "..."}). Flattening an item to its string value(s) changes format
+    only, never content — the raw response is stored verbatim regardless.
+    """
+    for field in _STRING_LIST_FIELDS:
+        value = payload.get(field)
+        if not isinstance(value, list):
+            continue
+        flat: list[str] = []
+        for item in value:
+            if isinstance(item, str):
+                flat.append(item)
+            elif isinstance(item, dict):
+                strings = [v for v in item.values() if isinstance(v, str) and v.strip()]
+                flat.append(" — ".join(strings) if strings
+                            else json.dumps(item, ensure_ascii=False))
+            else:
+                flat.append(json.dumps(item, ensure_ascii=False))
+        payload[field] = flat
+    # a model that lists several options ("A | B") gets its first choice —
+    # format repair of an ambiguous answer, recorded verbatim in raw_response
+    rec = payload.get("recommended_refactoring")
+    if isinstance(rec, str) and "|" in rec:
+        payload["recommended_refactoring"] = rec.split("|")[0].strip()
+    return payload
+
+
 def _validate(model_text: str, run_meta: dict) -> RefactoringSuggestion:
     payload = json.loads(extract_json(model_text))
     if not isinstance(payload, dict):
         raise ValueError("model output is not a JSON object")
+    payload = _flatten_string_lists(payload)
     owned = {k: payload[k] for k in MODEL_OWNED_FIELDS if k in payload}
     merged = {**owned, **run_meta}
     return RefactoringSuggestion.model_validate(merged)

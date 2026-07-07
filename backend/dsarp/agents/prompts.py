@@ -6,17 +6,18 @@ import json
 from ..models.evidence import EvidenceCase
 from ..models.suggestion import AgentMode
 
-PROMPT_VERSION = "p1"
+PROMPT_VERSION = "p2"
 
 _OUTPUT_SCHEMA = """{
-  "evidence_used": ["evidence_id", "..."],
-  "observed_tool_evidence": ["fact grounded in evidence, citing its evidence_id"],
+  "evidence_used": ["EVIDENCE_ID_1", "EVIDENCE_ID_2"],
+  "observed_tool_evidence": ["org.example.a depends on org.example.b (GRAPH_EDGE_002)",
+                             "arcan reports severity high (ARCAN_CD_001)"],
   "candidate_boundary_to_inspect": {
     "components": ["componentA", "componentB"],
     "edge_direction_status": "supported_by_evidence | requires_source_inspection",
     "reason": "string"
   },
-  "recommended_refactoring": "Extract Interface | Dependency Inversion | Move Class | Move Method | Facade | Adapter | Split Component | Other",
+  "recommended_refactoring": "Dependency Inversion",
   "rationale": "string",
   "implementation_steps": ["step 1", "step 2", "step 3"],
   "affected_components": ["componentA"],
@@ -35,9 +36,13 @@ Respond with ONLY a single JSON object matching this schema (no markdown, no pro
 """ + _OUTPUT_SCHEMA + """
 
 Rules:
-- recommended_refactoring must be exactly one of the listed values.
+- recommended_refactoring must be EXACTLY ONE of: Extract Interface,
+  Dependency Inversion, Move Class, Move Method, Facade, Adapter,
+  Split Component, Other. Pick a single value — never combine them.
 - confidence is a number between 0.0 and 1.0.
-- implementation_steps must be concrete, ordered, and name the components they touch."""
+- implementation_steps must be concrete, ordered, and name the components they touch.
+- Every list field contains PLAIN STRINGS only — never nested objects. The values
+  shown in the schema above are examples of the expected style, not fixed text."""
 
 _EVIDENCE_RULES = """
 STRICT EVIDENCE RULES (violations make the answer unusable):
