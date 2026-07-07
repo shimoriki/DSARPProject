@@ -29,3 +29,30 @@ def project_selector(ctx, key: str = "project"):
 
 
 SUGGESTED_LABEL = "Suggested system value — requires human confirmation"
+
+
+def evidence_backed_banner(checks: dict) -> None:
+    """Tell the reviewer plainly whether a suggestion is evidence-backed."""
+    if not checks:
+        st.warning("⚠️ No structural checks recorded for this run — treat every "
+                   "claim as unverified.")
+        return
+    if checks.get("critical_hallucination"):
+        problems = []
+        if checks.get("unsupported_evidence_ids"):
+            problems.append(f"cites unknown evidence IDs "
+                            f"{checks['unsupported_evidence_ids']}")
+        if checks.get("ungrounded_components"):
+            problems.append(f"names components absent from the evidence "
+                            f"{checks['ungrounded_components']}")
+        failed = [c["name"] for c in checks.get("checks", []) if not c["passed"]]
+        if "edge_direction_claim_supported" in failed:
+            problems.append("claims a dependency direction no imported edge supports")
+        st.error("🚫 NOT evidence-backed — this suggestion " +
+                 "; ".join(problems or ["failed grounding checks"]) +
+                 ". Verify against the source code before acting on it.")
+    else:
+        st.success("✅ Evidence-backed — every cited evidence ID, component, and "
+                   "claimed dependency direction was verified against the imported "
+                   "tool data. Anything the evidence cannot support is marked "
+                   "'Requires source inspection.'")

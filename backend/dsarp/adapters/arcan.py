@@ -9,15 +9,19 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .base import (AdapterResult, RawEdge, RawSmell, ToolAdapter, pick,
-                   read_csv_rows, register_adapter, split_components)
+from .base import (AdapterResult, RawEdge, RawMetric, RawSmell, ToolAdapter,
+                   pick, read_csv_rows, register_adapter, split_components)
 
 _EDGE_FROM = ("source", "from", "fromcomponent", "src", "dependencyfrom", "vertexfrom")
 _EDGE_TO = ("target", "to", "tocomponent", "dst", "dependencyto", "vertexto")
 _SMELL_ID = ("id", "smellid", "vertexid", "uniquesmellid", "arcanid")
-_SMELL_TYPE = ("smelltype", "type", "smell", "vertexlabel", "smellname")
+_SMELL_TYPE = ("smelltype", "smell", "smellname")
 _AFFECTED = ("affectedelements", "affectedcomponents", "elements", "components",
              "belongstocomponents", "affected", "cycle")
+# component-metrics style files: one row per component, numeric quality metrics
+_METRIC_COMPONENT = ("name", "componentname", "component", "packagename")
+_METRIC_COLUMNS = ("FanIn", "FanOut", "InstabilityMetric", "AbstractnessMetric",
+                   "LinesOfCode", "PageRank")
 
 
 @register_adapter
@@ -37,6 +41,19 @@ class ArcanAdapter(ToolAdapter):
         rows = read_csv_rows(path)
         result = AdapterResult()
         if not rows:
+            return result
+        if not pick(rows[0], *_SMELL_TYPE) and pick(rows[0], *_METRIC_COMPONENT) \
+                and any(pick(rows[0], m) for m in _METRIC_COLUMNS):
+            for row in rows:
+                component = pick(row, *_METRIC_COMPONENT)
+                if not component:
+                    continue
+                for metric in _METRIC_COLUMNS:
+                    value = pick(row, metric)
+                    if value != "":
+                        result.metrics.append(RawMetric(
+                            tool=self.name, raw_source_file=path.name,
+                            component=component, name=metric, value=value))
             return result
         if pick(rows[0], *_EDGE_FROM) and pick(rows[0], *_EDGE_TO):
             for row in rows:

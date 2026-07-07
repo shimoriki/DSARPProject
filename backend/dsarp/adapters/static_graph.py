@@ -111,8 +111,10 @@ class StaticGraphAdapter(ToolAdapter):
         rows = read_csv_rows(path)
         edges = []
         for row in rows:
-            frm = pick(row, "from", "source", "src", "fromcomponent")
-            to = pick(row, "to", "target", "dst", "tocomponent")
+            frm = pick(row, "from", "source", "src", "fromcomponent", "testclass",
+                       "dependent")
+            to = pick(row, "to", "target", "dst", "tocomponent", "dependsonclass",
+                      "dependency")
             if not frm or not to:
                 continue
             weight_s = pick(row, "weight", "count", "strength")

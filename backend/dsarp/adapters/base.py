@@ -115,7 +115,15 @@ def pick(row: dict[str, str], *candidates: str) -> str:
 
 
 def split_components(value: str) -> list[str]:
+    value = value.strip().strip("[]").strip()
+    items: list[str] = [value] if value else []
     for sep in (";", "|", ","):
         if sep in value:
-            return [c.strip() for c in value.split(sep) if c.strip()]
-    return [value.strip()] if value.strip() else []
+            items = value.split(sep)
+            break
+    out: list[str] = []
+    for item in items:
+        cleaned = item.strip().strip("'\"[]").strip()
+        if cleaned and cleaned not in out:
+            out.append(cleaned)
+    return out

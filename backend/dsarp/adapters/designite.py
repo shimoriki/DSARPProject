@@ -14,7 +14,12 @@ from .base import (AdapterResult, RawSmell, ToolAdapter, pick, read_csv_rows,
                    register_adapter, split_components)
 
 _PARTICIPANTS_RE = re.compile(
-    r"(?:with|between|involving|among)\s*:?\s*(?P<list>[\w.$\-, ;]+)", re.IGNORECASE)
+    r"(?:cycles?\s+are|with|between|involving|among)\s*:?\s*(?P<list>[\w.$\-, ;]+)",
+    re.IGNORECASE)
+
+
+def _looks_like_component(token: str) -> bool:
+    return bool(token) and not token.isdigit() and ("." in token or len(token) > 2)
 
 
 @register_adapter
@@ -33,14 +38,21 @@ class DesigniteAdapter(ToolAdapter):
                              "component", "namespace", "typename", "classname")
             if not smell_type or not component:
                 continue
+            cls = pick(row, "class", "classname", "typename")
+            method = pick(row, "method", "methodname")
+            if cls:  # class/method-level smells target the concrete element
+                component = f"{component}.{cls}" + (f"::{method}" if method else "")
             cause = pick(row, "causeofthesmell", "cause", "description", "details")
             affected = [component]
-            m = _PARTICIPANTS_RE.search(cause)
-            if m:
-                for part in split_components(m.group("list")):
-                    cleaned = part.strip().rstrip(".")
-                    if cleaned and cleaned not in affected:
-                        affected.append(cleaned)
+            # participant lists are only meaningful for dependency-cycle smells;
+            # elsewhere "are: 54" style counts would pollute the component list
+            if "cycl" in smell_type.lower():
+                m = _PARTICIPANTS_RE.search(cause)
+                if m:
+                    for part in split_components(m.group("list")):
+                        cleaned = part.strip().rstrip(".")
+                        if _looks_like_component(cleaned) and cleaned not in affected:
+                            affected.append(cleaned)
             attributes = {"cause": cause} if cause else {}
             attributes.update({k: v for k, v in row.items() if v})
             result.smells.append(RawSmell(

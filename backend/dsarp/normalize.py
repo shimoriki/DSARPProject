@@ -40,6 +40,15 @@ def build_evidence(store: Store, cfg: AppConfig, project_name: str) -> list[Evid
     smell_records = store.raw_findings_for_project(pid, kind="smell")
     edge_rows = store.edges_for_project(pid)
 
+    # component -> [(metric name, value, tool)] from imported metric files
+    metric_map: dict[str, list[tuple[str, Any, str]]] = {}
+    for rec in store.raw_findings_for_project(pid, kind="metric"):
+        record = json.loads(rec["record_json"])
+        comp = record.get("component", "")
+        if comp:
+            metric_map.setdefault(comp, []).append(
+                (record.get("name", ""), record.get("value"), rec["tool"]))
+
     # Group raw smell findings by (canonical key, frozen component set)
     groups: dict[tuple[str, frozenset], list[dict]] = {}
     for rec in smell_records:
@@ -105,6 +114,14 @@ def build_evidence(store: Store, cfg: AppConfig, project_name: str) -> list[Evid
                         evidence_id=f"{f.evidence_id}_M_{mname.upper()}",
                         component="", name=mname, value=f.attributes[mname],
                         tool=f.tool))
+        # attach component-level metrics (e.g. Arcan component-metrics.csv)
+        mseq = 0
+        for comp in components:
+            for mname, mvalue, mtool in sorted(metric_map.get(comp, [])):
+                mseq += 1
+                metrics.append(MetricEvidence(
+                    evidence_id=f"{smell_id}_CM_{mseq:02d}",
+                    component=comp, name=mname, value=mvalue, tool=mtool))
 
         case = EvidenceCase(
             case_id=_case_id(pid, key, components),
@@ -136,7 +153,11 @@ def _clean_attributes(attrs: dict[str, Any]) -> dict[str, Any]:
             continue
         key = str(k).strip().lower().replace(" ", "_")
         if key in ("kind", "raw_source_file", "tool_record_id", "smell_type_raw",
-                   "affected_components", "tool"):
+                   "affected_components", "tool",
+                   # provenance/noise columns from real tool exports
+                   "project", "versionid", "versionindex", "versiondate",
+                   "affectsindexlist", "vertexlabel", "filepathreal",
+                   "filepathrelative", "file"):
             continue
         cleaned[key] = v
     return cleaned

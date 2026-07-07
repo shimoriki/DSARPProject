@@ -5,7 +5,7 @@ from pathlib import Path
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from _bootstrap import get_ctx, project_selector  # noqa: E402
+from _bootstrap import evidence_backed_banner, get_ctx, project_selector  # noqa: E402
 from dsarp import services  # noqa: E402
 
 st.set_page_config(page_title="Agent Suggestions", layout="wide")
@@ -54,8 +54,9 @@ if pname:
         run_id = st.selectbox("Inspect run", [r["run_id"] for r in runs])
         run = ctx.store.get_run(run_id)
         if run["status"] == "ok":
-            st.json(json.loads(run["suggestion_json"]))
             checks = json.loads(run.get("structural_checks_json") or "{}")
+            evidence_backed_banner(checks)
+            st.json(json.loads(run["suggestion_json"]))
             with st.expander("Automatic structural checks"):
                 for c in checks.get("checks", []):
                     icon = "✅" if c["passed"] else "❌"

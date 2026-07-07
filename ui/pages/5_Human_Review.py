@@ -5,7 +5,8 @@ from pathlib import Path
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from _bootstrap import SUGGESTED_LABEL, get_ctx, project_selector  # noqa: E402
+from _bootstrap import (SUGGESTED_LABEL, evidence_backed_banner, get_ctx,  # noqa: E402
+                        project_selector)
 from dsarp import services  # noqa: E402
 from dsarp.hgrs import CRITERIA, CRITERION_LABELS, compute_hgrs  # noqa: E402
 
@@ -22,20 +23,21 @@ if pname:
         st.info("No successful agent runs to review yet.")
         st.stop()
 
+    reviewed_ids = {rv["run_id"] for rv in ctx.store.list_reviews(project_id=pname)}
     unreviewed_first = sorted(
-        runs, key=lambda r: (ctx.store.review_for_run(r["run_id"]) is not None,
-                             r["created_at"]))
-    run_id = st.selectbox(
-        "Run to review", [r["run_id"] for r in unreviewed_first],
-        format_func=lambda rid: next(
-            f"{r['smell_id']} · {r['agent_mode']} · {r['model_id']} · "
-            f"{'REVIEWED' if ctx.store.review_for_run(rid) else 'unreviewed'}"
-            for r in unreviewed_first if r["run_id"] == rid))
+        runs, key=lambda r: (r["run_id"] in reviewed_ids, r["created_at"]))
+    labels = {r["run_id"]: (f"{r['smell_id']} · {r['agent_mode']} · {r['model_id']} · "
+                            f"{'REVIEWED' if r['run_id'] in reviewed_ids else 'unreviewed'}")
+              for r in unreviewed_first}
+    run_id = st.selectbox("Run to review", [r["run_id"] for r in unreviewed_first],
+                          format_func=labels.get)
     run = ctx.store.get_run(run_id)
     case = ctx.store.get_case(run["case_id"])
     suggestion = json.loads(run["suggestion_json"])
     checks = json.loads(run.get("structural_checks_json") or "{}")
     suggested_sets = ctx.store.get_suggested_scores(run_id)
+
+    evidence_backed_banner(checks)
 
     left, right = st.columns(2)
     with left:

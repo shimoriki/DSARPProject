@@ -1,4 +1,4 @@
-"""Reproducible Apache Tika demonstration — fully offline (mock provider).
+﻿"""Reproducible Apache Tika demonstration - fully offline (mock provider).
 
 Creates the tika project, imports the sample Arcan/Designite/graph exports,
 builds evidence, assigns splits, runs all three agent modes with the mock
@@ -29,8 +29,7 @@ def main() -> None:
 
     print("== 1. project add ==")
     project = services.add_project(
-        ctx, "tika", path="C:/work/apache-tika",
-        architecture_type="package-based-java", source_revision="main")
+        ctx, "tika-sample", architecture_type="package-based-java", source_revision="main")
     print(f"   project: {project['name']} ({project['id']})")
 
     print("== 2. import tool exports ==")
@@ -41,21 +40,21 @@ def main() -> None:
         ("static_graph", "sample_data/tika/graph/edges.csv"),
     ]
     for tool, path in imports:
-        summary = services.import_tool_file(ctx, "tika", tool, path)
+        summary = services.import_tool_file(ctx, "tika-sample", tool, path)
         print(f"   {tool}: {summary['smells']} smells, {summary['edges']} edges "
               f"from {Path(path).name}")
 
     print("== 3. build evidence ==")
-    n = services.rebuild_evidence(ctx, "tika")
+    n = services.rebuild_evidence(ctx, "tika-sample")
     print(f"   {n} normalized evidence cases")
 
     print("== 4. split train/validation ==")
-    counts = services.split_evidence(ctx, "tika")
+    counts = services.split_evidence(ctx, "tika-sample")
     print(f"   {counts}")
 
     print("== 5. run agents (baseline / skill / tool_evidence) ==")
     for mode in ("baseline", "skill", "tool_evidence"):
-        runs = services.run_agents(ctx, "tika", mode,
+        runs = services.run_agents(ctx, "tika-sample", mode,
                                    provider_name=args.model_provider,
                                    model_id=args.model_id)
         ok = sum(1 for r in runs if r["status"] == "ok")
@@ -63,7 +62,7 @@ def main() -> None:
 
     print("== 6. example human reviews (edit them in the console!) ==")
     reviewed = 0
-    for run in ctx.store.list_runs(project_id="tika", agent_mode="tool_evidence"):
+    for run in ctx.store.list_runs(project_id="tika-sample", agent_mode="tool_evidence"):
         if run["status"] != "ok" or reviewed >= 2:
             continue
         if ctx.store.review_for_run(run["run_id"]):
@@ -72,15 +71,17 @@ def main() -> None:
         scores = {c: v["score"] for c, v in suggested.items()}
         review = services.save_review(
             ctx, run["run_id"], scores, "maybe", "revise",
-            reviewer_notes="Seeded example review from scripts/seed_demo.py — "
+            reviewer_notes="Seeded example review from scripts/seed_demo.py - "
                            "replace with a real human judgment in the console.")
         print(f"   review {review.review_id[:8]} HGRS={review.hgrs}")
         reviewed += 1
 
     print("\nDemo ready. Next:")
     print("  streamlit run ui/app.py")
-    print("  py -m dsarp.cli experiment compare --project tika   (after pip install -e .)")
+    print("  py -m dsarp.cli experiment compare --project tika-sample   (after pip install -e .)")
 
 
 if __name__ == "__main__":
     main()
+
+

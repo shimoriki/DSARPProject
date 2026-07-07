@@ -139,6 +139,10 @@ class Store:
         self.db.execute(
             "INSERT INTO evidence_cases(id, project_id, smell_id, smell_type, smell_key,"
             " architecture_type, case_json, created_at) VALUES (?,?,?,?,?,?,?,?)"
+            " ON CONFLICT(id) DO UPDATE SET"
+            " smell_id = excluded.smell_id, smell_type = excluded.smell_type,"
+            " smell_key = excluded.smell_key,"
+            " architecture_type = excluded.architecture_type, case_json = excluded.case_json"
             " ON CONFLICT(project_id, smell_id) DO UPDATE SET"
             " smell_type = excluded.smell_type, smell_key = excluded.smell_key,"
             " architecture_type = excluded.architecture_type, case_json = excluded.case_json",

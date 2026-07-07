@@ -131,7 +131,12 @@ def import_tool_file(ctx: AppContext, project_name: str, tool: str,
         "raw_source_file": e.raw_source_file, "from": e.from_component,
         "to": e.to_component, "weight": e.weight,
     } for e in result.edges]
-    ctx.store.add_raw_findings(run_id, tool, smell_records + edge_records)
+    metric_records = [{
+        "kind": "metric", "tool_record_id": f"{m.component}:{m.name}",
+        "raw_source_file": m.raw_source_file, "component": m.component,
+        "name": m.name, "value": m.value,
+    } for m in result.metrics]
+    ctx.store.add_raw_findings(run_id, tool, smell_records + edge_records + metric_records)
 
     existing = len(ctx.store.edges_for_project(project["id"]))
     edges_payload = []
@@ -147,7 +152,8 @@ def import_tool_file(ctx: AppContext, project_name: str, tool: str,
 
     ctx.store.finish_tool_run(run_id, "ok")
     summary = {"tool_run_id": run_id, "tool": tool, "file": str(path),
-               "smells": len(result.smells), "edges": len(result.edges)}
+               "smells": len(result.smells), "edges": len(result.edges),
+               "metrics": len(result.metrics)}
     log.info("imported %s: %s", path.name, summary)
     return summary
 

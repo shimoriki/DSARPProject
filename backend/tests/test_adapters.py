@@ -65,3 +65,49 @@ def test_unknown_smell_maps_to_custom():
     key, display, code = canonical_smell("Weird Proprietary Smell")
     assert key == "custom_tool_smell"
     assert code == "XX"
+
+
+def test_arcan_bracketed_elements_and_real_columns(tmp_path):
+    p = _write(tmp_path, "smell-characteristics.csv",
+               "project,versionId,ATDI,AffectedElements,Severity,Size,smellType,vertexId\n"
+               'tika,abc,42.5,"[org.a, org.b, org.c]",4,3,cyclicDep,101009\n')
+    result = get_adapter("arcan").parse_import(p)
+    assert len(result.smells) == 1
+    s = result.smells[0]
+    assert s.affected_components == ["org.a", "org.b", "org.c"]
+    assert s.tool_record_id == "101009"
+    assert canonical_smell(s.smell_type_raw)[0] == "cyclic_dependency"
+
+
+def test_arcan_component_metrics_file(tmp_path):
+    p = _write(tmp_path, "component-metrics.csv",
+               "project,FanIn,FanOut,InstabilityMetric,LinesOfCode,name,vertexLabel\n"
+               "tika,1,18,0.96,490,org.a.cli,container\n")
+    result = get_adapter("arcan").parse_import(p)
+    assert not result.smells and not result.edges
+    metrics = {(m.component, m.name): m.value for m in result.metrics}
+    assert metrics[("org.a.cli", "FanIn")] == "1"
+    assert metrics[("org.a.cli", "LinesOfCode")] == "490"
+
+
+def test_designite_real_cycle_description(tmp_path):
+    p = _write(tmp_path, "ArchitectureSmells.csv",
+               "Project,Package,Smell,Description\n"
+               'tika,org.a,Cyclic Dependency,"The tool detected the smell in this '
+               'component because this component participates in a cyclic dependency. '
+               'The participating components in the cycle are: org.a; org.b; org.a"\n'
+               'tika,org.c,God Component,"high number of classes. Number of classes '
+               'in the component are: 54"\n')
+    result = get_adapter("designite").parse_import(p)
+    cyc = next(s for s in result.smells if "Cyclic" in s.smell_type_raw)
+    assert set(cyc.affected_components) == {"org.a", "org.b"}
+    god = next(s for s in result.smells if "God" in s.smell_type_raw)
+    assert god.affected_components == ["org.c"]  # "54" must not leak in
+
+
+def test_designite_class_level_component(tmp_path):
+    p = _write(tmp_path, "DesignSmells.csv",
+               "Project,Package,Class,Smell,Description,File\n"
+               "tika,org.a,Foo,Feature Envy,likes members of Bar,/x/Foo.java\n")
+    result = get_adapter("designite").parse_import(p)
+    assert result.smells[0].affected_components == ["org.a.Foo"]
