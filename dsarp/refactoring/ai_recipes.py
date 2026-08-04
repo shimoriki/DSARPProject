@@ -199,6 +199,35 @@ def propose(model, facts, finding: Dict[str, Any]) -> Proposal:
         if missing and name != "org.openrewrite.java.ChangePackage":
             p.rejection = f"{name} is missing required option(s): {sorted(missing)}"
             return p
+        # Models emit JSON lists where a recipe wants a comma-separated string
+        # (classNames: ['a.B'] silently matches nothing and the run reports "no effect").
+        for key, value in list(opts.items()):
+            if isinstance(value, list):
+                opts[key] = ",".join(str(v) for v in value)
+
+        # The hand-written strategies refuse to refactor test code, and an AI proposal must
+        # meet the same bar — a model asked about "Wide Hierarchy" proposed giving a
+        # supertype to AbstractCommonTest.
+        for key in ("fullyQualifiedClassName", "classType", "classNames",
+                    "oldFullyQualifiedTypeName"):
+            for target in str(opts.get(key, "")).split(","):
+                target = target.strip()
+                jf = facts.file_for(target) if target else None
+                if jf is not None and facts.is_test(jf):
+                    p.rejection = f"{key}={target!r} is test code; DSARP refactors production only"
+                    return p
+
+        # IntroduceSupertype / ExtractInterface need the new type to exist before the recipe
+        # adds `implements` for it. The strategy path writes it first; a bare AI proposal
+        # does not, so the result would not compile.
+        if name in ("com.dsarp.recipes.IntroduceSupertype",
+                    "com.dsarp.recipes.ExtractInterfaceForClass"):
+            iface = str(opts.get("fullyQualifiedInterfaceName", ""))
+            if name.endswith("IntroduceSupertype") and not facts.file_for(iface):
+                p.rejection = (f"{iface} does not exist; IntroduceSupertype can only implement "
+                               "an interface that is already declared")
+                return p
+
         # entity check: every type/package named must actually exist
         for key, value in opts.items():
             if key.startswith("old") or key == "fullyQualifiedClassName" or key == "classType":

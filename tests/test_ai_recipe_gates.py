@@ -131,3 +131,49 @@ def test_catalogue_only_lists_recipes_that_exist():
             continue
         simple = name.rsplit(".", 1)[-1]
         assert list(src.rglob(f"{simple}.java")), f"{name} has no implementation"
+
+
+# --------------------------------------------------------------------------- #
+# Guards added after the Qwen-7B trial: the model produced structurally valid
+# proposals that were semantically wrong in ways the strategies already guard against.
+# --------------------------------------------------------------------------- #
+
+def test_list_valued_option_is_normalised(facts, tmp_path):
+    """Observed: classNames: ['a.B'] matched nothing and reported a false "no effect"."""
+    d = tmp_path / "src" / "main" / "java" / "com" / "ex"
+    (d / "Iface.java").write_text("package com.ex;\npublic interface Iface { }\n",
+                                  encoding="utf-8")
+    f2 = SourceFacts(tmp_path)
+    p = propose(FakeModel({"reasoning": "x", "recipes": [
+        {"recipe": "com.dsarp.recipes.IntroduceSupertype",
+         "options": {"fullyQualifiedInterfaceName": "com.ex.Iface",
+                     "classNames": ["com.ex.Real", "com.ex.Used"]}}]}),
+        f2, {"smell_type": "Wide Hierarchy", "components": ["com.ex.Real"]})
+    assert p.valid, p.rejection
+    assert p.entries[0].options["classNames"] == "com.ex.Real,com.ex.Used"
+
+
+def test_test_code_target_is_rejected(tmp_path):
+    """Observed: asked about Wide Hierarchy, the model targeted AbstractCommonTest."""
+    d = tmp_path / "src" / "test" / "java" / "com" / "ex"
+    d.mkdir(parents=True)
+    (d / "SomeTest.java").write_text("package com.ex;\npublic class SomeTest { public int v; }\n",
+                                     encoding="utf-8")
+    f2 = SourceFacts(tmp_path)
+    p = propose(FakeModel({"reasoning": "x", "recipes": [
+        {"recipe": "com.dsarp.recipes.ReduceFieldVisibility",
+         "options": {"fullyQualifiedClassName": "com.ex.SomeTest", "fieldName": "v"}}]}),
+        f2, {"smell_type": "Deficient Encapsulation", "components": ["com.ex.SomeTest"]})
+    assert not p.valid
+    assert "test code" in p.rejection
+
+
+def test_supertype_must_already_exist(facts):
+    """IntroduceSupertype adds `implements X`; if X is not declared it cannot compile."""
+    p = propose(FakeModel({"reasoning": "x", "recipes": [
+        {"recipe": "com.dsarp.recipes.IntroduceSupertype",
+         "options": {"fullyQualifiedInterfaceName": "com.ex.NeverDeclared",
+                     "classNames": "com.ex.Real"}}]}),
+        facts, {"smell_type": "Wide Hierarchy", "components": ["com.ex.Real"]})
+    assert not p.valid
+    assert "does not exist" in p.rejection
