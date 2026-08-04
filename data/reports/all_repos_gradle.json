@@ -1,0 +1,35 @@
+{
+  "repositories": 2,
+  "refactored_and_verified": 0,
+  "by_build_system": {
+    "gradle": 2
+  },
+  "unsupported_build": 0,
+  "smell_types_refactored_across_repos": {},
+  "results": [
+    {
+      "repo": "apache-solr",
+      "build_system": "gradle",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 0,
+      "targeted_after": 0,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 1216
+    },
+    {
+      "repo": "spring-projects-spring-framework",
+      "build_system": "gradle",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 0,
+      "targeted_after": 0,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 324
+    }
+  ]
+}

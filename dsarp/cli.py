@@ -627,6 +627,22 @@ def cmd_refactor_iterative(cfg: Config, args) -> int:
     return 0
 
 
+def cmd_refactor_sectioned(cfg: Config, args) -> int:
+    """Verify a large repo MODULE BY MODULE so one bad plan cannot sink the whole pass."""
+    from .verification.sectioned_loop import run_sectioned
+    from .repositories.manager import RepositoryManager
+    mgr = RepositoryManager(cfg.data_dir)
+    name = args.repo
+    if getattr(args, "repo_url", None):
+        name = args.repo or _slug_from_url(args.repo_url)
+        mgr.clone(name, args.repo_url, depth=1)
+    repo_path = Path(args.path) if getattr(args, "path", None) else mgr.path_for(name)
+    rep = run_sectioned(cfg, name, repo_path, detector=args.detector,
+                        max_passes=args.max_passes, max_modules=args.max_modules)
+    print(f"[sectioned] -> data/outputs/{name}/sectioned_loop_report.json")
+    return 0
+
+
 def cmd_ui(cfg: Config, args) -> int:
     import subprocess
     app = Path(__file__).resolve().parent.parent / "ui" / "streamlit_app.py"
@@ -740,6 +756,15 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     pl.add_argument("--repo"); pl.add_argument("--repo-url", dest="repo_url")
     pl.add_argument("--name"); pl.add_argument("--path")
     pl.add_argument("--top-k", type=int, default=8); pl.set_defaults(func=cmd_pipeline)
+
+    rs = sub.add_parser("refactor-sectioned")  # module-by-module for large repos
+    rs.add_argument("--repo"); rs.add_argument("--path")
+    rs.add_argument("--repo-url", dest="repo_url")
+    rs.add_argument("--detector", choices=("arcan", "designite", "both"), default="both")
+    rs.add_argument("--max-passes", type=int, default=2, dest="max_passes")
+    rs.add_argument("--max-modules", type=int, default=0, dest="max_modules",
+                    help="cap modules processed (0 = all)")
+    rs.set_defaults(func=cmd_refactor_sectioned)
 
     ri = sub.add_parser("refactor-iterative")  # repeat until it stops helping
     ri.add_argument("--repo"); ri.add_argument("--path")
