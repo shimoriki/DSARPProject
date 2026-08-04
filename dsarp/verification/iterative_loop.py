@@ -92,13 +92,14 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
     # Iterate on a working copy so the user's checkout is never modified.
     current = _copy_repo(repo_path, work / "pass_0")
     passes: List[Dict[str, Any]] = []
+    carried: Optional[Dict[str, Any]] = None   # previous pass's AFTER measurement
     baseline: Optional[int] = None
     best_by_type: Dict[str, int] = {}
 
     for i in range(1, max_passes + 1):
         rep = refactor_with_openrewrite_and_verify(
             cfg, f"{project_id}__pass{i}", current, detector=detector, strategy=strategy,
-            keep_copy=True)
+            keep_copy=True, known_before=carried)
 
         b_by = rep.get("by_type_before") or {}
         a_by = rep.get("by_type_after") or {}
@@ -156,6 +157,9 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
             shutil.move(str(refactored), str(keep))
             current = keep
         record.update(accepted=True, stop_reason=None)
+        # The tree we just measured becomes the next pass's input, so its AFTER measurement
+        # is that pass's BEFORE. Saves a full compile + Arcan + Designite run per pass.
+        carried = rep.get("_after_detection")
         best_by_type = a_by
         passes.append(record)
 

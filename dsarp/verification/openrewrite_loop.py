@@ -370,7 +370,9 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                                          max_moves: int = 30,
                                          detector: str = "both",
                                          strategy: str = "merge_package",
-                                         keep_copy: bool = False) -> Dict[str, Any]:
+                                         keep_copy: bool = False,
+                                         known_before: Optional[Dict[str, Any]] = None
+                                         ) -> Dict[str, Any]:
     """Full real loop. Returns a step-by-step record with before/after tool smells."""
     repo_path = Path(repo_path)
     out = cfg.data_dir / "outputs" / project_id
@@ -378,12 +380,20 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     tool_name = {"arcan": "Arcan 1.2.1", "designite": "DesigniteJava"}.get(
         detector, "Arcan 1.2.1 + DesigniteJava")
 
-    # 1) DETECT (real tool)
-    before = detect(repo_path, out / f"{detector}_before", detector)
-    steps.append({"step": "detect", "tool": tool_name, "status": before["status"],
-                  "smells": before.get("smells"), "by_type": before.get("by_type"),
-                  "by_tool": before.get("by_tool"),
-                  "compile": (before.get("compile") or {}).get("status")})
+    # 1) DETECT (real tool). The iterative loop passes the previous pass's AFTER result in,
+    # because it measured exactly this source tree — re-running mvn compile plus both tools
+    # on unchanged code costs minutes and cannot produce a different answer.
+    before = known_before or detect(repo_path, out / f"{detector}_before", detector)
+    if known_before:
+        steps.append({"step": "detect", "tool": tool_name, "status": "reused",
+                      "smells": before.get("smells"), "by_type": before.get("by_type"),
+                      "by_tool": before.get("by_tool"),
+                      "note": "reused the previous pass's measurement of this exact tree"})
+    else:
+        steps.append({"step": "detect", "tool": tool_name, "status": before["status"],
+                      "smells": before.get("smells"), "by_type": before.get("by_type"),
+                      "by_tool": before.get("by_tool"),
+                      "compile": (before.get("compile") or {}).get("status")})
 
     # 2) PLAN a transformation for EVERY detected smell type.
     #    - cyclic smells      -> package merges (ChangePackage), handled here
@@ -585,6 +595,9 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
               "plans": plans or []}
     write_json(out / "openrewrite_loop_report.json", report)
     write_json(out / f"loop_{detector}_report.json", report)
+    # In-memory only: the iterative loop feeds this straight into the next pass as its
+    # BEFORE measurement. Kept out of the JSON, where it would duplicate findings_after.
+    report["_after_detection"] = after
     if keep_copy:
         # The iterative loop feeds this refactored tree into the next pass; deleting it here
         # would make every pass restart from the original source.
