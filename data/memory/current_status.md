@@ -9,6 +9,48 @@
 DSARP Evidence-Based Refactoring Agent — complete modular platform: local + HPC, multi-repo
 training, unseen-repo testing, evidence-grounded no-hallucination suggestions, human HGRS review.
 
+## GIT + iterative loop + SkillOpt parameter surface (2026-08-04, latest)
+
+GIT: repo initialised (was NOT a git repo). Remote https://github.com/shimoriki/DSARPProject,
+branch **feature/arcan-designite-openrewrite-loop**, 2 commits pushed (23c9ce4, 36f93b2).
+EXCLUDED from git and why: `tools/*` except our own `tools/dsarp-recipes/` — DesigniteJava
+Professional is LICENSED COMMERCIAL software and must not be redistributed; also Arcan 144MB,
+RefactoringMiner 163MB+150MB zip, Maven 11MB. `DSARP dataset/` (817MB user-supplied raw tool
+CSVs + PDFs) and `data/source_index/` (42MB generated). Result: 215 files / 2.8MB.
+`docs/SETUP_TOOLS.md` documents installing them. Existing remote branch: agentic-refactoring-agent.
+
+ITERATIVE LOOP `dsarp/verification/iterative_loop.py` + CLI `refactor-iterative` + UI page
+`23_Iterative_Loop.py`. Repeats detect->refactor->verify; each pass re-detects on the
+REFACTORED code so plans the conflict filter deferred can land later.
+
+TWO BUGS FOUND, both would have produced fake progress:
+1. `_apply_and_verify` rmtree'd the refactored copy on exit, so every pass restarted from the
+   ORIGINAL source and reported the identical 76->75 four times. Fixed with `keep_copy=True`
+   threaded through the single-pass loop.
+2. **THE IMPORTANT ONE.** Acceptance used `verification_status == "verified"`, which only
+   means SOME tool measured both sides. When the build breaks, Arcan (bytecode) drops out and
+   the before/after score is recomputed over FEWER TOOLS — a smaller number that looks like
+   improvement but is lost measurement. That scored a broken pass as **13.2% reduction**.
+   Acceptance now ALSO requires `build_after_refactoring == "compiled"`.
+HONEST RESULT after the fix: commons-validator **76 -> 75 (1.3%)**, 1/2 passes accepted; pass 2
+rolled back because its refactoring does not compile. The 13.2% figure was an artifact — do not
+quote it. Iteration does NOT currently beat a single pass on this repo; the blocker is that the
+second pass's plan breaks the build, not the conflict filter.
+
+SKILLOPT SURFACE `dsarp/refactoring/params.py` (+ `configs/refactoring_params.json`):
+god_component_min_classes=6, god_component_min_group=3, unstable_max_crossing=6,
+max_package_merges=4, max_class_moves=30, dead_code_max_references=0,
+encapsulate_max_external_readers=0, max_passes=5. Strategies now read PARAMS instead of
+hardcoded constants. `SEARCH_SPACE` = 576 combinations.
+`scripts/tune_refactoring_params.py` — coordinate descent, reward = mean architectural smells
+removed, GATE = refactored code must still build (build failure => -inf, rejected with reason).
+DELIBERATELY EXCLUDED from SEARCH_SPACE: dead_code_max_references and
+encapsulate_max_external_readers — raising either buys score by deleting/hiding code that is
+actually used (reward hacking the gate shouldn't have to catch).
+NOT YET RUN at scale: needs the 9 training repos to avoid overfitting on 2 repos, and the
+pass-2 build failure should be fixed first or the tuner optimises against a broken ceiling.
+28 tests pass.
+
 ## CUSTOM OpenRewrite recipe module (2026-08-04, latest)
 
 CORRECTION to an earlier claim: stock rewrite-java 8.37.1 DOES contain `ExtractInterface`,
