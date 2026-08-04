@@ -92,7 +92,10 @@ class SourceFacts:
         self._file_of: Dict[str, Path] = {}           # FQN -> file
         self._text: Dict[Path, str] = {}
         self._pkg_private_cache: Dict[str, Tuple[set, set]] = {}
+        self._mentions: Dict[str, set] = {}
         self._scan()
+
+    _IDENT = re.compile(r"[A-Za-z_]\w*")
 
     def _scan(self) -> None:
         files = []
@@ -108,6 +111,11 @@ class SourceFacts:
             except OSError:
                 continue
             self._text[jf] = txt
+            # Inverted index of identifiers -> files. Built once here so the "does anything
+            # else mention X?" questions (reference counts, crossing classes, field readers)
+            # become set lookups instead of a regex sweep over every file per call.
+            for token in set(self._IDENT.findall(txt)):
+                self._mentions.setdefault(token, set()).add(jf)
             m = re.search(r"^\s*package\s+([\w.]+)\s*;", txt, re.M)
             if not m:
                 continue
@@ -117,6 +125,10 @@ class SourceFacts:
             self._classes.setdefault(pkg, []).append(simple)
             self._file_of[f"{pkg}.{simple}"] = jf
 
+    def files_mentioning(self, name: str) -> set:
+        """Files whose source contains `name` as a whole identifier. O(1) after the scan."""
+        return self._mentions.get(name, set())
+
     # -- queries -------------------------------------------------------------
     def is_test(self, jf: Path) -> bool:
         p = str(jf).replace("\\", "/")
@@ -125,9 +137,15 @@ class SourceFacts:
     def packages(self) -> List[str]:
         return sorted(self._classes)
 
+    # Not types: every package has a package-info.java, and treating it as a class makes any
+    # two packages look like they contain a same-named class.
+    _NON_TYPES = ("package-info", "module-info")
+
     def classes_in(self, pkg: str, production_only: bool = True) -> List[str]:
         out = []
         for fqn, jf in self._file_of.items():
+            if fqn.rsplit(".", 1)[-1] in self._NON_TYPES:
+                continue
             if fqn.rsplit(".", 1)[0] == pkg and (not production_only or not self.is_test(jf)):
                 out.append(fqn)
         return sorted(out)
@@ -246,37 +264,37 @@ class SourceFacts:
         own = self._file_of.get(fqn)
         dotted = re.compile(rf"\.\s*{re.escape(field)}\b")
         qualified = re.compile(rf"\b{re.escape(simple)}\s*\.\s*{re.escape(field)}\b")
-        names_type = re.compile(rf"\b{re.escape(simple)}\b")
+        # Only files mentioning BOTH the type and the field can qualify, so the index
+        # narrows the candidate set before any regex runs.
         n = 0
-        for jf, txt in self._text.items():
+        for jf in self.files_mentioning(simple) & self.files_mentioning(field):
             if jf == own:
                 continue
-            if qualified.search(txt) or (names_type.search(txt) and dotted.search(txt)):
+            txt = self._text.get(jf, "")
+            if qualified.search(txt) or dotted.search(txt):
                 n += 1
         return n
 
     def reference_count(self, fqn: str) -> int:
-        """How many OTHER production files mention this type."""
-        simple = fqn.rsplit(".", 1)[-1]
+        """How many OTHER production files mention this type. O(hits) via the index."""
         own = self._file_of.get(fqn)
-        n = 0
-        for jf, txt in self._text.items():
-            if jf == own or self.is_test(jf):
-                continue
-            if re.search(rf"\b{re.escape(simple)}\b", txt):
-                n += 1
-        return n
+        return sum(1 for jf in self.files_mentioning(fqn.rsplit(".", 1)[-1])
+                   if jf != own and not self.is_test(jf))
 
     def crossing_classes(self, from_pkg: str, to_pkg: str) -> List[str]:
         """Classes in from_pkg that reference to_pkg (they create the from->to edge)."""
+        # Every file mentioning any type of to_pkg, resolved through the index in one pass
+        # instead of re-scanning each candidate against every target name.
+        touching = set()
+        for name in self._classes.get(to_pkg, []):
+            touching |= self.files_mentioning(name)
         out = []
         for fqn in self.classes_in(from_pkg):
-            txt = self.text_of(fqn)
-            if not txt:
+            jf = self._file_of.get(fqn)
+            if jf is None:
                 continue
-            if re.search(rf"\b{re.escape(to_pkg)}\.", txt) or \
-                    any(re.search(rf"\b{re.escape(s)}\b", txt)
-                        for s in self._classes.get(to_pkg, [])):
+            if jf in touching or re.search(rf"\b{re.escape(to_pkg)}\.",
+                                           self._text.get(jf, "")):
                 out.append(fqn)
         return out
 

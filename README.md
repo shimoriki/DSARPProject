@@ -1,104 +1,172 @@
-# DSARP Evidence-Based Refactoring Agent
+# DSARP — evidence-based architectural refactoring
 
-Modular, **evidence-grounded** Java refactoring-suggestion system. It learns from real
-historical refactorings (RefactoringMiner), combines them with architecture-smell evidence
-(Arcan, Designite, dependency graphs, static analysis), and emits **ranked, schema-valid,
-no-hallucination** refactoring suggestions for unseen repositories — with a human-review UI.
+DSARP takes a Java repository, finds its architectural problems with real analysis tools,
+**actually rewrites the source** to fix them, then **re-runs the same tools** to check whether
+the problems really went away.
 
-> No cloud APIs by default. Local mode is offline-first; HPC mode adds vLLM + optional LoRA.
-
-See [`docs/DESIGN.md`](docs/DESIGN.md) for the architecture, graph-of-loops, schemas, and plans,
-and [`CLAUDE.md`](CLAUDE.md) for the governing token + no-hallucination policy.
-
-## Quickstart (local, offline)
+That last step is the point. Plenty of tools suggest refactorings. DSARP measures whether its
+suggestions worked, and refuses to call anything a success unless the rewritten code still
+compiles and a real tool confirms the improvement.
 
 ```bash
-py -m pip install -e .[local]         # or: pip install pydantic PyYAML networkx jsonschema requests scikit-learn streamlit
-dsarp-local demo full                 # ← runs the WHOLE local MVP end-to-end, offline
-dsarp-local ui                        # Streamlit dashboard at http://localhost:8501
+py -m dsarp.cli refactor-openrewrite --repo-url https://github.com/apache/commons-validator --detector both
 ```
 
-Or step by step:
+---
 
-```bash
-py scripts/make_sample_data.py apache-cassandra     # stage sample tool exports via real adapters
-dsarp-local normalize --repo apache-cassandra --revision demo
-dsarp-local suggest   --repo apache-cassandra --top-k 3
+## The idea in one picture
+
+```
+   ┌─────────┐   ┌──────┐   ┌──────────┐   ┌───────────┐   ┌─────────┐
+   │ DETECT  │──▶│ PLAN │──▶│ REFACTOR │──▶│ RE-DETECT │──▶│ COMPARE │
+   └─────────┘   └──────┘   └──────────┘   └───────────┘   └─────────┘
+    Arcan +      one agent   OpenRewrite     the SAME       per-smell
+    Designite    per smell   rewrites the    tools, on      before/after
+    (real jars)  family      real source     the new code
 ```
 
-Outputs land in `data/outputs/<repo>/` (`suggestions.json`, `report.json`). Every suggestion
-validates against [`docs/schemas/suggestion_schema.json`](docs/schemas/suggestion_schema.json).
+Every box is a real subprocess: `java -jar arcan.jar`, `java -jar DesigniteJava.jar`,
+`mvn rewrite:run`. Nothing is simulated.
 
-## Multi-repository generalisation
+---
 
-Trains on many repos with **repository-independent structural features** (no raw package names),
-validates with **leave-one-repository-out**, and evaluates on **unseen** repos. Cassandra is the
-final unseen test only — a leakage guard blocks it from every training split.
+## Step by step
 
-```bash
-py scripts/make_multi_repo_fixtures.py              # synthetic multi-repo fixtures (distinct namespaces)
-dsarp-local dataset build-multi-repo --splits train
-dsarp-local ranker train --dataset data/training/multi_repo_train_candidates.jsonl
-dsarp-local validate leave-one-repo-out
-dsarp-local generalisation report                   # docs/GENERALISATION_REPORT.md + json/csv
+### 1. Detect — what is actually wrong?
 
-# Any new/unseen repository:
-dsarp-local repo add --name my-project --path /path/to/repo
-dsarp-local evaluate --name my-project --model offline
-# or by URL: dsarp-local evaluate --repo-url https://github.com/org/name --name name
-```
+Two independent tools, because they see different things:
 
-Splits: [`configs/repos_train.yaml`](configs/repos_train.yaml) ·
-[`repos_validation.yaml`](configs/repos_validation.yaml) ·
-[`repos_test.yaml`](configs/repos_test.yaml) ·
-[`repos_unseen.yaml`](configs/repos_unseen.yaml) (Cassandra).
-
-## CLI (local == `dsarp-local`, HPC == `dsarp-hpc`)
-
-| Command | Loop | Purpose |
+| tool | reads | finds |
 |---|---|---|
-| `setup` | — | create `data/` tree |
-| `repo clone --repo <slug>` | 1 | clone/update (git optional) |
-| `tools import --repo <r> --tool <arcan\|designite> --path <export>` | 4 | import tool findings |
-| `graph build --repo <r> --edges <json>` | 5 | build dependency graph + metrics |
-| `normalize --repo <r>` | 6 | merge findings+graph → `EvidenceCase` |
-| `ranker train --dataset <jsonl>` | 8 | train local preference ranker |
-| `source index --repo <r>` | 6 | build Java source index for entity validation |
-| `dataset build-multi-repo` | 7 | masked multi-repo ranker dataset |
-| `ranker train --dataset <j>` | 8 | train ranker (repo-independent features) |
-| `validate leave-one-repo-out` | 8 | LORO generalisation validation |
-| `suggest --repo <r> [--model]` | 9-13 | ranked, validated suggestions + token report |
-| `recipes validate --repo <r>` | 11 | OpenRewrite dry-run/build (never fakes `validated`) |
-| `evaluate cassandra [--dry-run]` | 9-13 | final unseen-test workflow (leakage-guarded) |
-| `evaluate --name <r> \| --repo-url <u>` | 9-13 | inference on any unseen repo |
-| `generalisation report` | 13 | cross-repo generalisation report |
-| `insights <kind> --repo <r>` | 15 | health/conflicts/patterns/readiness/issue-draft |
-| `model list \| smoke-test` | — | local model management |
-| `db init \| status \| import-outputs` | — | SQLite persistence |
-| `api serve` | — | FastAPI backend (other agents) |
-| `demo full` / `demo plan\|submit` | — | end-to-end local demo / HPC plan |
-| `ui` | — | launch dashboard (20 pages) |
+| **Arcan 1.2.1** | compiled bytecode | package-level Cyclic, Unstable and Hub-Like Dependency |
+| **DesigniteJava** | source | God Component, Scattered Functionality, and 10 design smells |
 
-## What's implemented
+Arcan needs bytecode, so DSARP runs `mvn compile` first and points it at `target/classes`.
+That detail matters later: **if the code does not compile, Arcan cannot measure anything.**
 
-- **Core pipeline** (M1–M14): schemas, config profiles, repo manager, tool adapters (import mode),
-  RefactoringMiner adapter, graph builder, evidence normalizer, alignment (with confidence),
-  dataset builder, deterministic candidate generator, preference ranker, LLM explanation agent,
-  OpenRewrite recipe generator, 8 no-hallucination validators, 12-page Streamlit UI, CLI.
-- **Token-optimisation layer**: 4 context levels, context packages, hash cache, `TokenBudgetManager`,
-  per-run optimisation report, compact project-memory files.
-- **HPC** (M15): Slurm scripts for mining, dataset, LoRA, Cassandra eval; vLLM provider.
-- **Tests**: end-to-end + unit (`pytest tests/`).
+### 2. Plan — one agent per architectural concern
 
-## Model providers (no cloud by default)
+Each finding is routed to exactly one agent, and every agent must return a plan for every
+finding it receives — either a real refactoring or an explicit reason it cannot be automated.
+Nothing is silently dropped.
 
-`offline` (deterministic, network-free — default) · `ollama` · `llamacpp` · `openai`-compatible · `vllm` (HPC).
-Set in `configs/local.yaml` / `configs/hpc.yaml` under `model_provider`.
+| agent | concern | smells it owns |
+|---|---|---|
+| `DependencyAgent` | coupling direction | Cyclic, Unstable, Hub-Like |
+| `ModularizationAgent` | package size and cohesion | God Component, Scattered Functionality |
+| `EncapsulationAgent` | information hiding | Deficient Encapsulation |
+| `AbstractionAgent` | abstraction quality | Unutilized / Unnecessary / Multifaceted |
+| `HierarchyAgent` | inheritance structure | Missing / Wide / Rebellious / Broken Hierarchy |
+| `StructureAgent` | system-wide | Dense Structure |
 
-## Guardrails
+### 3. Refactor — real OpenRewrite recipes
 
-- Java tools (Arcan/Designite/RefactoringMiner) run in **import mode** locally and **execute mode** on
-  HPC; execute stubs return empty rather than fabricating findings — missing evidence ⇒
-  `requires_source_inspection`.
-- `apache/cassandra` is the **only** unseen test repo and is absent from every training config.
-- OpenRewrite recipes stay `draft` until dry-run/build/tests pass.
+Plans compose into one `rewrite.yml` and run as a single `mvn rewrite:run`. Most entries are
+stock OpenRewrite recipes; three are ours, in `tools/dsarp-recipes/`, because stock cannot
+express them declaratively:
+
+- `ReduceFieldVisibility` — there is no stock field-visibility recipe at all
+- `ExtractInterfaceForClass` — stock ships this only as a *visitor*, unusable from YAML
+- `IntroduceSupertype` — same, for giving a group of classes a shared new interface
+
+**Four safety preconditions**, every one discovered from a real broken build:
+
+1. A relocated class loses its same-package references, so the needed imports are written in
+   first. (OpenRewrite's `AddImport` cannot do this — it inspects the file while it is still
+   in the old package and concludes no import is needed.)
+2. A class using package-private types or members is never moved; no import can restore that
+   access, and widening visibility would change the public API.
+3. Package merges are rejected on same-name collisions, or when the source package has
+   sub-packages.
+4. Two refactorings touching the same type in one pass are separated.
+
+### 4. Re-detect and compare — did it work?
+
+The same tools run again on the rewritten code. Results are reported **per smell type**, split
+into what was targeted and what moved as a side effect.
+
+> **Read the targeted delta, not the grand total.** Splitting a God Component creates a new
+> package, which Designite then flags as Feature Concentration. A refactoring that removed
+> exactly what it aimed at can still make the overall count look worse.
+
+---
+
+## Why you can trust the numbers
+
+Three times during development a change *looked* like a large win and was actually a
+**measurement failure**. Each is now a permanent guard:
+
+| the claim | what was really happening | the guard |
+|---|---|---|
+| Arcan `20 → 0` | the code never compiled, so Arcan had no bytecode to read | no bytecode ⇒ `UNMEASURABLE`, not zero |
+| `13.2%` reduction | build broke, Arcan dropped out, score recomputed over fewer tools | accepting a pass requires a **compiling build** |
+| an LLM proposed a deletion | the class was still referenced — its own reasoning said so | closed loop returned `rejected`; a pre-check now refuses it |
+
+**A measurement failure is never scored as a success.** That rule is the core contribution.
+
+---
+
+## Getting started
+
+```bash
+py -m pip install -e .[local]                 # Python side
+mvn -f tools/dsarp-recipes/pom.xml install    # build DSARP's custom recipes
+py -m streamlit run ui/streamlit_app.py       # dashboard at localhost:8501
+showcase.bat                                  # guided 8-step demo (Windows)
+```
+
+External tools (Arcan, Designite, Maven) are **not committed** — see
+[docs/SETUP_TOOLS.md](docs/SETUP_TOOLS.md). Anything missing is reported as unavailable rather
+than silently skipped.
+
+### Common commands
+
+```bash
+# one pass: detect -> refactor -> verify
+py -m dsarp.cli refactor-openrewrite --repo <name> --detector both
+
+# repeat until it stops helping (rolls back any pass that breaks the build)
+py -m dsarp.cli refactor-iterative --repo <name> --max-passes 4
+
+# ask an LLM for recipes on smells we cannot handle, then test them
+py scripts/run_ai_recipes.py --repo <name> --execute
+```
+
+---
+
+## Where things live
+
+```
+dsarp/
+  tools/          run Arcan and Designite, parse their output formats
+  refactoring/    agents.py     routing, one agent per concern
+                  strategies.py the refactorings themselves
+                  params.py     tunable thresholds (the tuning surface)
+                  ai_recipes.py LLM-proposed recipes, validated then tested
+  openrewrite/    generate rewrite.yml, run Maven
+  verification/   openrewrite_loop.py  one pass
+                  iterative_loop.py    repeat until it stops helping
+tools/dsarp-recipes/   our custom OpenRewrite recipes (Java)
+ui/pages/              Streamlit dashboard
+docs/MVP_RESULTS.md    scope and measured results
+```
+
+---
+
+## Scope
+
+Five smell types have an automated, compile-safe refactoring: Cyclic Dependency, Unstable
+Dependency, God Component, Deficient Encapsulation, Missing/Wide Hierarchy.
+
+The rest are reported with the specific reason they are not automatable — most need
+member-level extraction with real type attribution, which means rebuilding the source index on
+OpenRewrite's LST. Details and measured results: [docs/MVP_RESULTS.md](docs/MVP_RESULTS.md).
+
+## The learning side
+
+DSARP also learns to *rank* suggestions, from real refactoring history mined with
+RefactoringMiner across 17 repositories, using repository-independent structural features and
+leave-one-repository-out validation. Log4j2 is held out as the unseen benchmark. This is an
+evaluation artifact rather than part of the refactoring critical path — see
+[docs/DESIGN.md](docs/DESIGN.md) and [CLAUDE.md](CLAUDE.md) for the governing no-hallucination
+policy.

@@ -1,13 +1,18 @@
 {
-  "node_count": 5,
-  "edge_count": 5,
-  "cycle_count": 1,
-  "scc_count": 1,
+  "node_count": 765,
+  "edge_count": 4085,
+  "cycle_count": 2000,
+  "scc_count": 11,
   "central_components": [
-    "org.apache.tika.detect",
+    "java.util",
+    "java.io",
     "org.apache.tika.parser",
     "org.apache.tika.metadata",
+    "org.apache.tika.exception",
+    "org.apache.tika.io",
     "org.apache.tika.mime",
-    "org.apache.tika.sax"
+    "org.apache.tika.utils",
+    "org.apache.tika.sax",
+    "org.slf4j"
   ]
 }

@@ -36,6 +36,9 @@ from ..openrewrite.runner import (find_mvn, run_recipe, write_change_package_rec
 
 DETECTORS = ("arcan", "designite", "both")
 
+# repo path -> SourceFacts, so one scan serves a whole planning run
+_FACTS_CACHE: Dict[str, Any] = {}
+
 
 def designite_jar() -> Optional[Path]:
     tools = Path(__file__).resolve().parent.parent.parent / "tools"
@@ -246,34 +249,31 @@ def _merge_is_safe(repo_path: Path, src: str, dst: str) -> bool:
     return not _has_subpackages(repo_path, src)
 
 
+def _facts(repo_path: Path):
+    """Cached SourceFacts for a repo.
+
+    These helpers used to re-walk and re-read every .java file on EVERY call, which made
+    package-merge planning quadratic in repository size. SourceFacts scans once and answers
+    from an index, so the cache keeps that cost to a single pass per repository.
+    """
+    from ..refactoring.strategies import SourceFacts
+    key = str(Path(repo_path).resolve())
+    facts = _FACTS_CACHE.get(key)
+    if facts is None:
+        facts = _FACTS_CACHE[key] = SourceFacts(Path(repo_path))
+    return facts
+
+
 def _has_subpackages(repo_path: Path, pkg: str) -> bool:
-    prefix = f"package {pkg}."
-    for jf in Path(repo_path).rglob("*.java"):
-        p = str(jf).replace("\\", "/")
-        if "/test/" in p or "/target/" in p:
-            continue
-        try:
-            if prefix in jf.read_text(encoding="utf-8", errors="ignore")[:2000]:
-                return True
-        except OSError:
-            continue
-    return False
+    prefix = pkg + "."
+    return any(p.startswith(prefix) for p in _facts(repo_path).packages())
 
 
 def _package_classes(repo_path: Path, pkg: str) -> List[Path]:
     """Source files declaring `package <pkg>;` (production code only)."""
-    out = []
-    for jf in Path(repo_path).rglob("*.java"):
-        p = str(jf).replace("\\", "/")
-        if "/test/" in p or "/target/" in p:
-            continue
-        try:
-            head = jf.read_text(encoding="utf-8", errors="ignore")[:2000]
-        except OSError:
-            continue
-        if f"package {pkg};" in head:
-            out.append(jf)
-    return out
+    facts = _facts(repo_path)
+    return [jf for jf in (facts.file_for(f) for f in facts.classes_in(pkg))
+            if jf is not None]
 
 
 def _cheapest_direction(repo_path: Path, a_pkg: str, b_pkg: str) -> List[Tuple[str, str]]:
