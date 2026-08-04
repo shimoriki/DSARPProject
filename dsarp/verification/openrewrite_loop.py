@@ -390,10 +390,12 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     #    - all other smells   -> dsarp.refactoring.strategies (split / consolidate / move /
     #                            delete dead code), each emitting stock recipe entries
     #    Strategies that cannot be automated report an evidence-backed reason instead.
-    from ..refactoring.strategies import RecipeEntry, SourceFacts, plan_for
+    from ..refactoring.agents import plan_all
+    from ..refactoring.strategies import RecipeEntry, SourceFacts
 
     findings = before.get("findings", [])
     facts = SourceFacts(repo_path)
+    routed = plan_all(repo_path, findings, facts)
     entries: List[Any] = []
     plans: List[Dict[str, Any]] = []
     pre_imports: Dict[str, List[str]] = {}
@@ -412,15 +414,8 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                       "operations": len(merges), "stock_recipes": True,
                       "verification_status": "planned"})
 
-    seen_keys = set()
-    for f in findings:
-        key = (f.get("smell_type"), tuple(f.get("components") or [])[:3])
-        if key in seen_keys:
-            continue
-        seen_keys.add(key)
-        p = plan_for(facts, f)
-        if p is None:
-            continue
+    new_interfaces: Dict[str, List[str]] = {}
+    for p in routed["plans"]:
         # Two refactorings touching the SAME type in one OpenRewrite pass interfere: e.g.
         # extracting an interface from a class another plan is relocating leaves the new
         # interface pointing at the old package. First plan to claim a type wins.
@@ -438,6 +433,9 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
             claimed |= touched
             entries.extend(p.entries)
             pre_imports.update(p.pre_imports)
+            iface = (p.evidence or {}).get("creates_interface")
+            if iface:
+                new_interfaces[iface] = (p.evidence or {}).get("classes") or []
 
     applicable = [p for p in plans if p["applicable"]]
     by_smell = collections.Counter(p["smell_type"] for p in applicable)
@@ -448,12 +446,15 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                   "plans_applicable": len(applicable),
                   "plans_not_applicable": len(plans) - len(applicable),
                   "recipe_operations": len(entries),
-                  "by_smell_type": dict(by_smell), "plans": plans})
+                  "by_smell_type": dict(by_smell), "plans": plans,
+                  "agents": routed["agents"], "coverage": routed["coverage"],
+                  "unrouted_smell_types": routed["unrouted_smell_types"]})
 
     if entries:
         return _apply_and_verify(cfg, project_id, repo_path, out, steps, before, detector,
                                  tool_name, entries, kind="composite", plans=plans,
-                                 pre_imports=pre_imports, keep_copy=keep_copy)
+                                 pre_imports=pre_imports, keep_copy=keep_copy,
+                                 new_interfaces=new_interfaces)
 
     moves = derive_moves_from_findings(repo_path, findings, max_moves)
     source = "tool_findings"
@@ -492,10 +493,17 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
                       tool_name: str, plan: List[Any], kind: str = "class",
                       plans: Optional[List[Dict[str, Any]]] = None,
                       pre_imports: Optional[Dict[str, List[str]]] = None,
-                      keep_copy: bool = False) -> Dict[str, Any]:
+                      keep_copy: bool = False,
+                      new_interfaces: Optional[Dict[str, List[str]]] = None) -> Dict[str, Any]:
     """Steps 3-5: run OpenRewrite on a copy, re-detect with the same tool(s), compare."""
     # 3) REFACTOR — copy repo, generate recipe, RUN OpenRewrite (real source changes)
     copy = _copy_repo(repo_path, out / "openrewrite_copy")
+    if new_interfaces:
+        from ..refactoring.hierarchy import create_interface_files
+        made = create_interface_files(copy, new_interfaces)
+        steps.append({"step": "create_supertypes", "tool": "DSARP", "status": "ok",
+                      "note": "empty interfaces written so IntroduceSupertype has a type to "
+                              "implement", **made})
     if pre_imports:
         from ..refactoring.strategies import apply_pre_imports
         pre = apply_pre_imports(copy, pre_imports)
