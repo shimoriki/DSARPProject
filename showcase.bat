@@ -100,6 +100,8 @@ echo         plan       derive concrete class moves that break the cycles
 echo         refactor   OpenRewrite "mvn rewrite:run" rewrites the real source
 echo         re-detect  run BOTH tools again on the refactored code
 echo         compare    report exactly which smells were removed
+echo         re-suggest generate NEW suggestions for the refactored code, so you
+echo                    see what to do next - and what the refactoring introduced
 echo.
 echo       Running on commons-validator (this takes a few minutes)...
 echo.

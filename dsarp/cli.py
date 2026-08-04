@@ -564,6 +564,16 @@ def cmd_refactor_openrewrite(cfg: Config, args) -> int:
                         line += f"\n        blocked: {b}"
             else:
                 line += f" — changed {s.get('changed_count', 0)} files ({s.get('mvn','')})"
+        elif s["step"] == "next_suggestions":
+            line += (f" — {s.get('actionable')} actionable suggestion(s) for the REFACTORED "
+                     f"code over {s.get('smell_types_actionable')} smell type(s)")
+            for smell, n in (s.get("by_smell_type") or {}).items():
+                line += f"\n        {smell}: {n}"
+            if s.get("introduced_smell_types"):
+                line += ("\n        introduced by this refactoring: "
+                         + ", ".join(s["introduced_smell_types"]))
+            for t in (s.get("top") or [])[:4]:
+                line += f"\n        -> {t['refactoring']} for {t['smell_type']}"
         elif s["step"] == "compare":
             if s.get("verification_status") == "verified":
                 line += f" — removed {s.get('removed')} smells, delta {s.get('delta_by_type')}"

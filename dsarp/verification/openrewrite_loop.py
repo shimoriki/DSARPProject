@@ -541,6 +541,37 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
                   "by_tool": after.get("by_tool"),
                   "compile": (after.get("compile") or {}).get("status")})
 
+    # 4b) RE-SUGGEST — plan against the REFACTORED code. Knowing what was removed is only
+    # half the answer; the other half is what to do next. This also surfaces smells the
+    # refactoring itself introduced (splitting a God Component creates a package that gets
+    # flagged as Feature Concentration), which a before/after count alone would hide.
+    next_suggestions: Dict[str, Any] = {}
+    try:
+        from ..refactoring.agents import plan_all
+        re_routed = plan_all(copy, after.get("findings", []))
+        nxt = [p.as_dict() for p in re_routed["plans"] if p.applicable]
+        blocked = [p.as_dict() for p in re_routed["plans"] if not p.applicable]
+        next_suggestions = {
+            "coverage": re_routed["coverage"],
+            "by_smell_type": re_routed["by_smell_type"],
+            "actionable": nxt,
+            "requires_source_inspection": blocked,
+            "introduced_smell_types": sorted(
+                set(after.get("by_type") or {}) - set(before.get("by_type") or {})),
+        }
+        steps.append({"step": "next_suggestions", "tool": "DSARP", "status": "ok",
+                      "actionable": len(nxt),
+                      "smell_types_actionable": len(re_routed["by_smell_type"]),
+                      "by_smell_type": re_routed["by_smell_type"],
+                      "introduced_smell_types": next_suggestions["introduced_smell_types"],
+                      "top": [{"smell_type": p["smell_type"],
+                               "refactoring": p["refactoring"],
+                               "components": p["components"][:2],
+                               "reason": p["reason"]} for p in nxt[:8]]})
+    except Exception as e:                     # never let re-planning break a verified run
+        steps.append({"step": "next_suggestions", "tool": "DSARP", "status": "failed",
+                      "note": f"could not re-plan on the refactored code: {e}"})
+
     # 5) COMPARE — only tools that measured BOTH sides may claim a delta. A tool that
     # could not run after the refactoring (e.g. Arcan when the rewritten code no longer
     # compiles) reports "unmeasurable", never a spurious drop to zero.
@@ -592,7 +623,7 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
               "findings_before": before.get("findings", [])[:200],
               "findings_after": after.get("findings", [])[:200],
               "recipe_path": str(recipe), "changed_files": orw.get("changed_files"),
-              "plans": plans or []}
+              "plans": plans or [], "next_suggestions": next_suggestions}
     write_json(out / "openrewrite_loop_report.json", report)
     write_json(out / f"loop_{detector}_report.json", report)
     # In-memory only: the iterative loop feeds this straight into the next pass as its

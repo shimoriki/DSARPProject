@@ -140,6 +140,40 @@ if b_by or a_by:
     st.caption("Bars are indexed in the same order as the table above.")
 
 # --------------------------------------------------------------------------- #
+# What to do NEXT — suggestions re-planned against the refactored code
+# --------------------------------------------------------------------------- #
+nxt = rep.get("next_suggestions") or {}
+if nxt:
+    st.divider()
+    st.subheader("🔮 Next suggestions — planned against the REFACTORED code")
+    st.caption("Knowing what was removed is only half the answer. These are re-planned on the "
+               "rewritten source, so they also reveal smells the refactoring itself introduced.")
+    cov = nxt.get("coverage") or {}
+    c = st.columns(3)
+    c[0].metric("Actionable now", len(nxt.get("actionable") or []))
+    c[1].metric("Smell types actionable", cov.get("smell_types_refactored", 0))
+    c[2].metric("Need human inspection", len(nxt.get("requires_source_inspection") or []))
+
+    if nxt.get("introduced_smell_types"):
+        st.warning("**Introduced by this refactoring:** "
+                   + ", ".join(nxt["introduced_smell_types"])
+                   + " — splitting a package commonly creates a new one that the detector "
+                     "then flags. Reported rather than hidden.")
+
+    if nxt.get("actionable"):
+        st.markdown("**Run the loop again to apply these**")
+        st.dataframe([{"smell": p["smell_type"], "refactoring": p["refactoring"],
+                       "components": ", ".join(p["components"][:2]),
+                       "operations": p.get("operations"),
+                       "why": p.get("reason", "")} for p in nxt["actionable"]],
+                     use_container_width=True, hide_index=True)
+        st.code("py -m dsarp.cli refactor-iterative --repo <name> --detector both",
+                language="bash")
+    else:
+        st.success("No further automated refactoring applies to this code — the remaining "
+                   "smells all need human design input.")
+
+# --------------------------------------------------------------------------- #
 # Step-by-step evidence
 # --------------------------------------------------------------------------- #
 st.divider()
@@ -147,7 +181,8 @@ st.subheader("Every step, with its real command status")
 for s in rep.get("steps", []):
     name = s.get("step")
     icon = {"detect": "🔍", "plan_moves": "🧭", "plan_refactorings": "🧭", "openrewrite": "🛠️",
-            "re-detect": "🔁", "compare": "📊"}.get(name, "•")
+            "re-detect": "🔁", "compare": "📊", "next_suggestions": "🔮",
+            "create_supertypes": "🏗️", "prepare_imports": "📦"}.get(name, "•")
     ok = s.get("status") in ("ok", "changed", "compiled")
     with st.expander(f"{icon} {name} — {s.get('tool','')} · `{s.get('status')}`", expanded=not ok):
         if name in ("detect", "re-detect"):
@@ -201,6 +236,11 @@ for s in rep.get("steps", []):
                              use_container_width=True, hide_index=True, height=260)
             if s.get("recipe_path"):
                 st.caption(f"Generated recipe: `{s['recipe_path']}`")
+        elif name == "next_suggestions":
+            st.write(f"**{s.get('actionable')} actionable suggestion(s)** for the refactored "
+                     f"code across {s.get('smell_types_actionable')} smell type(s)")
+            if s.get("top"):
+                st.dataframe(s["top"], use_container_width=True, hide_index=True)
         elif name == "compare":
             st.write(f"**{s.get('removed')} smells removed** overall")
             if s.get("per_tool"):

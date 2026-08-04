@@ -1,12 +1,18 @@
 {
-  "node_count": 4,
-  "edge_count": 4,
-  "cycle_count": 1,
-  "scc_count": 1,
+  "node_count": 230,
+  "edge_count": 742,
+  "cycle_count": 13,
+  "scc_count": 2,
   "central_components": [
-    "com.google.common.cache",
+    "com.google.common.util.concurrent",
     "com.google.common.collect",
-    "com.google.common.graph",
-    "com.google.common.io"
+    "com.google.common.base",
+    "com.google.common.io",
+    "com.google.common.testing",
+    "com.google.common.primitives",
+    "com.google.common.cache",
+    "com.google.common.collect.testing",
+    "com.google.common.collect.testing.google",
+    "com.google.common.hash"
   ]
 }

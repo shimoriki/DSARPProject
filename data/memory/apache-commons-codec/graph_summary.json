@@ -1,0 +1,18 @@
+{
+  "node_count": 28,
+  "edge_count": 50,
+  "cycle_count": 0,
+  "scc_count": 0,
+  "central_components": [
+    "org.apache.commons.codec.digest",
+    "org.apache.commons.codec.binary",
+    "org.apache.commons.codec",
+    "java.util",
+    "org.apache.commons.codec.net",
+    "org.apache.commons.codec.cli",
+    "org.apache.commons.codec.language.bm",
+    "java.io",
+    "java.nio.charset",
+    "org.apache.commons.codec.language"
+  ]
+}
