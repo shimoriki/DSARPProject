@@ -88,7 +88,16 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
              "-Dmaven.test.skip=true", "-Dspotless.check.skip=true", "-Dspotbugs.skip=true",
              "-Dpmd.skip=true", "-Danimal.sniffer.skip=true", "-Dlicense.skip=true",
              "-Djacoco.skip=true", "-Dmaven.javadoc.skip=true"]
-    cmd = [mvn, "-B", "-ntp", "-f", str(pom), "compile", *skips]
+    # A submodule of a multi-module build cannot compile standalone — its siblings are not
+    # installed, so Maven reports "Could not resolve dependencies". Build it INSIDE the
+    # reactor instead: `-f <root>/pom.xml -pl <module> -am` also builds what it depends on.
+    reactor = _reactor_root(repo_path)
+    if reactor is not None:
+        rel = repo_path.resolve().relative_to(reactor.resolve()).as_posix()
+        cmd = [mvn, "-B", "-ntp", "-f", str(reactor / "pom.xml"),
+               "-pl", rel, "-am", "compile", *skips]
+    else:
+        cmd = [mvn, "-B", "-ntp", "-f", str(pom), "compile", *skips]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -104,6 +113,29 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
                                              else "compile_failed"),
             "class_dirs": [str(d) for d in dirs], "returncode": proc.returncode,
             "command": " ".join(cmd), "tail": out[-2000:]}
+
+
+def _reactor_root(module_path: Path) -> Optional[Path]:
+    """The multi-module root whose pom lists this directory as a <module>, if any.
+
+    Returns None for a standalone project, so ordinary single-repo runs are unaffected.
+    """
+    module_path = Path(module_path).resolve()
+    parent = module_path.parent
+    for _ in range(3):                      # modules nest at most a couple of levels deep
+        pom = parent / "pom.xml"
+        if pom.exists():
+            try:
+                text = pom.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                return None
+            if f"<module>{module_path.name}</module>" in text.replace(" ", "") or \
+                    f"<module>{module_path.name}</module>" in text:
+                return parent
+        if parent.parent == parent:
+            break
+        parent = parent.parent
+    return None
 
 
 def _class_dirs(repo_path: Path) -> List[Path]:
