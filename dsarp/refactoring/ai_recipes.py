@@ -70,7 +70,12 @@ def _canonical(name: str) -> str:
     name = (name or "").strip()
     if name in ALLOWED_RECIPES:
         return name
-    matches = [full for full in ALLOWED_RECIPES if full.rsplit(".", 1)[-1] == name]
+    # Match on the SIMPLE name of whatever was written, so both a bare name
+    # ("RemoveUnusedImports") and a wrong package ("org.openrewrite.RemoveUnusedImports"
+    # instead of org.openrewrite.java.*) resolve. Recipe simple names are unique here, and
+    # getting the package wrong is a recall slip, not an invented recipe.
+    simple = name.rsplit(".", 1)[-1]
+    matches = [full for full in ALLOWED_RECIPES if full.rsplit(".", 1)[-1] == simple]
     return matches[0] if len(matches) == 1 else name
 
 PROMPT = """You are an expert Java architect using OpenRewrite.
@@ -89,10 +94,19 @@ Propose an OpenRewrite recipe that would REDUCE this smell without breaking comp
 You may ONLY use these recipes, with exactly these options:
 {catalogue}
 
+RULES — a proposal breaking any of these is discarded without being run:
+ 1. Use full recipe names and only the options listed above.
+ 2. Every class, package and interface you name must appear in the facts above.
+ 3. Never target a TEST class.
+ 4. Never move a class listed as MUST NOT be moved.
+ 5. Never delete a class that has external references.
+ 6. IntroduceSupertype only works with an interface that ALREADY exists.
+ 7. Options are strings. For several classes write "a.B,a.C" — never a JSON list.
+
 Reply with JSON only, no prose:
 {{"reasoning": "<one sentence>", "recipes": [{{"recipe": "<name>", "options": {{...}}}}]}}
 
-If none of the available recipes can address this smell, reply:
+If no available recipe can address this smell under these rules, reply:
 {{"reasoning": "<why>", "recipes": []}}
 Proposing a recipe that cannot help is worse than proposing none."""
 
@@ -116,7 +130,13 @@ class Proposal:
 
 
 def _facts_for(facts, component: str) -> str:
-    """A compact, factual context block — no speculation, only what the index knows."""
+    """Factual context INCLUDING the preconditions, so the model can satisfy them up front.
+
+    Earlier versions stated only what the component was, then rejected proposals afterwards
+    for violating rules the model was never told. Every rejection reason the validator can
+    produce is now derivable from this block: which classes may be moved, which are test
+    code, and which interfaces actually exist.
+    """
     lines = []
     jf = facts.file_for(component)
     if jf:
@@ -124,20 +144,48 @@ def _facts_for(facts, component: str) -> str:
         lines.append(f"- {component} is a class in package {pkg}")
         lines.append(f"- external references to it: {facts.reference_count(component)}")
         exposed = facts.exposed_fields(component)
-        if exposed:
-            lines.append(f"- public/protected fields: {', '.join(exposed[:6])}")
+        lines.append(f"- public/protected fields: "
+                     + (", ".join(exposed[:6]) if exposed else "(none — nothing to encapsulate)"))
         blockers = facts.move_blockers(component)
         if blockers:
-            lines.append(f"- CANNOT be moved out of its package: {blockers[0]}")
-        sibs = facts.classes_in(pkg)
-        lines.append(f"- its package holds {len(sibs)} production classes")
-    else:
-        classes = facts.classes_in(component)
-        if classes:
-            lines.append(f"- {component} is a package with {len(classes)} production classes")
-            lines.append(f"- example classes: {', '.join(c.rsplit('.', 1)[-1] for c in classes[:6])}")
+            lines.append(f"- MUST NOT be moved out of its package: {blockers[0]}")
         else:
-            lines.append(f"- {component} was not found in the source index")
+            lines.append("- may be moved to another package")
+    else:
+        pkg = component
+        classes = facts.classes_in(component)
+        if not classes:
+            return f"- {component} was not found in the source index"
+        lines.append(f"- {component} is a package with {len(classes)} production classes")
+
+    # Which siblings are safe to touch, and which are off-limits. Stating this removes the
+    # two mistakes the model made unprompted: targeting test code, and moving a class that
+    # depends on package-private members.
+    movable, blocked, tests = [], [], []
+    for fqn in facts.classes_in(pkg, production_only=False)[:40]:
+        f = facts.file_for(fqn)
+        simple = fqn.rsplit(".", 1)[-1]
+        if f is not None and facts.is_test(f):
+            tests.append(simple)
+        elif facts.move_blockers(fqn):
+            blocked.append(simple)
+        else:
+            movable.append(simple)
+    if movable:
+        lines.append(f"- classes in {pkg} that MAY be moved: {', '.join(movable[:10])}")
+    if blocked:
+        lines.append(f"- classes that MUST NOT be moved (package-private deps): "
+                     f"{', '.join(blocked[:6])}")
+    if tests:
+        lines.append(f"- TEST classes — never refactor these: {', '.join(tests[:6])}")
+
+    # IntroduceSupertype can only implement an interface that already exists.
+    ifaces = [c.rsplit(".", 1)[-1] for c in facts.classes_in(pkg)
+              if re.search(rf"\binterface\s+{re.escape(c.rsplit('.', 1)[-1])}\b",
+                           facts.text_of(c))]
+    lines.append(f"- interfaces that ALREADY exist in {pkg}: "
+                 + (", ".join(ifaces[:8]) if ifaces else
+                    "(none — so IntroduceSupertype is NOT usable here)"))
     return "\n".join(lines)
 
 
@@ -160,7 +208,11 @@ def propose(model, facts, finding: Dict[str, Any]) -> Proposal:
                            facts=_facts_for(facts, component), catalogue=_catalogue())
     p = Proposal(smell_type=smell, component=component)
     try:
-        p.raw = (model.generate(prompt, max_tokens=600, temperature=0.1).text or "")
+        try:
+            p.raw = (model.generate(prompt, max_tokens=600, temperature=0.1,
+                                    json_mode=True).text or "")
+        except TypeError:              # provider without json_mode support
+            p.raw = (model.generate(prompt, max_tokens=600, temperature=0.1).text or "")
     except Exception as e:                                  # model unavailable / timed out
         p.rejection = f"model call failed: {e}"
         return p

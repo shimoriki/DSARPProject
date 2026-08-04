@@ -177,3 +177,14 @@ def test_supertype_must_already_exist(facts):
         facts, {"smell_type": "Wide Hierarchy", "components": ["com.ex.Real"]})
     assert not p.valid
     assert "does not exist" in p.rejection
+
+
+def test_wrong_package_on_a_real_recipe_is_resolved():
+    """Observed: the model wrote org.openrewrite.RemoveUnusedImports (the real one lives in
+    org.openrewrite.java). A misremembered package is a recall slip, not a hallucination."""
+    assert (_canonical("org.openrewrite.RemoveUnusedImports")
+            == "org.openrewrite.java.RemoveUnusedImports")
+
+
+def test_a_genuinely_unknown_recipe_still_fails_canonicalisation():
+    assert _canonical("org.openrewrite.java.NoSuchRecipe") == "org.openrewrite.java.NoSuchRecipe"
