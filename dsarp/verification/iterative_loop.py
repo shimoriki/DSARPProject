@@ -31,6 +31,7 @@ from typing import Any, Dict, Iterable, List, Optional
 from ..config import Config
 from ..util import write_json
 from .effect_checker import _copy_repo
+from ..refactoring.agents import is_expansive
 from .openrewrite_loop import refactor_with_openrewrite_and_verify
 
 
@@ -81,8 +82,22 @@ def per_type_delta(before: Dict[str, int], after: Dict[str, int],
 
 def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                         detector: str = "both", max_passes: int = 5,
-                        strategy: str = "merge_package") -> Dict[str, Any]:
-    """Repeat detect -> refactor -> verify, keeping only passes that measurably help."""
+                        strategy: str = "merge_package",
+                        start_budget: int = 2, patience: int = 1) -> Dict[str, Any]:
+    """Repeat detect -> refactor -> verify, escalating how much is attempted per pass.
+
+    Two behaviours that matter, both learned from measured failures:
+
+    * **Budget escalation.** A pass applies only its `budget` best-ranked plans, starting
+      small and doubling while passes keep being accepted. Applying every plan at once let
+      one bad plan fail the whole pass (log4j2 attempted 186) and let expansive refactorings
+      drown out clean ones.
+    * **Patience.** Splitting a God Component CREATES a package the detector flags, so the
+      count rises before a later pass can consolidate it. Stopping at the first
+      non-improving pass made that outcome unreachable. A pass that still COMPILES but does
+      not improve is now kept, up to `patience` times, so the follow-up pass gets its chance
+      to clean up. A pass that breaks the build is still rolled back immediately.
+    """
     repo_path = Path(repo_path)
     out = cfg.data_dir / "outputs" / project_id
     work = out / "iterative"
@@ -93,13 +108,16 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
     current = _copy_repo(repo_path, work / "pass_0")
     passes: List[Dict[str, Any]] = []
     carried: Optional[Dict[str, Any]] = None   # previous pass's AFTER measurement
+    budget = max(1, start_budget)
+    used_patience = 0
+    best_score: Optional[int] = None
     baseline: Optional[int] = None
     best_by_type: Dict[str, int] = {}
 
     for i in range(1, max_passes + 1):
         rep = refactor_with_openrewrite_and_verify(
             cfg, f"{project_id}__pass{i}", current, detector=detector, strategy=strategy,
-            keep_copy=True, known_before=carried)
+            keep_copy=True, known_before=carried, plan_budget=budget)
 
         b_by = rep.get("by_type_before") or {}
         a_by = rep.get("by_type_after") or {}
@@ -114,8 +132,13 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
         before_score = targeted_score(b_by, targeted) if targeted else score(b_by)
         after_score = ((targeted_score(a_by, targeted) if targeted else score(a_by))
                        if verified else None)
+        # RUN-level metric must be consistent across passes. `before_score`/`after_score`
+        # are computed over the smell types THAT pass targeted, which legitimately differ
+        # per pass — comparing pass 1's baseline to pass 4's result mixes two different
+        # measurements and produced a meaningless "10 -> 18". The run summary therefore uses
+        # the full architectural score, which is the same set every pass.
         if baseline is None:
-            baseline, best_by_type = before_score, b_by
+            baseline, best_by_type = score(b_by), b_by
 
         record = {
             "pass": i, "verification_status": rep.get("verification_status"),
@@ -127,6 +150,7 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                             if "conflicts with another" in (p.get("reason") or "")),
             "files_changed": len(rep.get("changed_files") or []),
             "score_before": before_score, "score_after": after_score,
+            "plan_budget": budget,
             "targeted_smell_types": targeted,
             "per_type": per_type_delta(b_by, a_by, targeted) if verified else None,
             "total_architectural_before": score(b_by),
@@ -142,12 +166,35 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                           stop_reason=f"{why}; rolled back and stopped")
             passes.append(record)
             break
-        if after_score is None or after_score >= before_score:
-            record.update(accepted=False,
-                          stop_reason=f"no improvement ({before_score} -> {after_score} "
-                                      "architectural smells); rolled back and stopped")
-            passes.append(record)
-            break
+        improved = after_score is not None and after_score < before_score
+        if best_score is None:
+            best_score = before_score
+
+        if not improved:
+            # An expansive refactoring (God Component split) is EXPECTED to raise the count
+            # first. Keep the pass and let the next one try to consolidate, but only while
+            # patience lasts and only because the build is still sound.
+            expansive = any(is_expansive(t) for t in targeted)
+            if used_patience < patience and expansive:
+                used_patience += 1
+                record.update(accepted=True, kept_on_patience=True,
+                              stop_reason=None,
+                              note=f"no immediate improvement ({before_score} -> "
+                                   f"{after_score}), but this pass applied an expansive "
+                                   "refactoring that is expected to add smells before a "
+                                   "later pass can consolidate them; compiles, so kept")
+            else:
+                why = ("patience exhausted" if expansive else
+                       "the refactorings applied cannot reduce this smell set")
+                record.update(accepted=False,
+                              stop_reason=f"no improvement ({before_score} -> {after_score}); "
+                                          f"{why}; rolled back and stopped")
+                passes.append(record)
+                break
+        else:
+            used_patience = 0          # real progress resets the allowance
+            budget = min(budget * 2, 64)   # and earns a bigger bite next pass
+            best_score = min(best_score, after_score)
 
         # Accept: the refactored copy becomes the input to the next pass.
         refactored = Path(rep.get("refactored_copy") or "")
@@ -164,11 +211,28 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
         passes.append(record)
 
     accepted = [p for p in passes if p.get("accepted")]
-    final_score = accepted[-1]["score_after"] if accepted else baseline
+    # Patience permits a temporary rise so an expansive refactoring can be consolidated
+    # later — but the RUN must return the best state it found, never merely the last one.
+    # Without this, keeping non-improving passes let commons-cli finish at 31 -> 36, worse
+    # than it started, with every pass marked "accepted".
+    scored = [(p["pass"], p.get("total_architectural_after")) for p in accepted
+              if p.get("total_architectural_after") is not None]
+    best_pass, final_score = (None, baseline)
+    for pnum, sc in scored:
+        if sc < final_score:
+            best_pass, final_score = pnum, sc
+    ended_worse = bool(scored) and scored[-1][1] > baseline
+    if ended_worse and best_pass is None:
+        stop_note = ("every pass compiled, but none reduced the total; the run is reported "
+                     "at its BASELINE because keeping the last state would leave the "
+                     "repository worse than it started")
+    else:
+        stop_note = None
     report = {
         "project_id": project_id, "detector": detector, "strategy": strategy,
         "passes_run": len(passes), "passes_accepted": len(accepted),
-        "metric": "targeted architectural smells (only the types this run refactored)",
+        "metric": "total architectural smells (consistent across passes; per-pass "
+                  "accept/reject uses that pass's targeted types)",
         "architectural_smells_before": baseline,
         "architectural_smells_after": final_score,
         "per_type": (accepted[-1].get("per_type") if accepted else None),
@@ -178,7 +242,9 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
         "smell_types_refactored": sorted({t for p in accepted
                                           for t in p["smell_types_refactored"]}),
         "final_by_type": best_by_type,
-        "stop_reason": passes[-1].get("stop_reason") if passes else "no passes run",
+        "stop_reason": (stop_note or (passes[-1].get("stop_reason") if passes
+                                      else "no passes run")),
+        "best_pass": best_pass, "ended_worse_than_baseline": ended_worse,
         "refactored_source": str(current) if accepted else None,
         "passes": passes,
     }

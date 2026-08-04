@@ -384,7 +384,8 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                                          detector: str = "both",
                                          strategy: str = "merge_package",
                                          keep_copy: bool = False,
-                                         known_before: Optional[Dict[str, Any]] = None
+                                         known_before: Optional[Dict[str, Any]] = None,
+                                         plan_budget: int = 0
                                          ) -> Dict[str, Any]:
     """Full real loop. Returns a step-by-step record with before/after tool smells."""
     repo_path = Path(repo_path)
@@ -470,8 +471,19 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                       "operations": len(merges), "stock_recipes": True,
                       "verification_status": "planned"})
 
+    # Take only the BEST `plan_budget` plans. Applying every plan at once let expansive
+    # refactorings (a God Component split creates a package the detector flags) mask the
+    # clean ones, and gave one bad plan the power to fail the whole pass.
+    from ..refactoring.agents import budgeted_plans, rank_plans
+    chosen = budgeted_plans(routed["plans"], plan_budget)
+    chosen_ids = {id(x) for x in chosen}
     new_interfaces: Dict[str, List[str]] = {}
     for p in routed["plans"]:
+        if p.applicable and id(p) not in chosen_ids:
+            d = p.as_dict(); d.update(applicable=False,
+                                      reason=f"deferred: outside this pass's budget of "
+                                             f"{plan_budget} plan(s)")
+            plans.append(d); continue
         # Two refactorings touching the SAME type in one OpenRewrite pass interfere: e.g.
         # extracting an interface from a class another plan is relocating leaves the new
         # interface pointing at the old package. First plan to claim a type wins.
@@ -503,6 +515,7 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                   "plans_not_applicable": len(plans) - len(applicable),
                   "recipe_operations": len(entries),
                   "by_smell_type": dict(by_smell), "plans": plans,
+                  "plan_budget": plan_budget,
                   "agents": routed["agents"], "coverage": routed["coverage"],
                   "unrouted_smell_types": routed["unrouted_smell_types"]})
 

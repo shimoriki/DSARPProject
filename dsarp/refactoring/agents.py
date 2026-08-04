@@ -152,3 +152,53 @@ def plan_all(repo_path: Path, findings: List[Dict[str, Any]],
         "by_smell_type": dict(collections.Counter(
             p.smell_type for p in plans if p.applicable)),
     }
+
+
+# --------------------------------------------------------------------------- #
+# Ranking and budgeting
+# --------------------------------------------------------------------------- #
+
+# Some refactorings REMOVE a smell without creating anything new; others necessarily create
+# a new package or type that the detector will then flag. Splitting a God Component makes a
+# new package that Designite reports as Feature Concentration, so the count goes UP before a
+# later pass can consolidate it. Applying both kinds together makes the expansive ones mask
+# the clean ones, which is why whole-repo passes looked like "no improvement".
+CLEAN_REFACTORINGS = {
+    "Deficient Encapsulation",      # field -> private, creates nothing
+    "Unutilized Abstraction",       # deletes dead code
+    "Unnecessary Abstraction",
+    "Unstable Dependency",          # relocates a few classes into an existing package
+    "Cyclic Dependency",            # merges a package away, so the graph shrinks
+}
+EXPANSIVE_REFACTORINGS = {
+    "God Component",                # split -> NEW package -> Feature Concentration
+    "Feature Concentration",
+    "Scattered Functionality",
+    "Missing Hierarchy",            # introduces a NEW interface
+    "Wide Hierarchy",
+    "Rebellious Hierarchy",
+}
+
+
+def rank_plans(plans: List[Plan]) -> List[Plan]:
+    """Best-first ordering, so a budget takes the most promising work.
+
+    Clean refactorings first (they can only reduce the count), then expansive ones. Within
+    each group, fewer recipe operations first: a small plan is less likely to interfere with
+    another and cheaper to roll back when it does.
+    """
+    def key(p: Plan):
+        group = 0 if p.smell_type in CLEAN_REFACTORINGS else 1
+        return (group, len(p.entries), p.smell_type)
+    return sorted([p for p in plans if p.applicable], key=key)
+
+
+def budgeted_plans(plans: List[Plan], budget: int) -> List[Plan]:
+    """The `budget` best plans. budget <= 0 means take everything (previous behaviour)."""
+    ranked = rank_plans(plans)
+    return ranked if budget <= 0 else ranked[:budget]
+
+
+def is_expansive(smell_type: str) -> bool:
+    """True when this refactoring is expected to ADD smells before it removes any."""
+    return smell_type in EXPANSIVE_REFACTORINGS
