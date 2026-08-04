@@ -41,6 +41,38 @@ ALLOWED_RECIPES: Dict[str, List[str]] = {
     "com.dsarp.recipes.IntroduceSupertype": ["fullyQualifiedInterfaceName", "classNames"],
 }
 
+# Telling the model only the recipe NAMES made it conclude the catalogue "cannot create new
+# types" and decline — when two of these do exactly that. Each entry says what it achieves.
+RECIPE_EFFECTS: Dict[str, str] = {
+    "org.openrewrite.java.ChangeType": "relocate/rename ONE class and rewrite every reference",
+    "org.openrewrite.java.ChangePackage": "relocate an ENTIRE package and rewrite references",
+    "org.openrewrite.java.ChangeMethodAccessLevel": "widen or narrow a method's visibility",
+    "org.openrewrite.java.ChangeMethodName": "rename a method and every call site",
+    "org.openrewrite.java.ChangeFieldName": "rename a field and every access",
+    "org.openrewrite.java.RemoveUnusedImports": "delete unused imports",
+    "org.openrewrite.DeleteSourceFiles": "delete a source file (only if nothing references it)",
+    "com.dsarp.recipes.ReduceFieldVisibility": "make an exposed field private",
+    "com.dsarp.recipes.ExtractInterfaceForClass":
+        "CREATE a NEW interface from a class's public methods and make the class implement it "
+        "(use this to invert a dependency)",
+    "com.dsarp.recipes.IntroduceSupertype":
+        "CREATE a NEW shared interface and make several named classes implement it "
+        "(use this to give related classes a common abstraction)",
+}
+
+
+def _canonical(name: str) -> str:
+    """Accept a bare recipe name; models routinely drop the package prefix.
+
+    `ExtractInterfaceForClass` names a real recipe — treating that as a hallucination
+    penalises the model for a formatting slip rather than a factual error.
+    """
+    name = (name or "").strip()
+    if name in ALLOWED_RECIPES:
+        return name
+    matches = [full for full in ALLOWED_RECIPES if full.rsplit(".", 1)[-1] == name]
+    return matches[0] if len(matches) == 1 else name
+
 PROMPT = """You are an expert Java architect using OpenRewrite.
 
 A static analysis tool reported this architectural smell:
@@ -72,13 +104,14 @@ class Proposal:
     reasoning: str = ""
     entries: List[RecipeEntry] = field(default_factory=list)
     valid: bool = False
+    declined: bool = False
     rejection: str = ""
     raw: str = ""
 
     def as_dict(self) -> Dict[str, Any]:
         return {"smell_type": self.smell_type, "component": self.component,
                 "reasoning": self.reasoning, "valid": self.valid,
-                "rejection": self.rejection,
+                "declined": self.declined, "rejection": self.rejection,
                 "recipes": [{"recipe": e.recipe, "options": e.options} for e in self.entries]}
 
 
@@ -109,8 +142,12 @@ def _facts_for(facts, component: str) -> str:
 
 
 def _catalogue() -> str:
-    return "\n".join(f"  {name}: {', '.join(opts) if opts else '(no options)'}"
-                     for name, opts in ALLOWED_RECIPES.items())
+    lines = []
+    for name, opts in ALLOWED_RECIPES.items():
+        lines.append(f"  {name}")
+        lines.append(f"      effect:  {RECIPE_EFFECTS.get(name, '')}")
+        lines.append(f"      options: {', '.join(opts) if opts else '(none)'}")
+    return "\n".join(lines)
 
 
 def propose(model, facts, finding: Dict[str, Any]) -> Proposal:
@@ -123,7 +160,7 @@ def propose(model, facts, finding: Dict[str, Any]) -> Proposal:
                            facts=_facts_for(facts, component), catalogue=_catalogue())
     p = Proposal(smell_type=smell, component=component)
     try:
-        p.raw = model.complete(prompt) or ""
+        p.raw = (model.generate(prompt, max_tokens=600, temperature=0.1).text or "")
     except Exception as e:                                  # model unavailable / timed out
         p.rejection = f"model call failed: {e}"
         return p
@@ -141,11 +178,14 @@ def propose(model, facts, finding: Dict[str, Any]) -> Proposal:
     p.reasoning = str(data.get("reasoning", ""))[:300]
     proposed = data.get("recipes") or []
     if not proposed:
-        p.rejection = "model declined to propose a recipe"
+        # Declining can be the CORRECT answer — e.g. refusing to delete a type that is still
+        # referenced. Recorded separately so a good refusal is not scored as a failure.
+        p.declined = True
+        p.rejection = "model declined: " + (p.reasoning[:160] or "no reason given")
         return p
 
     for item in proposed:
-        name = (item or {}).get("recipe", "")
+        name = _canonical((item or {}).get("recipe", ""))
         opts = (item or {}).get("options") or {}
         if name not in ALLOWED_RECIPES:
             p.rejection = f"hallucinated or disallowed recipe: {name!r}"
@@ -164,6 +204,21 @@ def propose(model, facts, finding: Dict[str, Any]) -> Proposal:
             if key.startswith("old") or key == "fullyQualifiedClassName" or key == "classType":
                 if not (facts.file_for(str(value)) or facts.classes_in(str(value))):
                     p.rejection = f"{key}={value!r} does not exist in this repository"
+                    return p
+        # Safety pre-check: models will propose deleting a file whose own stated reasoning
+        # says it is still used. Caught here rather than by the build gate, because a wrong
+        # deletion is cheap to refuse and expensive to discover.
+        if name == "org.openrewrite.DeleteSourceFiles":
+            # filePattern may be a glob OR a regex (".*Constants\\.java"), so pull the trailing
+            # Java identifier out rather than treating it as a path.
+            pattern = str(opts.get("filePattern", ""))
+            m2 = re.search(r"([A-Za-z_]\w*)\s*\\?\.java\s*$", pattern)
+            target = m2.group(1) if m2 else ""
+            for fqn in [k for k in facts._file_of if k.rsplit(".", 1)[-1] == target]:
+                refs = facts.reference_count(fqn)
+                if refs > 0:
+                    p.rejection = (f"proposes deleting {fqn}, which {refs} production file(s) "
+                                   "still reference — the model's own reasoning said as much")
                     return p
         p.entries.append(RecipeEntry(name, opts))
 

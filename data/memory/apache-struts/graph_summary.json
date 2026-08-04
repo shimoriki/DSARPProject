@@ -1,12 +1,18 @@
 {
-  "node_count": 4,
-  "edge_count": 4,
-  "cycle_count": 1,
-  "scc_count": 1,
+  "node_count": 355,
+  "edge_count": 1821,
+  "cycle_count": 2000,
+  "scc_count": 8,
   "central_components": [
-    "org.apache.struts2.views",
+    "java.util",
+    "org.apache.struts2",
+    "org.apache.struts2.util",
+    "java.io",
+    "org.apache.logging.log4j",
     "org.apache.struts2.dispatcher",
+    "org.apache.struts2.inject",
+    "org.apache.struts2.config",
     "org.apache.struts2.interceptor",
-    "org.apache.struts2.config"
+    "org.apache.struts2.tiles"
   ]
 }
