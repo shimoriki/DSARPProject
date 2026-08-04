@@ -28,8 +28,13 @@ if not rep:
     st.error("Report could not be read.")
     st.stop()
 
+st.success("**Scored on the smell types this run targeted**, not the grand total. Splitting a "
+           "God Component creates a new package that Designite flags as Feature Concentration, "
+           "so a refactoring that removed exactly what it aimed at can still make the overall "
+           "count look worse.")
+
 c = st.columns(4)
-c[0].metric("Architectural smells",
+c[0].metric("Targeted smells",
             f"{rep.get('architectural_smells_before')} → {rep.get('architectural_smells_after')}")
 c[1].metric("Removed", rep.get("removed"), delta=f"{rep.get('reduction_pct')}%")
 c[2].metric("Passes accepted", f"{rep.get('passes_accepted')} / {rep.get('passes_run')}")
@@ -60,6 +65,18 @@ last = [p["score_after"] for p in rep.get("passes", [])
 if traj:
     st.line_chart({"architectural smells": traj + (last[-1:] if last else [])}, height=260)
     st.caption("x = pass, y = architectural smells remaining.")
+
+pt = rep.get("per_type") or {}
+if pt.get("targeted"):
+    st.divider()
+    st.subheader("Per smell type")
+    st.markdown("**Targeted — what the refactorings aimed at**")
+    st.dataframe(pt["targeted"], use_container_width=True, hide_index=True)
+    if pt.get("side_effects"):
+        st.markdown("**Side effects — types that moved without being targeted**")
+        st.dataframe(pt["side_effects"], use_container_width=True, hide_index=True)
+        st.caption("New packages created by a split commonly appear here as Feature "
+                   "Concentration. That is a real trade-off, reported rather than hidden.")
 
 if rep.get("stop_reason"):
     st.warning(f"**Stopped:** {rep['stop_reason']}")

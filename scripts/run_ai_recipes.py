@@ -40,15 +40,26 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=8, help="max smells to ask about")
     ap.add_argument("--execute", action="store_true",
                     help="also RUN each validated proposal through the closed loop")
+    ap.add_argument("--model", help="override the model id (e.g. a larger local model)")
+    ap.add_argument("--provider", help="override the provider (ollama, openai-compatible, ...)")
+    ap.add_argument("--base-url", dest="base_url",
+                    help="override the endpoint, e.g. an OpenAI-compatible gateway")
     args = ap.parse_args()
 
     cfg = load_config("local")
     repo_path = RepositoryManager(cfg.data_dir).path_for(args.repo)
     out = cfg.data_dir / "outputs" / args.repo
 
+    # Model is overridable so the same harness can be pointed at a stronger model. A 3B
+    # local model declines far more often than it proposes usefully, so the interesting
+    # experiment is whether capability - not the harness - is the limiting factor.
     model_cfg = dict(cfg.model_provider or {})
+    for key, val in (("model", args.model), ("provider", args.provider),
+                     ("base_url", args.base_url)):
+        if val:
+            model_cfg[key] = val
     provider = get_provider(model_cfg)
-    print(f"[ai] model = {model_cfg.get('provider')}:{model_cfg.get('model')}")
+    print(f"[ai] model = {model_cfg.get('provider') or 'ollama'}:{model_cfg.get('model')}")
 
     det = detect(repo_path, out / "ai_detect", args.detector)
     findings = det.get("findings", [])

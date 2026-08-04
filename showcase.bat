@@ -36,7 +36,7 @@ pause >nul
 
 REM ---------- 1. Dashboard in its own window ----------
 cls
-echo [1/7] Launching the dashboard (opens in your web browser)...
+echo [1/8] Launching the dashboard (opens in your web browser)...
 echo       A new window will run the server; leave it open during the demo.
 start "DSARP Dashboard" cmd /k py -m streamlit run ui/streamlit_app.py
 echo.
@@ -50,7 +50,7 @@ pause >nul
 
 REM ---------- 2. Tests ----------
 cls
-echo [2/7] Proving the system is correct - running the test suite...
+echo [2/8] Proving the system is correct - running the test suite...
 echo.
 py -m pytest -q
 echo.
@@ -59,7 +59,7 @@ pause >nul
 
 REM ---------- 3. Full pipeline demo ----------
 cls
-echo [3/7] End-to-end pipeline demo (offline, no cloud, no API keys)...
+echo [3/8] End-to-end pipeline demo (offline, no cloud, no API keys)...
 echo.
 py -m dsarp.cli demo full
 echo.
@@ -68,7 +68,7 @@ pause >nul
 
 REM ---------- 4. Live suggestions on the UNSEEN test repo ----------
 cls
-echo [4/7] Ranked, evidence-grounded suggestions for Apache Log4j2
+echo [4/8] Ranked, evidence-grounded suggestions for Apache Log4j2
 echo       (the strictly held-out, UNSEEN test repository - never trained on)...
 echo.
 py -m dsarp.cli suggest --repo apache-logging-log4j2 --model offline --top-k 3
@@ -78,7 +78,7 @@ pause >nul
 
 REM ---------- 5. Works on ANY repo + leakage guard ----------
 cls
-echo [5/7] Inference on an unseen local Java repo (proves it is not hardcoded)...
+echo [5/8] Inference on an unseen local Java repo (proves it is not hardcoded)...
 echo.
 py -m dsarp.cli evaluate --name mini-java --path data\samples\mini-java-repo --model offline
 echo.
@@ -91,7 +91,7 @@ pause >nul
 
 REM ---------- 6. THE REAL CLOSED LOOP (headline result) ----------
 cls
-echo [6/7] REAL closed-loop verification - this is the core contribution.
+echo [6/8] REAL closed-loop verification - this is the core contribution.
 echo.
 echo       Both real tools run BEFORE and AFTER an actual refactoring:
 echo         detect     Arcan 1.2.1 (package cycles, unstable, hub-like)
@@ -112,10 +112,34 @@ echo.
 echo  Press a key for the next step...
 pause >nul
 
-REM ---------- 7. The ML result: neural ranker vs trees ----------
+REM ---------- 7. The verification gate - the core contribution ----------
 cls
-echo [7/7] Model comparison - leave-one-repository-out generalization
-echo       (gradient-boosted trees vs the grokking neural ranker):
+echo [7/8] The verification gate - why the numbers can be trusted.
+echo.
+echo       Every claim is measured, and measurement failures are never scored as
+echo       success. Three real examples caught by this gate during development:
+echo.
+echo         - Arcan reported 20 smells -^> 0. FALSE: the refactored code had not
+echo           compiled, so there was no bytecode to analyse. Now reported as
+echo           UNMEASURABLE, and the run is marked unverified_build_broken.
+echo         - An iterative run reported a 13.2%% reduction. FALSE: the build broke,
+echo           Arcan dropped out, and the score was recomputed over fewer tools.
+echo           Acceptance now also requires a COMPILING build.
+echo         - An LLM proposed deleting a class its own reasoning said was still
+echo           referenced. The closed loop returned verdict=rejected because the
+echo           code did not compile.
+echo.
+py -m dsarp.cli refactor-iterative --repo apache-commons-validator --detector both --max-passes 3
+echo.
+echo  Press a key for the next step...
+pause >nul
+
+REM ---------- 8. Supporting evidence: the learned ranker ----------
+cls
+echo [8/8] Supporting evidence - leave-one-repository-out generalization
+echo       (gradient-boosted trees vs the grokking neural ranker).
+echo       This ranks suggestions; it is an evaluation artifact, not part of the
+echo       refactoring critical path.
 echo.
 if exist data\models\model_comparison.json (
   type data\models\model_comparison.json

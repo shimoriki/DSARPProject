@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from ..config import Config
 from ..util import write_json
@@ -46,6 +46,37 @@ def score(by_type: Dict[str, int]) -> int:
     """Objective to minimise: how many architectural smells remain."""
     return sum(n for smell, n in (by_type or {}).items()
                if any(k in smell.lower() for k in ARCHITECTURAL))
+
+
+def targeted_score(by_type: Dict[str, int], targeted: Iterable[str]) -> int:
+    """Remaining count for ONLY the smell types this run actually tried to fix.
+
+    The headline number has to be this, not the total. Splitting a God Component creates a
+    new package that Designite then reports as Feature Concentration, so a refactoring that
+    genuinely removed what it aimed at can still make the grand total look worse. Judging a
+    run on smells it never targeted measures the detector's taxonomy, not the refactoring.
+    """
+    keys = [t.lower() for t in targeted]
+    return sum(n for smell, n in (by_type or {}).items()
+               if any(k in smell.lower() or smell.lower() in k for k in keys))
+
+
+def per_type_delta(before: Dict[str, int], after: Dict[str, int],
+                   targeted: Iterable[str]) -> Dict[str, Any]:
+    """Per-smell-type before/after, split into what was targeted and what moved on its own."""
+    keys = [t.lower() for t in targeted]
+    rows, side_effects = [], []
+    for smell in sorted(set(before) | set(after)):
+        b, a = before.get(smell, 0), after.get(smell, 0)
+        row = {"smell_type": smell, "before": b, "after": a, "delta": a - b}
+        if any(k in smell.lower() or smell.lower() in k for k in keys):
+            rows.append(row)
+        elif a != b:
+            side_effects.append(row)
+    return {"targeted": rows, "side_effects": side_effects,
+            "targeted_removed": sum(r["before"] - r["after"] for r in rows),
+            "targeted_before": sum(r["before"] for r in rows),
+            "targeted_after": sum(r["after"] for r in rows)}
 
 
 def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
@@ -77,8 +108,11 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
         # smells. Accepting a pass therefore also requires a compiling build.
         built = rep.get("build_after_refactoring") == "compiled"
         verified = rep.get("verification_status") == "verified" and built
-        before_score = score(b_by)
-        after_score = score(a_by) if verified else None
+        targeted = sorted({p["smell_type"] for p in (rep.get("plans") or [])
+                           if p.get("applicable")})
+        before_score = targeted_score(b_by, targeted) if targeted else score(b_by)
+        after_score = ((targeted_score(a_by, targeted) if targeted else score(a_by))
+                       if verified else None)
         if baseline is None:
             baseline, best_by_type = before_score, b_by
 
@@ -92,6 +126,10 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                             if "conflicts with another" in (p.get("reason") or "")),
             "files_changed": len(rep.get("changed_files") or []),
             "score_before": before_score, "score_after": after_score,
+            "targeted_smell_types": targeted,
+            "per_type": per_type_delta(b_by, a_by, targeted) if verified else None,
+            "total_architectural_before": score(b_by),
+            "total_architectural_after": score(a_by) if verified else None,
             "by_type_before": b_by, "by_type_after": a_by,
         }
 
@@ -126,8 +164,10 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
     report = {
         "project_id": project_id, "detector": detector, "strategy": strategy,
         "passes_run": len(passes), "passes_accepted": len(accepted),
+        "metric": "targeted architectural smells (only the types this run refactored)",
         "architectural_smells_before": baseline,
         "architectural_smells_after": final_score,
+        "per_type": (accepted[-1].get("per_type") if accepted else None),
         "removed": (baseline - final_score) if baseline is not None else None,
         "reduction_pct": (round(100.0 * (baseline - final_score) / baseline, 1)
                           if baseline else 0.0),
