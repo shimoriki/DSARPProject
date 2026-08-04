@@ -9,6 +9,43 @@
 DSARP Evidence-Based Refactoring Agent — complete modular platform: local + HPC, multi-repo
 training, unseen-repo testing, evidence-grounded no-hallucination suggestions, human HGRS review.
 
+## OPTIMISATION + git-deepen fix + README rewrite (2026-08-04, latest)
+
+**GIT-DEEPEN HANG — ROOT-CAUSED AND FIXED.** `scripts/mine_and_align_refactorings.py` chose
+`git fetch --depth=N` (deepen) whenever an existing clone had `1 < cur < depth`. Deepening a
+partial clone re-negotiates the whole history and hangs; tika 521->1200 sat SILENT for 20+ min
+and produced nothing even though `_git_bounded` had a 600s timeout (the timeout did not save
+it). FIX: **never deepen.** `cur >= depth` -> reuse; otherwise `_force_rmtree` + fresh shallow
+`git clone --depth N` (already tree-killable and proven — spark cloned fine at depth 400).
+VERIFIED: tika now prints "already has 1200 commits (>= 1200); reusing" and git.exe is NOT
+running; the only long-running process is java/RefactoringMiner, which is the legitimately slow
+BOUNDED step. Distinguish these two when diagnosing: `tasklist` for git.exe vs java.exe.
+
+**PERFORMANCE — SourceFacts is the hot path.** Measured on commons-validator (166 files):
+  reference_count         49ms   -> 0.01ms   (~5000x)
+  move_blockers           56ms   -> 4.6ms
+  siblings_referenced_by  13.2ms -> 1.25ms
+  plan_all (91 findings)  10.3s  -> 0.95s    (~11x)
+`_scan()` now builds TWO indexes in its single pass: `_mentions` (identifier -> files) and
+`_tokens` (file -> identifiers). "Does anything mention X" becomes a set op; remaining regexes
+run only against candidates the index cannot decide. Stays FLAT on a 2591-file repo where the
+old code cost ~700ms per reference_count. Output byte-identical (84 planned / 8 applicable).
+Also: `openrewrite_loop._package_classes` / `_has_subpackages` re-walked and re-read every
+.java file on EVERY call -> now backed by a cached SourceFacts (`_FACTS_CACHE`).
+
+**BUG FOUND BY THAT DEDUP:** old `_package_classes` only read the first 2000 chars, so files
+with long Apache licence headers were invisible. Reading properly surfaced `package-info.java`
+in every package, which made any two packages look like they shared a class -> merge planning
+dropped to 0 merges. `SourceFacts._NON_TYPES = ("package-info", "module-info")` excludes them.
+Back to the correct 2 merges AND the truncation bug is gone. LESSON: when optimising, diff the
+OUTPUT not just the timing — this regression was only caught by comparing merge counts.
+
+README fully rewritten for a first-time reader (loop diagram, then detect/plan/refactor/
+re-detect/compare, the 4 compile-safety preconditions, the 3 measurement failures the gate
+caught). Old README still called Cassandra the unseen benchmark (it is training) and never
+mentioned the closed loop. `docs/MVP_RESULTS.md` + UI page `02_MVP_Results.py` state scope.
+Branch feature/arcan-designite-openrewrite-loop pushed; 28 tests pass.
+
 ## GIT + iterative loop + SkillOpt parameter surface (2026-08-04, latest)
 
 GIT: repo initialised (was NOT a git repo). Remote https://github.com/shimoriki/DSARPProject,
