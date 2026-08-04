@@ -65,12 +65,17 @@ class Plan:
     stock: bool = True          # composed only from stock OpenRewrite recipes
     # FQN of a file -> sibling types that must be imported EXPLICITLY before it is moved
     pre_imports: Dict[str, List[str]] = field(default_factory=dict)
+    # True when this plan addresses the WHOLE smell instance, not just part of it. Every
+    # smell type is equally worth fixing; what distinguishes a plan is whether it actually
+    # eliminates the finding or only chips at it.
+    resolves_fully: bool = False
 
     def as_dict(self) -> Dict[str, Any]:
         return {"smell_type": self.smell_type, "refactoring": self.refactoring,
                 "components": self.components[:6], "applicable": self.applicable,
                 "reason": self.reason, "recipes": [e.recipe for e in self.entries],
                 "operations": len(self.entries), "stock_recipes": self.stock,
+                "resolves_fully": self.resolves_fully,
                 "evidence": self.evidence,
                 "verification_status": "planned" if self.applicable
                 else "requires_source_inspection"}
@@ -458,6 +463,7 @@ def plan_god_component(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
                            "would change the public API)",
                     evidence={"package": pkg, "blocked": dict(list(blocked.items())[:3])})
     return Plan("God Component", "Split Package", comps, entries=entries, pre_imports=pre,
+                resolves_fully=(len(entries) == len(members) and not blocked),
                 reason=f"move {len(entries)} of {len(members)} '{stem}' classes out of {pkg} "
                        f"into {sub}" + (f"; {len(blocked)} blocked by package-private access"
                                         if blocked else ""),
@@ -513,7 +519,7 @@ def plan_scattered_functionality(facts: SourceFacts, finding: Dict[str, Any]) ->
                     evidence={"collisions": collide[:5]})
     entries, pre, blocked = _move_entries(facts, moves)
     return Plan("Scattered Functionality", "Consolidate Package", comps,
-                entries=entries, pre_imports=pre,
+                entries=entries, pre_imports=pre, resolves_fully=not collide,
                 reason=f"pull {len(moves)} scattered '{stem}' classes into {pkg}",
                 evidence={"package": pkg, "concern": stem, "moved": len(moves),
                           "skipped_collisions": collide[:5]})
@@ -558,6 +564,7 @@ def plan_unstable_dependency(facts: SourceFacts, finding: Dict[str, Any]) -> Pla
                     evidence={"collisions": collide[:5]})
     entries, pre, blocked = _move_entries(facts, moves)
     return Plan("Unstable Dependency", "Move Class", comps, entries=entries, pre_imports=pre,
+                resolves_fully=not collide and not blocked,
                 reason=f"move {len(moves)} class(es) from {src} into {dst}, removing the "
                        "unstable outgoing dependency",
                 evidence={"from": src, "to": dst, "moved": len(moves)})
@@ -593,7 +600,7 @@ def plan_unutilized_abstraction(facts: SourceFacts, finding: Dict[str, Any]) -> 
                            "would be a breaking change for downstream consumers",
                     evidence={"component": fqn, "references": 0, "public_api": True})
     rel = str(jf.relative_to(facts.repo)).replace("\\", "/")
-    return Plan("Unutilized Abstraction", "Remove Dead Code", comps,
+    return Plan("Unutilized Abstraction", "Remove Dead Code", comps, resolves_fully=True,
                 entries=[RecipeEntry("org.openrewrite.DeleteSourceFiles",
                                      {"filePattern": rel})],
                 reason=f"{fqn} has zero references and is not public API",
@@ -634,7 +641,7 @@ def plan_deficient_encapsulation(facts: SourceFacts, finding: Dict[str, Any]) ->
     entries = [RecipeEntry("com.dsarp.recipes.ReduceFieldVisibility",
                            {"fullyQualifiedClassName": fqn, "fieldName": f}) for f in safe]
     return Plan("Deficient Encapsulation", "Encapsulate Field", comps, entries=entries,
-                stock=False,
+                stock=False, resolves_fully=not blocked,
                 reason=f"make {len(safe)} unreferenced field(s) of {simple} private"
                        + (f"; {len(blocked)} left alone (read externally)" if blocked else ""),
                 evidence={"component": fqn, "fields": safe[:8],

@@ -64,7 +64,7 @@ def plan_introduce_supertype(facts: SourceFacts, finding: Dict[str, Any]) -> Pla
 
     # The interface file itself is created by the loop (see `supertypes` on the Plan) because
     # OpenRewrite's CreateEmptyJavaClass cannot express "in the same source root as X".
-    plan = Plan(smell, "Introduce Supertype", comps, stock=False,
+    plan = Plan(smell, "Introduce Supertype", comps, stock=False, resolves_fully=True,
                 entries=[RecipeEntry("com.dsarp.recipes.IntroduceSupertype",
                                      {"fullyQualifiedInterfaceName": iface,
                                       "classNames": ",".join(group)})],

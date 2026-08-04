@@ -181,16 +181,16 @@ EXPANSIVE_REFACTORINGS = {
 
 
 def rank_plans(plans: List[Plan]) -> List[Plan]:
-    """Best-first ordering, so a budget takes the most promising work.
+    """Best-first ordering by what a plan ACHIEVES, not by which smell it targets.
 
-    Clean refactorings first (they can only reduce the count), then expansive ones. Within
-    each group, fewer recipe operations first: a small plan is less likely to interfere with
-    another and cheaper to roll back when it does.
+    Every smell type matters equally — a Deficient Encapsulation finding is no less worth
+    fixing than a Cyclic Dependency. What separates plans is whether they eliminate the
+    finding outright or merely chip at it, so a plan that fully resolves its smell sorts
+    first. Ties break on fewer recipe operations: a smaller plan is less likely to interfere
+    with another and cheaper to roll back when it does.
     """
-    def key(p: Plan):
-        group = 0 if p.smell_type in CLEAN_REFACTORINGS else 1
-        return (group, len(p.entries), p.smell_type)
-    return sorted([p for p in plans if p.applicable], key=key)
+    return sorted([p for p in plans if p.applicable],
+                  key=lambda p: (0 if p.resolves_fully else 1, len(p.entries), p.smell_type))
 
 
 def budgeted_plans(plans: List[Plan], budget: int) -> List[Plan]:
