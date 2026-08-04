@@ -21,7 +21,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from .strategies import (Plan, SourceFacts, plan_deficient_encapsulation,
+from .strategies import (Plan, SourceFacts, infer_god_threshold,
+                         plan_deficient_encapsulation,
                          plan_extract_interface, plan_god_component,
                          plan_not_automatable, plan_scattered_functionality,
                          plan_unstable_dependency, plan_unutilized_abstraction)
@@ -118,6 +119,9 @@ def plan_all(repo_path: Path, findings: List[Dict[str, Any]],
              facts: Optional[SourceFacts] = None) -> Dict[str, Any]:
     """Route every finding to its agent. Returns plans plus per-agent coverage."""
     facts = facts or SourceFacts(Path(repo_path))
+    # The tool states its own class counts; the smallest package it still flagged bounds the
+    # threshold a split has to get under. Computed once and handed to every planner.
+    god_threshold = infer_god_threshold(findings)
     agents = build_agents()
     plans: List[Plan] = []
     unrouted: List[str] = []
@@ -131,16 +135,24 @@ def plan_all(repo_path: Path, findings: List[Dict[str, Any]],
         seen.add(key)
         if "cyclic" in smell.lower():
             continue                    # owned by the loop's package-merge planner
+        f = {**f, "_god_threshold": god_threshold}
         for agent in agents:
             p = agent.plan(facts, f)
             if p is not None:
+                if p.applicable and is_expansive(p.smell_type) and not p.resolves_fully:
+                    # It would create a package or type the detector flags while leaving the
+                    # original smell in place: a guaranteed net loss.
+                    p.applicable = False
+                    p.reason = ("would create a new package/type the detector flags while "
+                                "leaving the original smell in place, so it cannot reduce "
+                                "the total; only a fully-resolving split is worth applying")
                 plans.append(p)
                 break
         else:
             unrouted.append(smell)
 
     return {
-        "plans": plans,
+        "plans": plans, "god_threshold": god_threshold,
         "agents": [a.summary() for a in agents if a.handled],
         "unrouted_smell_types": sorted(set(unrouted)),
         "coverage": {

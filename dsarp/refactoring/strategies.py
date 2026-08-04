@@ -456,6 +456,21 @@ def plan_god_component(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
     sub = f"{pkg}.{stem.lower()}"
     moves = [(fqn, f"{sub}.{fqn.rsplit('.', 1)[-1]}") for fqn in members]
     entries, pre, blocked = _move_entries(facts, moves)
+    # A split is only worth doing if it gets the package UNDER the threshold the tool
+    # actually uses. Moving 4 of 27 classes leaves the God Component in place AND adds a
+    # new package the detector flags as Feature Concentration — strictly worse than doing
+    # nothing, which is what made most repositories net-negative.
+    threshold = finding.get("_god_threshold")
+    if threshold and entries:
+        remaining = len(classes) - len(entries)
+        if remaining >= threshold:
+            return Plan("God Component", "Split Package", comps, applicable=False,
+                        reason=f"splitting would leave {remaining} classes in {pkg}, still at "
+                               f"or above the {threshold}-class threshold the tool flags at, "
+                               "so the smell would remain AND a new package would be created",
+                        evidence={"package": pkg, "classes": len(classes),
+                                  "movable": len(entries), "remaining": remaining,
+                                  "tool_threshold": threshold})
     if not entries:
         return Plan("God Component", "Split Package", comps, applicable=False,
                     reason=f"every '{stem}' class in {pkg} depends on package-private types or "
@@ -463,7 +478,7 @@ def plan_god_component(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
                            "would change the public API)",
                     evidence={"package": pkg, "blocked": dict(list(blocked.items())[:3])})
     return Plan("God Component", "Split Package", comps, entries=entries, pre_imports=pre,
-                resolves_fully=(len(entries) == len(members) and not blocked),
+                resolves_fully=bool(threshold) and (len(classes) - len(entries)) < threshold,
                 reason=f"move {len(entries)} of {len(members)} '{stem}' classes out of {pkg} "
                        f"into {sub}" + (f"; {len(blocked)} blocked by package-private access"
                                         if blocked else ""),
@@ -471,6 +486,25 @@ def plan_god_component(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
                           "extracted_group": stem, "moved": len(entries),
                           "blocked_by_package_private": dict(list(blocked.items())[:3]),
                           "new_package": sub})
+
+
+def reported_class_count(finding: Dict[str, Any]) -> Optional[int]:
+    """The class count Designite states in its own Description, if present."""
+    m = re.search(r"[Nn]umber of classes[^:]*:\s*(\d+)", finding.get("description") or "")
+    return int(m.group(1)) if m else None
+
+
+def infer_god_threshold(findings: List[Dict[str, Any]]) -> Optional[int]:
+    """Lower bound on the tool's God Component threshold, from its own verdicts.
+
+    Designite flags a package once it exceeds an internal class-count threshold and states
+    the count. The SMALLEST count it still flagged is therefore at or above the threshold,
+    which is exactly what a split has to get below to actually clear the smell.
+    """
+    counts = [n for n in (reported_class_count(f) for f in findings
+                          if "god component" in (f.get("smell_type") or "").lower())
+              if n]
+    return min(counts) if counts else None
 
 
 def _name_stem(simple: str) -> str:
