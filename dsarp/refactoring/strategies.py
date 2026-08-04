@@ -26,6 +26,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from .params import RefactoringParams
+
+# Policy thresholds live in params.py so they can be tuned against the measured
+# reward (build still compiles + smells actually reduced) instead of guessed.
+PARAMS = RefactoringParams.load()
+
 # ---------------------------------------------------------------------------- #
 # recipe entry model
 # ---------------------------------------------------------------------------- #
@@ -369,9 +375,10 @@ def plan_god_component(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
     comps = finding.get("components") or []
     pkg = comps[0] if comps else ""
     classes = facts.classes_in(pkg)
-    if len(classes) < 6:
+    if len(classes) < PARAMS.god_component_min_classes:
         return Plan("God Component", "Split Package", comps, applicable=False,
-                    reason=f"package {pkg} has only {len(classes)} production classes; "
+                    reason=f"package {pkg} has only {len(classes)} production classes "
+                           f"(threshold {PARAMS.god_component_min_classes}); "
                            "splitting would not reduce the smell",
                     evidence={"classes": len(classes)})
     groups: Dict[str, List[str]] = collections.defaultdict(list)
@@ -380,11 +387,14 @@ def plan_god_component(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
         stem = _name_stem(simple)
         if stem:
             groups[stem].append(fqn)
-    best = max((g for g in groups.items() if len(g[1]) >= 3), key=lambda g: len(g[1]),
+    best = max((g for g in groups.items()
+                if len(g[1]) >= PARAMS.god_component_min_group),
+               key=lambda g: len(g[1]),
                default=None)
     if not best:
         return Plan("God Component", "Split Package", comps, applicable=False,
-                    reason=f"no cohesive group of >=3 similarly-named classes found in {pkg}; "
+                    reason=f"no cohesive group of >={PARAMS.god_component_min_group} similarly-named "
+                           f"classes found in {pkg}; "
                            "splitting it needs a human judgement call on responsibilities",
                     evidence={"classes": len(classes), "groups": len(groups)})
     stem, members = best
@@ -483,7 +493,7 @@ def plan_unstable_dependency(facts: SourceFacts, finding: Dict[str, Any]) -> Pla
                     reason=f"no source-level classes in {src} were found referencing {dst}; "
                            "the dependency may be via bytecode/reflection only",
                     evidence={"from": src, "to": dst})
-    if len(crossing) > 6:
+    if len(crossing) > PARAMS.unstable_max_crossing:
         return Plan("Unstable Dependency", "Dependency Inversion", comps, applicable=False,
                     reason=f"{len(crossing)} classes in {src} depend on {dst}; relocating them "
                            "all would be a rewrite, not a refactoring — needs an extracted "
@@ -521,7 +531,7 @@ def plan_unutilized_abstraction(facts: SourceFacts, finding: Dict[str, Any]) -> 
                            "reference count",
                     evidence={"component": fqn, "test_code": True})
     refs = facts.reference_count(fqn)
-    if refs > 0:
+    if refs > PARAMS.dead_code_max_references:
         return Plan("Unutilized Abstraction", "Remove Dead Code", comps, applicable=False,
                     reason=f"{fqn} is still referenced by {refs} production file(s); deleting "
                            "it would break the build",

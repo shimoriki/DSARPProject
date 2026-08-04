@@ -590,6 +590,33 @@ def _slug_from_url(url: str) -> str:
     return "-".join(parts[-2:]).lower() if len(parts) >= 2 else parts[-1].lower()
 
 
+def cmd_refactor_iterative(cfg: Config, args) -> int:
+    """Repeat the closed loop, keeping only passes that build AND reduce smells."""
+    from .verification.iterative_loop import run_until_converged
+    from .repositories.manager import RepositoryManager
+    mgr = RepositoryManager(cfg.data_dir)
+    name = args.repo
+    if getattr(args, "repo_url", None):
+        name = args.repo or _slug_from_url(args.repo_url)
+        mgr.clone(name, args.repo_url, depth=1)
+    repo_path = Path(args.path) if getattr(args, "path", None) else mgr.path_for(name)
+    rep = run_until_converged(cfg, name, repo_path, detector=args.detector,
+                              max_passes=args.max_passes)
+    print(f"[iterative] {name}: {rep['passes_accepted']}/{rep['passes_run']} passes accepted")
+    for p in rep["passes"]:
+        mark = "KEPT" if p.get("accepted") else "rolled back"
+        print(f"  pass {p['pass']}: {p['verification_status']} build={p['build']} "
+              f"score {p['score_before']} -> {p['score_after']} [{mark}]")
+        if p.get("smell_types_refactored"):
+            print(f"          refactored: {', '.join(p['smell_types_refactored'])}")
+        if p.get("stop_reason"):
+            print(f"          stop: {p['stop_reason']}")
+    print(f"[iterative] architectural smells {rep['architectural_smells_before']} -> "
+          f"{rep['architectural_smells_after']} ({rep['reduction_pct']}% reduction)")
+    print(f"[iterative] -> data/outputs/{name}/iterative_loop_report.json")
+    return 0
+
+
 def cmd_ui(cfg: Config, args) -> int:
     import subprocess
     app = Path(__file__).resolve().parent.parent / "ui" / "streamlit_app.py"
@@ -703,6 +730,13 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     pl.add_argument("--repo"); pl.add_argument("--repo-url", dest="repo_url")
     pl.add_argument("--name"); pl.add_argument("--path")
     pl.add_argument("--top-k", type=int, default=8); pl.set_defaults(func=cmd_pipeline)
+
+    ri = sub.add_parser("refactor-iterative")  # repeat until it stops helping
+    ri.add_argument("--repo"); ri.add_argument("--path")
+    ri.add_argument("--repo-url", dest="repo_url")
+    ri.add_argument("--detector", choices=("arcan", "designite", "both"), default="both")
+    ri.add_argument("--max-passes", type=int, default=5, dest="max_passes")
+    ri.set_defaults(func=cmd_refactor_iterative)
 
     ro = sub.add_parser("refactor-openrewrite")  # detect -> OpenRewrite run -> re-detect
     ro.add_argument("--repo"); ro.add_argument("--path")

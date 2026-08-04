@@ -181,13 +181,15 @@ def _dedupe_moves(moves: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
 
 
 def plan_package_merges(repo_path: Path, findings: List[Dict[str, Any]],
-                        max_merges: int = 4) -> List[Tuple[str, str]]:
+                        max_merges: int = 0) -> List[Tuple[str, str]]:
     """Compile-safe plan: merge the smaller package of each cyclic pair into the larger.
 
     Dissolving package A into B removes A from the package graph entirely, so any cycle
     that ran through A is gone — and because every class in A moves together, their
     intra-package references still resolve.
     """
+    from ..refactoring.params import RefactoringParams
+    max_merges = max_merges or RefactoringParams.load().max_package_merges
     sizes: Dict[str, int] = {}
 
     def size(pkg: str) -> int:
@@ -367,7 +369,8 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                                          suggestions: Optional[List[Dict[str, Any]]] = None,
                                          max_moves: int = 30,
                                          detector: str = "both",
-                                         strategy: str = "merge_package") -> Dict[str, Any]:
+                                         strategy: str = "merge_package",
+                                         keep_copy: bool = False) -> Dict[str, Any]:
     """Full real loop. Returns a step-by-step record with before/after tool smells."""
     repo_path = Path(repo_path)
     out = cfg.data_dir / "outputs" / project_id
@@ -450,7 +453,7 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     if entries:
         return _apply_and_verify(cfg, project_id, repo_path, out, steps, before, detector,
                                  tool_name, entries, kind="composite", plans=plans,
-                                 pre_imports=pre_imports)
+                                 pre_imports=pre_imports, keep_copy=keep_copy)
 
     moves = derive_moves_from_findings(repo_path, findings, max_moves)
     source = "tool_findings"
@@ -481,14 +484,15 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
         return report
 
     return _apply_and_verify(cfg, project_id, repo_path, out, steps, before, detector,
-                             tool_name, moves, kind="class")
+                             tool_name, moves, kind="class", keep_copy=keep_copy)
 
 
 def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
                       steps: List[Dict[str, Any]], before: Dict[str, Any], detector: str,
                       tool_name: str, plan: List[Any], kind: str = "class",
                       plans: Optional[List[Dict[str, Any]]] = None,
-                      pre_imports: Optional[Dict[str, List[str]]] = None) -> Dict[str, Any]:
+                      pre_imports: Optional[Dict[str, List[str]]] = None,
+                      keep_copy: bool = False) -> Dict[str, Any]:
     """Steps 3-5: run OpenRewrite on a copy, re-detect with the same tool(s), compare."""
     # 3) REFACTOR — copy repo, generate recipe, RUN OpenRewrite (real source changes)
     copy = _copy_repo(repo_path, out / "openrewrite_copy")
@@ -573,5 +577,10 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
               "plans": plans or []}
     write_json(out / "openrewrite_loop_report.json", report)
     write_json(out / f"loop_{detector}_report.json", report)
-    shutil.rmtree(copy, ignore_errors=True)
+    if keep_copy:
+        # The iterative loop feeds this refactored tree into the next pass; deleting it here
+        # would make every pass restart from the original source.
+        report["refactored_copy"] = str(copy)
+    else:
+        shutil.rmtree(copy, ignore_errors=True)
     return report
