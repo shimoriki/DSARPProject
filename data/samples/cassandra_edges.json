@@ -1,0 +1,9 @@
+[
+  {"source": "org.apache.cassandra.db", "target": "org.apache.cassandra.service", "weight": 8},
+  {"source": "org.apache.cassandra.service", "target": "org.apache.cassandra.db", "weight": 5},
+  {"source": "org.apache.cassandra.net", "target": "org.apache.cassandra.db", "weight": 3},
+  {"source": "org.apache.cassandra.gms", "target": "org.apache.cassandra.net", "weight": 4},
+  {"source": "org.apache.cassandra.net", "target": "org.apache.cassandra.gms", "weight": 2},
+  {"source": "org.apache.cassandra.streaming", "target": "org.apache.cassandra.db", "weight": 6},
+  {"source": "org.apache.cassandra.config", "target": "org.apache.cassandra.db", "weight": 7}
+]

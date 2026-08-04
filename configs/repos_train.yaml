@@ -1,0 +1,16 @@
+# Training repositories. EXPERIMENT (user 2026-07-29): Cassandra is now TRAINING-ONLY
+# (too big to use as a test); Log4j2 is the held-out FIXED TEST (repos_test.yaml).
+# Entry format: {project_id, repo_url}. Plain "org/name" strings also accepted.
+split: train
+repositories:
+  - {project_id: apache-tika,        repo_url: https://github.com/apache/tika}
+  - {project_id: apache-struts,      repo_url: https://github.com/apache/struts}
+  - {project_id: apache-lucene,      repo_url: https://github.com/apache/lucene}
+  - {project_id: apache-commons-lang, repo_url: https://github.com/apache/commons-lang}
+  - {project_id: apache-commons-collections, repo_url: https://github.com/apache/commons-collections}
+  - {project_id: apache-maven,       repo_url: https://github.com/apache/maven}
+  - {project_id: google-guava,       repo_url: https://github.com/google/guava}
+  - {project_id: spring-framework,   repo_url: https://github.com/spring-projects/spring-framework}
+  - {project_id: apache-cassandra,   repo_url: https://github.com/apache/cassandra}
+# Held out (NOT trained on): apache-logging-log4j2 (fixed test, repos_test.yaml),
+# a random repo (repos_unseen.yaml), apache-karaf (validation).

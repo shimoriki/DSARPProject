@@ -1,0 +1,18 @@
+{
+  "node_count": 1122,
+  "edge_count": 7446,
+  "cycle_count": 55,
+  "scc_count": 13,
+  "central_components": [
+    "org.jspecify.annotations",
+    "org.springframework.util",
+    "java.util",
+    "org.springframework.core",
+    "java.io",
+    "org.springframework.context.annotation",
+    "org.apache.commons.logging",
+    "org.springframework.beans.factory",
+    "org.springframework.http",
+    "java.util.function"
+  ]
+}

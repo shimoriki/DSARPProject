@@ -1,0 +1,12 @@
+{
+  "node_count": 4,
+  "edge_count": 4,
+  "cycle_count": 1,
+  "scc_count": 1,
+  "central_components": [
+    "com.google.common.cache",
+    "com.google.common.collect",
+    "com.google.common.graph",
+    "com.google.common.io"
+  ]
+}

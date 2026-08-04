@@ -1,0 +1,138 @@
+@echo off
+REM ===================================================================
+REM  DSARP - Evidence-Based Refactoring Agent : one-click showcase
+REM  Double-click this file, or run it from a terminal in the project.
+REM  Press a key to advance between steps (you control the pacing).
+REM
+REM  SPLIT (current experiment):
+REM    TRAINING     : 9 repos incl. Apache Cassandra (too big to test on)
+REM    UNSEEN TEST  : Apache Log4j2      - never trained on
+REM    RANDOM TEST  : commons-validator  - small held-out repo
+REM ===================================================================
+setlocal
+cd /d "%~dp0"
+title DSARP Refactoring Agent - Showcase
+
+where py >nul 2>&1
+if errorlevel 1 (
+  echo [ERROR] Python launcher "py" not found. Install Python 3.9+ first.
+  pause
+  exit /b 1
+)
+
+cls
+echo ============================================================
+echo    DSARP - Evidence-Based Refactoring Suggestion System
+echo ============================================================
+echo.
+echo  This showcase will:
+echo    1. Open the interactive dashboard in a new window
+echo    2. Run the key demos here, step by step
+echo    3. Finish with the REAL closed loop:
+echo       Arcan + Designite  --^>  OpenRewrite  --^>  re-detect
+echo.
+echo  Press a key to begin...
+pause >nul
+
+REM ---------- 1. Dashboard in its own window ----------
+cls
+echo [1/7] Launching the dashboard (opens in your web browser)...
+echo       A new window will run the server; leave it open during the demo.
+start "DSARP Dashboard" cmd /k py -m streamlit run ui/streamlit_app.py
+echo.
+echo       Waiting a few seconds for the dashboard to start...
+timeout /t 8 >nul
+echo       If your browser did not open, go to the URL shown in the new window
+echo       (usually http://localhost:8501).
+echo.
+echo  Press a key for the next step...
+pause >nul
+
+REM ---------- 2. Tests ----------
+cls
+echo [2/7] Proving the system is correct - running the test suite...
+echo.
+py -m pytest -q
+echo.
+echo  Press a key for the next step...
+pause >nul
+
+REM ---------- 3. Full pipeline demo ----------
+cls
+echo [3/7] End-to-end pipeline demo (offline, no cloud, no API keys)...
+echo.
+py -m dsarp.cli demo full
+echo.
+echo  Press a key for the next step...
+pause >nul
+
+REM ---------- 4. Live suggestions on the UNSEEN test repo ----------
+cls
+echo [4/7] Ranked, evidence-grounded suggestions for Apache Log4j2
+echo       (the strictly held-out, UNSEEN test repository - never trained on)...
+echo.
+py -m dsarp.cli suggest --repo apache-logging-log4j2 --model offline --top-k 3
+echo.
+echo  Press a key for the next step...
+pause >nul
+
+REM ---------- 5. Works on ANY repo + leakage guard ----------
+cls
+echo [5/7] Inference on an unseen local Java repo (proves it is not hardcoded)...
+echo.
+py -m dsarp.cli evaluate --name mini-java --path data\samples\mini-java-repo --model offline
+echo.
+echo       Scientific-integrity check - Log4j2 is excluded from ALL training
+echo       (Cassandra moved into training; Log4j2 is now the held-out benchmark):
+py -m dsarp.cli evaluate apache-logging-log4j2 --dry-run
+echo.
+echo  Press a key for the next step...
+pause >nul
+
+REM ---------- 6. THE REAL CLOSED LOOP (headline result) ----------
+cls
+echo [6/7] REAL closed-loop verification - this is the core contribution.
+echo.
+echo       Both real tools run BEFORE and AFTER an actual refactoring:
+echo         detect     Arcan 1.2.1 (package cycles, unstable, hub-like)
+echo                    + DesigniteJava (class-level design smells)
+echo         plan       derive concrete class moves that break the cycles
+echo         refactor   OpenRewrite "mvn rewrite:run" rewrites the real source
+echo         re-detect  run BOTH tools again on the refactored code
+echo         compare    report exactly which smells were removed
+echo.
+echo       Running on commons-validator (this takes a few minutes)...
+echo.
+py -m dsarp.cli refactor-openrewrite --repo apache-commons-validator --detector both
+echo.
+echo       Full report: data\outputs\apache-commons-validator\openrewrite_loop_report.json
+echo       The dashboard page "Refactoring Verification" shows the same
+echo       before/after smell counts visually.
+echo.
+echo  Press a key for the next step...
+pause >nul
+
+REM ---------- 7. The ML result: neural ranker vs trees ----------
+cls
+echo [7/7] Model comparison - leave-one-repository-out generalization
+echo       (gradient-boosted trees vs the grokking neural ranker):
+echo.
+if exist data\models\model_comparison.json (
+  type data\models\model_comparison.json
+) else (
+  echo   [not found] run once first:  py scripts\sweep_neural_ranker.py
+)
+echo.
+echo ============================================================
+echo    Demo complete.
+echo.
+echo    To analyse ANY repository of your own:
+echo      py -m dsarp.cli refactor-openrewrite --repo-url ^<git url^> --detector both
+echo    ...or paste the git URL into the dashboard's "Analyze Repo" page.
+echo.
+echo    The dashboard is still open at http://localhost:8501
+echo    Close its window (or press Ctrl+C there) to stop it.
+echo ============================================================
+echo.
+pause >nul
+endlocal

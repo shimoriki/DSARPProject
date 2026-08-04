@@ -1,0 +1,18 @@
+{
+  "node_count": 420,
+  "edge_count": 1298,
+  "cycle_count": 138,
+  "scc_count": 5,
+  "central_components": [
+    "java.util",
+    "java.io",
+    "org.apache.spark.network.util",
+    "org.apache.spark.annotation",
+    "org.apache.spark.network.shuffle",
+    "org.apache.spark.sql.catalyst.expressions",
+    "org.apache.spark.sql.execution.datasources.parquet",
+    "org.apache.hive.service.auth",
+    "org.apache.hive.service.cli",
+    "org.apache.hive.service.cli.thrift"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "examples": 1925,
+  "positive": 653,
+  "negative": 1272,
+  "repositories": 8,
+  "by_repository": {
+    "apache-tika": 10,
+    "apache-struts": 10,
+    "apache-lucene": 769,
+    "apache-commons-lang": 281,
+    "apache-commons-collections": 266,
+    "apache-maven": 552,
+    "google-guava": 10,
+    "apache-cassandra": 27
+  },
+  "by_smell_type": {
+    "Cyclic Dependency": 966,
+    "God Component": 396,
+    "Hub-Like Dependency": 561,
+    "Feature Envy": 2
+  },
+  "by_refactoring_type": {
+    "Extract Interface": 348,
+    "Dependency Inversion": 161,
+    "Introduce Facade": 447,
+    "Introduce Adapter": 161,
+    "Move Class": 447,
+    "Move Method": 261,
+    "Extract Class": 99,
+    "Extract Method": 1
+  }
+}

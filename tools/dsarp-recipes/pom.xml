@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DSARP custom OpenRewrite recipes.
+
+  Stock rewrite-java ships transformations we need only as *visitors*
+  (ExtractInterface$CreateInterface, GenerateGetterAndSetterVisitor) which cannot be named
+  from a declarative rewrite.yml, and ships no field-visibility recipe at all. This module
+  wraps them as real Recipes so DSARP can compose them like any other recipe.
+
+  Build + publish to the local repository:
+      mvn -f tools/dsarp-recipes/pom.xml install
+  Then reference from a run with:
+      -Drewrite.recipeArtifactCoordinates=com.dsarp:dsarp-recipes:1.0.0
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.dsarp</groupId>
+  <artifactId>dsarp-recipes</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>DSARP custom OpenRewrite recipes</name>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <rewrite.version>8.37.1</rewrite.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.openrewrite</groupId>
+      <artifactId>rewrite-java</artifactId>
+      <version>${rewrite.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openrewrite</groupId>
+      <artifactId>rewrite-core</artifactId>
+      <version>${rewrite.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+    </plugins>
+  </build>
+</project>

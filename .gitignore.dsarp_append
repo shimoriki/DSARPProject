@@ -1,0 +1,34 @@
+# DSARP generated / large files
+.venv/
+venv/
+__pycache__/
+*.pyc
+.idea/
+.env
+.env.*
+
+# Large generated data
+outputs/
+logs/
+data/raw/
+data/interim/
+data/training/
+data/outputs/
+
+# Local models and binaries
+models/
+*.gguf
+*.bin
+*.pt
+*.pth
+*.safetensors
+
+# Large tool binaries/archives
+tools/**/*.zip
+tools/**/*.jar
+
+# Large data formats Claude should not ingest directly
+*.jsonl
+*.log
+*.graphml
+*.dot

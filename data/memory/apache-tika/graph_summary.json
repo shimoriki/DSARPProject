@@ -1,0 +1,13 @@
+{
+  "node_count": 5,
+  "edge_count": 5,
+  "cycle_count": 1,
+  "scc_count": 1,
+  "central_components": [
+    "org.apache.tika.detect",
+    "org.apache.tika.parser",
+    "org.apache.tika.metadata",
+    "org.apache.tika.mime",
+    "org.apache.tika.sax"
+  ]
+}

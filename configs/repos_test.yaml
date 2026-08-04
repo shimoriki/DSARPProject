@@ -1,0 +1,5 @@
+# Secondary held-out test (a small random repo). Log4j2 is the primary UNSEEN test
+# (repos_unseen.yaml). Neither is used in training.
+split: test
+repositories:
+  - {project_id: apache-commons-validator, repo_url: https://github.com/apache/commons-validator}

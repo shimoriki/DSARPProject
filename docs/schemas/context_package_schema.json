@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DSARP Token-Optimised Context Package",
+  "type": "object",
+  "required": [
+    "context_package_id",
+    "project_id",
+    "revision",
+    "task_type",
+    "token_budget",
+    "stable_context_refs",
+    "project_memory_ref",
+    "evidence_slice",
+    "excluded_context",
+    "cache_keys"
+  ],
+  "properties": {
+    "context_package_id": {"type": "string"},
+    "project_id": {"type": "string"},
+    "revision": {"type": "string"},
+    "task_type": {
+      "type": "string",
+      "enum": [
+        "suggest_refactoring",
+        "explain_candidate",
+        "generate_recipe",
+        "validate_recipe",
+        "rank_candidates",
+        "summarize_evidence",
+        "build_dataset"
+      ]
+    },
+    "token_budget": {
+      "type": "object",
+      "required": ["max_input_tokens", "max_output_tokens", "reserved_output_tokens"],
+      "properties": {
+        "max_input_tokens": {"type": "integer"},
+        "max_output_tokens": {"type": "integer"},
+        "reserved_output_tokens": {"type": "integer"}
+      }
+    },
+    "stable_context_refs": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "project_memory_ref": {"type": "string"},
+    "evidence_slice": {
+      "type": "object",
+      "properties": {
+        "smell_ids": {"type": "array", "items": {"type": "string"}},
+        "evidence_ids": {"type": "array", "items": {"type": "string"}},
+        "affected_components": {"type": "array"},
+        "dependency_edges": {"type": "array", "items": {"type": "object"}},
+        "candidate_refactorings": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": true
+    },
+    "excluded_context": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "reason": {"type": "string"},
+          "stored_at": {"type": "string"},
+          "summary_ref": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "source_inspection_requests": {
+      "type": "array"
+    },
+    "cache_keys": {
+      "type": "object",
+      "properties": {
+        "repo_hash": {"type": "string"},
+        "graph_hash": {"type": "string"},
+        "tool_output_hash": {"type": "string"},
+        "prompt_template_hash": {"type": "string"},
+        "model_config_hash": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

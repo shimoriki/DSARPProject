@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DSARP Refactoring Suggestion",
+  "type": "object",
+  "required": [
+    "suggestion_id",
+    "case_id",
+    "project_id",
+    "revision",
+    "rank",
+    "score",
+    "confidence",
+    "smell_id",
+    "smell_type",
+    "recommended_refactoring",
+    "refactoring_type",
+    "evidence_used",
+    "affected_components",
+    "target_boundary",
+    "reasoning",
+    "implementation_plan",
+    "openrewrite_recipe_plan",
+    "expected_impact",
+    "verification",
+    "no_hallucination_checks",
+    "limitations"
+  ],
+  "properties": {
+    "suggestion_id": {"type": "string"},
+    "case_id": {"type": "string"},
+    "project_id": {"type": "string"},
+    "revision": {"type": "string"},
+    "rank": {"type": "integer", "minimum": 1},
+    "score": {"type": "number", "minimum": 0},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "smell_id": {"type": "string"},
+    "smell_type": {"type": "string"},
+    "recommended_refactoring": {"type": "string"},
+    "refactoring_type": {
+      "type": "string",
+      "enum": [
+        "Move Method",
+        "Move Class",
+        "Extract Interface",
+        "Dependency Inversion",
+        "Introduce Facade",
+        "Introduce Adapter",
+        "Extract Class",
+        "Extract Method",
+        "OpenRewrite Recipe",
+        "Other"
+      ]
+    },
+    "evidence_used": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "affected_components": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "target_entities": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "target_boundary": {
+      "type": "object",
+      "required": ["from", "to", "edge_direction_status"],
+      "properties": {
+        "from": {"type": "string"},
+        "to": {"type": "string"},
+        "edge_direction_status": {
+          "type": "string",
+          "enum": ["supported_by_evidence", "requires_source_inspection"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "reasoning": {"type": "string"},
+    "implementation_plan": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "openrewrite_recipe_plan": {
+      "type": "object",
+      "required": ["recipe_possible", "recipe_type", "recipe_status", "recipe_path", "required_manual_steps"],
+      "properties": {
+        "recipe_possible": {"type": "boolean"},
+        "recipe_type": {
+          "type": "string",
+          "enum": ["YAML", "Java visitor", "Composite", "Not applicable"]
+        },
+        "recipe_status": {
+          "type": "string",
+          "enum": ["draft", "generated", "validated", "failed", "not_applicable"]
+        },
+        "recipe_path": {"type": "string"},
+        "required_manual_steps": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": true
+    },
+    "expected_impact": {
+      "type": "object",
+      "required": ["smell_removed", "cycle_reduction", "coupling_reduction_estimate", "risk_level"],
+      "properties": {
+        "smell_removed": {"type": "string", "enum": ["yes", "partial", "unknown"]},
+        "cycle_reduction": {"type": "number"},
+        "coupling_reduction_estimate": {"type": "number"},
+        "risk_level": {"type": "string", "enum": ["low", "medium", "high"]}
+      },
+      "additionalProperties": true
+    },
+    "verification": {
+      "type": "object",
+      "required": ["source_checked", "openrewrite_dry_run", "build", "tests", "graph_reanalysis"],
+      "properties": {
+        "source_checked": {"type": "boolean"},
+        "openrewrite_dry_run": {"type": "string", "enum": ["not_run", "passed", "failed"]},
+        "build": {"type": "string", "enum": ["not_run", "passed", "failed"]},
+        "tests": {"type": "string", "enum": ["not_run", "passed", "failed"]},
+        "graph_reanalysis": {"type": "string", "enum": ["not_run", "passed", "failed"]}
+      },
+      "additionalProperties": true
+    },
+    "no_hallucination_checks": {
+      "type": "object",
+      "required": ["all_files_exist", "all_entities_exist", "all_edges_supported", "unsupported_claims"],
+      "properties": {
+        "all_files_exist": {"type": "boolean"},
+        "all_entities_exist": {"type": "boolean"},
+        "all_edges_supported": {"type": "boolean"},
+        "unsupported_claims": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": true
+    },
+    "limitations": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,12 @@
+{
+  "node_count": 4,
+  "edge_count": 4,
+  "cycle_count": 1,
+  "scc_count": 1,
+  "central_components": [
+    "org.apache.struts2.views",
+    "org.apache.struts2.dispatcher",
+    "org.apache.struts2.interceptor",
+    "org.apache.struts2.config"
+  ]
+}

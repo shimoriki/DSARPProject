@@ -1,0 +1,14 @@
+{
+  "node_count": 6,
+  "edge_count": 7,
+  "cycle_count": 2,
+  "scc_count": 2,
+  "central_components": [
+    "org.apache.cassandra.db",
+    "org.apache.cassandra.net",
+    "org.apache.cassandra.service",
+    "org.apache.cassandra.gms",
+    "org.apache.cassandra.streaming",
+    "org.apache.cassandra.config"
+  ]
+}

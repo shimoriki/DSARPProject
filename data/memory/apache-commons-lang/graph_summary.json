@@ -1,0 +1,18 @@
+{
+  "node_count": 49,
+  "edge_count": 149,
+  "cycle_count": 147,
+  "scc_count": 1,
+  "central_components": [
+    "org.apache.commons.lang3",
+    "org.apache.commons.lang3.builder",
+    "org.apache.commons.lang3.function",
+    "java.util",
+    "org.apache.commons.lang3.time",
+    "org.apache.commons.lang3.exception",
+    "java.io",
+    "org.apache.commons.lang3.concurrent",
+    "java.util.function",
+    "org.apache.commons.lang3.reflect"
+  ]
+}

@@ -1,0 +1,6 @@
+# UNSEEN test repository (user 2026-07-29): Log4j2 — run the FULL end-to-end pipeline on it
+# (detect smells -> suggest for all smell types -> OpenRewrite recipes -> apply -> re-detect).
+# Never used in training. Cassandra is training-only (too big to test on).
+split: unseen_test
+repositories:
+  - {project_id: apache-logging-log4j2, repo_url: https://github.com/apache/logging-log4j2}

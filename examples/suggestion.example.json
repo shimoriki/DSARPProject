@@ -1,0 +1,92 @@
+{
+  "suggestion_id": "e17793ab-5880-4243-9851-3cbc7a3a46a8",
+  "case_id": "9c794b78-4e5e-4346-a89c-0364374d9038",
+  "project_id": "apache-cassandra",
+  "revision": "HEAD",
+  "rank": 1,
+  "score": 0.9217,
+  "confidence": 0.7927,
+  "smell_id": "SMELL_c505ffac",
+  "smell_type": "Cyclic Dependency",
+  "recommended_refactoring": "Extract Interface",
+  "refactoring_type": "Extract Interface",
+  "evidence_used": [
+    "EVID_19fdecee"
+  ],
+  "affected_components": [
+    {
+      "id": "org.apache.cassandra.db",
+      "level": "package"
+    },
+    {
+      "id": "org.apache.cassandra.service",
+      "level": "package"
+    }
+  ],
+  "target_entities": [],
+  "target_boundary": {
+    "from": "org.apache.cassandra.db",
+    "to": "org.apache.cassandra.service",
+    "edge_direction_status": "supported_by_evidence"
+  },
+  "reasoning": "This refactoring addresses the cyclic dependency by introducing an interface between org.apache.cassandra.db and org.apache.cassandra.service components. The proposed interface will act as a bridge, reducing direct dependencies between these two packages. This approach helps in decoupling the components and simplifying their interactions, thereby mitigating the risk of cyclic dependencies.\n\nThe concrete boundary to change is identified by the edge from 'org.apache.cassandra.db' to 'org.apache.cassandra.service', which requires source inspection to ensure that all necessary methods are correctly exposed through the interface. This step ensures that the refactoring does not introduce any breaking changes and maintains the functionality of both components.",
+  "implementation_plan": [
+    "Inspect source to confirm exact entities in ['org.apache.cassandra.db', 'org.apache.cassandra.service'].",
+    "Confirm edge direction before moving/inverting the dependency.",
+    "Run OpenRewrite dry-run, then Maven compile + tests.",
+    "Re-run dependency graph analysis to confirm smell reduction."
+  ],
+  "openrewrite_recipe_plan": {
+    "recipe_possible": true,
+    "recipe_type": "Java visitor",
+    "recipe_status": "draft",
+    "recipe_path": "C:\\Users\\Rohit\\PycharmProjects\\dsarp-project\\data\\outputs\\recipes\\CAND_7c8c6c2b.java.txt",
+    "required_manual_steps": [
+      "Inspect source to confirm exact entities in ['org.apache.cassandra.db', 'org.apache.cassandra.service'].",
+      "Confirm edge direction before moving/inverting the dependency.",
+      "Run OpenRewrite dry-run, then Maven compile + tests.",
+      "Re-run dependency graph analysis to confirm smell reduction."
+    ]
+  },
+  "expected_impact": {
+    "smell_removed": "partial",
+    "cycle_reduction": 0.85,
+    "coupling_reduction_estimate": 0.425,
+    "risk_level": "low"
+  },
+  "verification": {
+    "source_checked": false,
+    "openrewrite_dry_run": "not_run",
+    "build": "not_run",
+    "tests": "not_run",
+    "graph_reanalysis": "not_run"
+  },
+  "no_hallucination_checks": {
+    "all_files_exist": true,
+    "all_entities_exist": true,
+    "all_edges_supported": true,
+    "unsupported_claims": []
+  },
+  "edge_direction_status": "supported_by_evidence",
+  "verification_status": "passed",
+  "limitations": [
+    "requires_source_inspection",
+    "maven/pom.xml unavailable — recipe validation skipped"
+  ],
+  "rank_breakdown": {
+    "final": 0.9217,
+    "graph_score": 0.9045,
+    "ranker_score": 0.9998,
+    "evidence_confidence": 0.8,
+    "risk": 0.2,
+    "graph_delta": 0.85
+  },
+  "tools_available": [
+    "Arcan",
+    "DependencyGraph",
+    "Designite"
+  ],
+  "tools_unavailable": [
+    "RefactoringMiner"
+  ]
+}

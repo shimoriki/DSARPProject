@@ -1,0 +1,20 @@
+{
+  "review_id": "f4de9235-9ead-4f77-87f7-93857db7fb17",
+  "suggestion_id": "11111111-1111-1111-1111-111111111111",
+  "reviewer": "reviewer1",
+  "scores": {
+    "evidence_grounding": 0.8,
+    "refactoring_relevance": 0.8,
+    "architectural_reasoning": 0.8,
+    "minimality_and_safety": 0.8,
+    "actionability": 0.8,
+    "human_confidence": 0.8,
+    "cost_efficiency": 0.8
+  },
+  "weighted_score": 0.8,
+  "would_try_it": true,
+  "preferred": true,
+  "hallucination_flags": [],
+  "recipe_usefulness": null,
+  "notes": "Clear, evidence-grounded."
+}

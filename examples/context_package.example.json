@@ -1,0 +1,40 @@
+{
+  "context_package_id": "8c820697-7cbb-4eac-bcda-4c20f185145d",
+  "project_id": "example-project",
+  "revision": "abc1234",
+  "task_type": "suggest_refactoring",
+  "token_budget": {
+    "max_input_tokens": 6000,
+    "max_output_tokens": 1200,
+    "reserved_output_tokens": 1200
+  },
+  "stable_context_refs": [
+    "NO_HALLUCINATION_POLICY_v1",
+    "OUTPUT_SCHEMA_v1",
+    "OPENREWRITE_POLICY_v1"
+  ],
+  "project_memory_ref": "PROJECT_SUMMARY_example-project_abc1234",
+  "evidence_slice": {
+    "smell_ids": [
+      "SMELL_001"
+    ],
+    "evidence_ids": [
+      "EVID_001",
+      "EDGE_004"
+    ],
+    "affected_components": [
+      "com.example.a",
+      "com.example.b"
+    ],
+    "dependency_edges": [],
+    "candidate_refactorings": []
+  },
+  "excluded_context": [],
+  "source_inspection_requests": [],
+  "cache_keys": {
+    "repo_hash": "sha256:...",
+    "graph_hash": "sha256:...",
+    "tool_output_hash": "sha256:...",
+    "prompt_template_hash": "sha256:..."
+  }
+}

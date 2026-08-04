@@ -1,0 +1,4 @@
+Project Name,Package Name,Architecture Smell,Severity
+cassandra,org.apache.cassandra.db,God Component,high
+cassandra,org.apache.cassandra.service,Feature Envy,medium
+cassandra,org.apache.cassandra.db,Cyclic Dependency,high

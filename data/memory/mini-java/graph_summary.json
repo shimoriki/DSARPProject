@@ -1,0 +1,10 @@
+{
+  "node_count": 2,
+  "edge_count": 2,
+  "cycle_count": 1,
+  "scc_count": 1,
+  "central_components": [
+    "com.example.alpha",
+    "com.example.beta"
+  ]
+}

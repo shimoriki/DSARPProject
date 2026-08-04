@@ -1,0 +1,29 @@
+# Local laptop profile — offline-first, no cloud, no JVM required.
+profile: local
+db_path: dsarp.sqlite
+
+token_budget:
+  max_input_tokens: 6000
+  max_output_tokens: 1200
+  reserved_output_tokens: 1200
+
+# Default provider is offline (deterministic, network-free). Switch to ollama or
+# llamacpp when a local server is running.
+model_provider:
+  type: ollama             # offline | ollama | llamacpp | openai
+  model: qwen2.5-coder:3b  # detected locally via `ollama list`
+  base_url: http://localhost:11434
+
+tools:
+  mode: import             # import | execute
+  arcan:
+    mode: import           # import | execute
+    command: ""            # e.g. "java -jar tools/arcan/arcan.jar -p {repo_path} -out {output_dir}"
+  designite:
+    mode: import
+    command: ""            # e.g. "java -jar tools/designite/DesigniteJava.jar -i {repo_path} -o {output_dir}"
+
+refactoringminer:
+  mode: import             # import | execute
+  executable_path: ""      # e.g. tools/refactoringminer/bin/RefactoringMiner
+  output_dir: data/raw/refactoringminer

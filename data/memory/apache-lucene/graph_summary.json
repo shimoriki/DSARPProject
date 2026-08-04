@@ -1,0 +1,18 @@
+{
+  "node_count": 789,
+  "edge_count": 3993,
+  "cycle_count": 2000,
+  "scc_count": 19,
+  "central_components": [
+    "java.util",
+    "java.io",
+    "org.apache.lucene.util",
+    "org.apache.lucene.index",
+    "org.apache.lucene.search",
+    "org.apache.lucene.analysis",
+    "org.apache.lucene.store",
+    "org.apache.lucene.tests.util",
+    "org.apache.lucene.analysis.tokenattributes",
+    "org.apache.lucene.document"
+  ]
+}

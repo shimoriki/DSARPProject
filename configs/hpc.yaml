@@ -1,0 +1,32 @@
+# HPC profile — vLLM inference, batch mining, optional LoRA.
+profile: hpc
+db_path: dsarp.sqlite
+
+token_budget:
+  max_input_tokens: 12000
+  max_output_tokens: 2048
+  reserved_output_tokens: 2048
+
+model_provider:
+  type: vllm               # vllm (OpenAI-compatible) on a compute node
+  model: Qwen2.5-Coder-32B-Instruct
+  base_url: http://localhost:8000
+
+tools:
+  mode: execute            # run Arcan/Designite/RefactoringMiner JVM CLIs
+  arcan:
+    mode: execute
+    command: "java -jar tools/arcan/arcan.jar -p {repo_path} -out {output_dir}"
+  designite:
+    mode: execute
+    command: "java -jar tools/designite/DesigniteJava.jar -i {repo_path} -o {output_dir}"
+
+refactoringminer:
+  mode: execute
+  executable_path: tools/refactoringminer/bin/RefactoringMiner
+  output_dir: data/raw/refactoringminer
+
+lora:
+  enabled: false
+  base_model: Qwen2.5-Coder-7B-Instruct
+  dataset: data/training/chat.jsonl

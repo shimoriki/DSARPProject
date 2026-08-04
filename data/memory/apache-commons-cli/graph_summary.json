@@ -1,0 +1,18 @@
+{
+  "node_count": 11,
+  "edge_count": 14,
+  "cycle_count": 1,
+  "scc_count": 1,
+  "central_components": [
+    "org.apache.commons.cli",
+    "org.apache.commons.cli.help",
+    "java.io",
+    "java.util",
+    "java.util.function",
+    "java.lang.reflect",
+    "java.math",
+    "java.net",
+    "java.nio.file",
+    "java.text"
+  ]
+}

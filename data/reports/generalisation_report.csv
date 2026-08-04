@@ -1,0 +1,8 @@
+project_id,num_smells,num_suggestions,evidence_grounding_pass_rate,hallucination_count,json_validity_rate,recipe_applicability,topk_recall_vs_history
+apache-cassandra,5,11,1.0,0,1.0,0.364,
+apache-commons-cli,1,5,1.0,0,1.0,0.4,
+apache-commons-io,36,66,1.0,0,1.0,0.545,
+apache-commons-validator,0,14,1.0,0,1.0,0.357,
+apache-logging-log4j2,0,1073,1.0,0,1.0,0.502,
+mini-java,1,5,1.0,0,1.0,0.4,
+recipes,0,0,0.0,0,1.0,0.0,

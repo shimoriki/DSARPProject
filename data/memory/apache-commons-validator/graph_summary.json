@@ -1,0 +1,18 @@
+{
+  "node_count": 22,
+  "edge_count": 43,
+  "cycle_count": 4,
+  "scc_count": 1,
+  "central_components": [
+    "org.apache.commons.validator",
+    "org.apache.commons.validator.routines",
+    "org.apache.commons.validator.util",
+    "java.io",
+    "java.util",
+    "org.apache.commons.validator.example",
+    "org.apache.commons.validator.routines.checkdigit",
+    "java.text",
+    "java.net",
+    "java.nio.charset"
+  ]
+}

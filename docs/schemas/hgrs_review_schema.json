@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DSARP HGRS Review",
+  "description": "Human grounded-refactoring score. Per-dimension scores are normalized to [0,1]; weighted_score in [0,1] applies HGRS_WEIGHTS (Evidence 25%, Relevance 20%, Reasoning 15%, Minimality/Safety 15%, Actionability 10%, Human Confidence 10%, Cost 5%).",
+  "type": "object",
+  "required": [
+    "review_id",
+    "suggestion_id",
+    "reviewer",
+    "scores",
+    "weighted_score",
+    "would_try_it"
+  ],
+  "properties": {
+    "review_id": {"type": "string"},
+    "suggestion_id": {"type": "string"},
+    "reviewer": {"type": "string"},
+    "scores": {
+      "type": "object",
+      "properties": {
+        "evidence_grounding": {"type": "number", "minimum": 0, "maximum": 1},
+        "refactoring_relevance": {"type": "number", "minimum": 0, "maximum": 1},
+        "architectural_reasoning": {"type": "number", "minimum": 0, "maximum": 1},
+        "minimality_and_safety": {"type": "number", "minimum": 0, "maximum": 1},
+        "actionability": {"type": "number", "minimum": 0, "maximum": 1},
+        "human_confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "cost_efficiency": {"type": "number", "minimum": 0, "maximum": 1}
+      },
+      "additionalProperties": true
+    },
+    "weighted_score": {"type": "number", "minimum": 0, "maximum": 1},
+    "would_try_it": {"type": "boolean"},
+    "preferred": {"type": "boolean"},
+    "hallucination_flags": {"type": "array", "items": {"type": "string"}},
+    "recipe_usefulness": {"type": ["string", "null"]},
+    "notes": {"type": "string"}
+  },
+  "additionalProperties": true
+}

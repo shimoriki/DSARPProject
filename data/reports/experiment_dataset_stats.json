@@ -1,0 +1,18 @@
+{
+  "total": 5846,
+  "by_repository": {
+    "apache-commons-collections": 266,
+    "apache-commons-cli": 6,
+    "apache-commons-lang": 281,
+    "apache-struts": 2715,
+    "apache-commons-io": 180,
+    "apache-cassandra": 2398
+  },
+  "cassandra_rows": 2398,
+  "test_fixed": [
+    "apache-logging-log4j2"
+  ],
+  "unseen_random": [
+    "apache-commons-validator"
+  ]
+}

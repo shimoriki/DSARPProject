@@ -1,0 +1,18 @@
+{
+  "node_count": 454,
+  "edge_count": 2677,
+  "cycle_count": 2000,
+  "scc_count": 8,
+  "central_components": [
+    "java.util",
+    "java.io",
+    "org.apache.maven.project",
+    "javax.inject",
+    "org.apache.maven.impl",
+    "org.apache.maven.execution",
+    "org.apache.maven.internal.impl",
+    "org.apache.maven.plugin",
+    "org.apache.maven",
+    "org.apache.maven.testing.plugin.stubs"
+  ]
+}

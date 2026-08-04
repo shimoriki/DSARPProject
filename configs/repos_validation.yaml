@@ -1,0 +1,4 @@
+# Validation repositories (held out from ranker/LoRA training, NOT the final test).
+split: validation
+repositories:
+  - {project_id: apache-karaf, repo_url: https://github.com/apache/karaf}

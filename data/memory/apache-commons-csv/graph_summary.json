@@ -1,0 +1,18 @@
+{
+  "node_count": 20,
+  "edge_count": 19,
+  "cycle_count": 0,
+  "scc_count": 0,
+  "central_components": [
+    "org.apache.commons.csv",
+    "java.io",
+    "java.net",
+    "java.nio",
+    "java.nio.charset",
+    "java.nio.file",
+    "java.sql",
+    "java.util",
+    "java.util.concurrent.locks",
+    "java.util.function"
+  ]
+}

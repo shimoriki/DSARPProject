@@ -1,0 +1,219 @@
+{
+  "splits": {
+    "train": [
+      "apache-tika",
+      "apache-struts",
+      "apache-lucene",
+      "apache-commons-lang",
+      "apache-commons-collections",
+      "apache-maven",
+      "google-guava",
+      "spring-framework",
+      "apache-cassandra"
+    ],
+    "validation": [
+      "apache-karaf"
+    ],
+    "test": [
+      "apache-commons-validator"
+    ],
+    "unseen": [
+      "apache-logging-log4j2"
+    ]
+  },
+  "training_repositories": [
+    "apache-tika",
+    "apache-struts",
+    "apache-lucene",
+    "apache-commons-lang",
+    "apache-commons-collections",
+    "apache-maven",
+    "google-guava",
+    "spring-framework",
+    "apache-cassandra"
+  ],
+  "validation_repositories": [
+    "apache-karaf"
+  ],
+  "unseen_test_repositories": [
+    "apache-logging-log4j2"
+  ],
+  "examples_per_repository": {
+    "apache-tika": 10,
+    "apache-struts": 10,
+    "apache-lucene": 769,
+    "apache-commons-lang": 281,
+    "apache-commons-collections": 266,
+    "apache-maven": 552,
+    "google-guava": 10,
+    "apache-cassandra": 27
+  },
+  "smell_distribution": {
+    "Cyclic Dependency": 966,
+    "God Component": 396,
+    "Hub-Like Dependency": 561,
+    "Feature Envy": 2
+  },
+  "refactoring_distribution": {
+    "Extract Interface": 348,
+    "Dependency Inversion": 161,
+    "Introduce Facade": 447,
+    "Introduce Adapter": 161,
+    "Move Class": 447,
+    "Move Method": 261,
+    "Extract Class": 99,
+    "Extract Method": 1
+  },
+  "loro_mean_validation_score": 0.9634,
+  "loro_folds": [
+    {
+      "held_out": "apache-cassandra",
+      "train_count": 1898,
+      "val_count": 27,
+      "train_score": 1.0,
+      "validation_score": 0.7778,
+      "overfitting_warning": false
+    },
+    {
+      "held_out": "apache-commons-collections",
+      "train_count": 1659,
+      "val_count": 266,
+      "train_score": 1.0,
+      "validation_score": 0.9737,
+      "overfitting_warning": false
+    },
+    {
+      "held_out": "apache-commons-lang",
+      "train_count": 1644,
+      "val_count": 281,
+      "train_score": 1.0,
+      "validation_score": 0.9929,
+      "overfitting_warning": false
+    },
+    {
+      "held_out": "apache-lucene",
+      "train_count": 1156,
+      "val_count": 769,
+      "train_score": 1.0,
+      "validation_score": 0.9805,
+      "overfitting_warning": false
+    },
+    {
+      "held_out": "apache-maven",
+      "train_count": 1373,
+      "val_count": 552,
+      "train_score": 1.0,
+      "validation_score": 0.9819,
+      "overfitting_warning": false
+    },
+    {
+      "held_out": "apache-struts",
+      "train_count": 1915,
+      "val_count": 10,
+      "train_score": 1.0,
+      "validation_score": 1.0,
+      "overfitting_warning": false
+    },
+    {
+      "held_out": "apache-tika",
+      "train_count": 1915,
+      "val_count": 10,
+      "train_score": 1.0,
+      "validation_score": 1.0,
+      "overfitting_warning": false
+    },
+    {
+      "held_out": "google-guava",
+      "train_count": 1915,
+      "val_count": 10,
+      "train_score": 1.0,
+      "validation_score": 1.0,
+      "overfitting_warning": false
+    }
+  ],
+  "per_repository_quality": [
+    {
+      "project_id": "apache-cassandra",
+      "num_suggestions": 11,
+      "num_smells": 5,
+      "evidence_grounding_pass_rate": 1.0,
+      "hallucination_count": 0,
+      "json_validity_rate": 1.0,
+      "recipe_draft_count": 4,
+      "recipe_applicability": 0.364,
+      "topk_recall_vs_history": null
+    },
+    {
+      "project_id": "apache-commons-cli",
+      "num_suggestions": 5,
+      "num_smells": 1,
+      "evidence_grounding_pass_rate": 1.0,
+      "hallucination_count": 0,
+      "json_validity_rate": 1.0,
+      "recipe_draft_count": 2,
+      "recipe_applicability": 0.4,
+      "topk_recall_vs_history": null
+    },
+    {
+      "project_id": "apache-commons-io",
+      "num_suggestions": 66,
+      "num_smells": 36,
+      "evidence_grounding_pass_rate": 1.0,
+      "hallucination_count": 0,
+      "json_validity_rate": 1.0,
+      "recipe_draft_count": 36,
+      "recipe_applicability": 0.545,
+      "topk_recall_vs_history": null
+    },
+    {
+      "project_id": "apache-commons-validator",
+      "num_suggestions": 14,
+      "num_smells": 0,
+      "evidence_grounding_pass_rate": 1.0,
+      "hallucination_count": 0,
+      "json_validity_rate": 1.0,
+      "recipe_draft_count": 5,
+      "recipe_applicability": 0.357,
+      "topk_recall_vs_history": null
+    },
+    {
+      "project_id": "apache-logging-log4j2",
+      "num_suggestions": 1073,
+      "num_smells": 0,
+      "evidence_grounding_pass_rate": 1.0,
+      "hallucination_count": 0,
+      "json_validity_rate": 1.0,
+      "recipe_draft_count": 539,
+      "recipe_applicability": 0.502,
+      "topk_recall_vs_history": null
+    },
+    {
+      "project_id": "mini-java",
+      "num_suggestions": 5,
+      "num_smells": 1,
+      "evidence_grounding_pass_rate": 1.0,
+      "hallucination_count": 0,
+      "json_validity_rate": 1.0,
+      "recipe_draft_count": 2,
+      "recipe_applicability": 0.4,
+      "topk_recall_vs_history": null
+    },
+    {
+      "project_id": "recipes",
+      "num_suggestions": 0,
+      "num_smells": 0,
+      "evidence_grounding_pass_rate": 0.0,
+      "hallucination_count": 0,
+      "json_validity_rate": 1.0,
+      "recipe_draft_count": 0,
+      "recipe_applicability": 0.0,
+      "topk_recall_vs_history": null
+    }
+  ],
+  "type_generalisation": {
+    "best_refactoring_type": "Introduce Facade",
+    "worst_refactoring_type": "Extract Method",
+    "best_smell_type": "Cyclic Dependency",
+    "worst_smell_type": "Feature Envy"
+  }
+}

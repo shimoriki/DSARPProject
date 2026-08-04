@@ -1,0 +1,10 @@
+[
+  {"smell_type": "Cyclic Dependency", "component_level": "package", "severity": "high",
+   "affected_components": ["org.apache.cassandra.db", "org.apache.cassandra.service"],
+   "metrics": {"cycle_length": 2}},
+  {"smell_type": "Hub-Like Dependency", "component_level": "package", "severity": "medium",
+   "affected_components": ["org.apache.cassandra.db"], "metrics": {"fan_in": 4, "fan_out": 1}},
+  {"smell_type": "Cyclic Dependency", "component_level": "package", "severity": "medium",
+   "affected_components": ["org.apache.cassandra.net", "org.apache.cassandra.gms"],
+   "metrics": {"cycle_length": 2}}
+]

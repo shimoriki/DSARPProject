@@ -1,0 +1,12 @@
+{
+  "node_count": 4,
+  "edge_count": 4,
+  "cycle_count": 1,
+  "scc_count": 1,
+  "central_components": [
+    "org.apache.logging.log4j.appender",
+    "org.apache.logging.log4j.core",
+    "org.apache.logging.log4j.layout",
+    "org.apache.logging.log4j.config"
+  ]
+}

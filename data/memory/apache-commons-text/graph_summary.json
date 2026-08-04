@@ -1,0 +1,18 @@
+{
+  "node_count": 30,
+  "edge_count": 54,
+  "cycle_count": 1,
+  "scc_count": 1,
+  "central_components": [
+    "org.apache.commons.text.lookup",
+    "org.apache.commons.text",
+    "java.util",
+    "org.apache.commons.text.translate",
+    "org.apache.commons.text.similarity",
+    "org.apache.commons.lang3",
+    "java.io",
+    "java.util.Map",
+    "java.util.function",
+    "java.util.stream"
+  ]
+}
