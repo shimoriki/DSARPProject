@@ -2,8 +2,11 @@ import streamlit as st
 from _common import cfg, list_projects, load_report
 from dsarp.util import read_jsonl
 
-st.title("📊 Reports")
-st.caption("Loop 13: quality, grounding, hallucination, recipe & token metrics across projects.")
+st.title("📊 Suggestion quality reports")
+st.caption("The no-hallucination evidence for the SUGGESTION stage, per project: how many "
+           "suggestions cited real evidence, how many made unsupported claims, and whether the "
+           "output was schema-valid. This is separate from the refactoring loop — see "
+           "**Real Tool Loop** for whether a refactoring actually removed a smell.")
 
 projects = list_projects()
 rows = []

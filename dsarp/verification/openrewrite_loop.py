@@ -40,6 +40,19 @@ DETECTORS = ("arcan", "designite", "both")
 _FACTS_CACHE: Dict[str, Any] = {}
 
 
+def detect_build_system(repo_path: Path) -> str:
+    """maven | gradle | ant | unknown — decides whether DSARP can refactor at all."""
+    p = Path(repo_path)
+    if (p / "pom.xml").exists():
+        return "maven"
+    if any((p / n).exists() for n in ("build.gradle", "build.gradle.kts", "settings.gradle",
+                                      "settings.gradle.kts")):
+        return "gradle"
+    if (p / "build.xml").exists():
+        return "ant"
+    return "unknown"
+
+
 def designite_jar() -> Optional[Path]:
     tools = Path(__file__).resolve().parent.parent.parent / "tools"
     jars = sorted(tools.glob("*esignite*.jar"))
@@ -379,6 +392,33 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     steps: List[Dict[str, Any]] = []
     tool_name = {"arcan": "Arcan 1.2.1", "designite": "DesigniteJava"}.get(
         detector, "Arcan 1.2.1 + DesigniteJava")
+
+    # OpenRewrite runs through rewrite-maven-plugin, and Arcan needs `mvn compile` for
+    # bytecode. A Gradle project (Solr, Cassandra, Lucene, Spring) therefore cannot be
+    # refactored or verified here. Say so up front: silently emitting suggestions with no
+    # verification looks like the loop ran and found nothing worth doing.
+    build = detect_build_system(repo_path)
+    if build != "maven":
+        note = (f"{project_id} is a {build} project. DSARP refactors through OpenRewrite's "
+                "rewrite-maven-plugin and Arcan needs `mvn compile` for bytecode, so this "
+                "repository can be ANALYSED but not refactored or verified. Gradle support "
+                "would need rewrite-gradle-plugin.")
+        before = detect(repo_path, out / f"{detector}_before", detector)
+        steps.append({"step": "detect", "tool": tool_name, "status": before["status"],
+                      "smells": before.get("smells"), "by_type": before.get("by_type"),
+                      "by_tool": before.get("by_tool")})
+        steps.append({"step": "openrewrite", "status": "skipped", "note": note})
+        report = {"project_id": project_id, "detector": detector, "tool": tool_name,
+                  "steps": steps, "build_system": build,
+                  "verification_status": "not_verifiable_unsupported_build",
+                  "note": note,
+                  "smells_before": before.get("smells"),
+                  "by_type_before": before.get("by_type"),
+                  "by_tool_before": before.get("by_tool"),
+                  "findings_before": before.get("findings", [])[:200]}
+        write_json(out / "openrewrite_loop_report.json", report)
+        write_json(out / f"loop_{detector}_report.json", report)
+        return report
 
     # 1) DETECT (real tool). The iterative loop passes the previous pass's AFTER result in,
     # because it measured exactly this source tree — re-running mvn compile plus both tools

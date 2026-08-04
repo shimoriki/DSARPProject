@@ -167,14 +167,24 @@ if go and (url or local):
         det = detector if _AVAIL.get(detector, False) or detector == "both" else _tools[0]
         with st.spinner(f"Real tool loop ({det}) — compiling, detecting, running OpenRewrite, "
                         "re-detecting … this takes a few minutes"):
-            from dsarp.verification.openrewrite_loop import refactor_with_openrewrite_and_verify
+            from dsarp.verification.iterative_loop import run_until_converged
+            from dsarp.verification.openrewrite_loop import detect_build_system
             from dsarp.repositories.manager import RepositoryManager
             repo_path = Path(local) if local else RepositoryManager(data_dir()).path_for(name)
-            sugs = read_json(data_dir() / "outputs" / name / "suggestions.json", default=[]) or []
-            try:
-                refactor_with_openrewrite_and_verify(cfg(), name, repo_path, sugs, detector=det)
-            except Exception as e:  # keep the pipeline result visible even if the loop fails
-                st.warning(f"Real tool loop could not complete: {e}")
+            build = detect_build_system(repo_path)
+            if build != "maven":
+                st.warning(
+                    f"**{name} is a {build} project — it can be analysed but not refactored.** "
+                    "DSARP rewrites through OpenRewrite's rewrite-maven-plugin, and Arcan "
+                    "needs `mvn compile` for bytecode. Suggestions below are real; the "
+                    "verification steps are genuinely unavailable, not merely empty.")
+            else:
+                try:
+                    # the ITERATIVE loop, so every pass runs detect -> refactor -> re-detect
+                    # -> re-suggest, and stops itself when a pass stops being safe
+                    run_until_converged(cfg(), name, repo_path, detector=det, max_passes=3)
+                except Exception as e:   # keep the pipeline result visible if the loop fails
+                    st.warning(f"Real tool loop could not complete: {e}")
     _render_report(report)
 else:
     st.divider()
