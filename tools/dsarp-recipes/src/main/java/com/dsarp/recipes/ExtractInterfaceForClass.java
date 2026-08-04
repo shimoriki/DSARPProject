@@ -66,12 +66,26 @@ public class ExtractInterfaceForClass extends Recipe {
             @Override
             public J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl,
                                                             ExecutionContext ctx) {
-                if (classDecl.getType() == null
-                        || !TypeUtils.isOfClassType(classDecl.getType(), fullyQualifiedClassName)) {
-                    return classDecl;
+                J.ClassDeclaration cd = classDecl;
+
+                // rewrite-java's CreateInterface copies the source type's `extends` clause
+                // onto the generated interface. `interface X extends SomeClass` is illegal
+                // Java ("interface expected here"), which made this recipe unusable on any
+                // class with a superclass - i.e. most of the ones worth extracting from.
+                // The interface only needs the method signatures, so the clause is dropped.
+                if (cd.getKind() == J.ClassDeclaration.Kind.Type.Interface
+                        && cd.getExtends() != null
+                        && cd.getType() != null
+                        && TypeUtils.isOfClassType(cd.getType(), fullyQualifiedInterfaceName)) {
+                    return cd.withExtends(null);
+                }
+
+                if (cd.getType() == null
+                        || !TypeUtils.isOfClassType(cd.getType(), fullyQualifiedClassName)) {
+                    return cd;
                 }
                 doAfterVisit(new ExtractInterface.CreateInterface(fullyQualifiedInterfaceName));
-                return classDecl;
+                return cd;
             }
         };
     }
