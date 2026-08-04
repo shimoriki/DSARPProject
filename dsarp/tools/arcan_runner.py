@@ -73,10 +73,17 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
                 "note": "Arcan needs compiled classes; Maven not found."}
     pom = repo_path / "pom.xml"
     if not pom.exists():
-        return {"ok": bool(existing),
-                "status": "reused_existing_classes" if existing else "no_pom",
-                "class_dirs": [str(d) for d in existing],
-                "note": None if existing else "No pom.xml, cannot compile for Arcan."}
+        if existing:
+            return {"ok": True, "status": "reused_existing_classes",
+                    "class_dirs": [str(d) for d in existing]}
+        # No pom, but Gradle can still produce the bytecode Arcan needs. Detection works
+        # on Gradle projects even though OpenRewrite's maven plugin cannot refactor them.
+        from ..verification.openrewrite_loop import detect_build_system
+        if detect_build_system(repo_path) == "gradle":
+            return compile_gradle(repo_path, timeout=timeout, log_path=log_path)
+        return {"ok": False, "status": "no_pom",
+                "class_dirs": [],
+                "note": "No pom.xml or Gradle build, cannot compile for Arcan."}
     skips = ["-Drat.skip=true", "-Dcheckstyle.skip=true", "-Denforcer.skip=true",
              "-Dmaven.test.skip=true", "-Dspotless.check.skip=true", "-Dspotbugs.skip=true",
              "-Dpmd.skip=true", "-Danimal.sniffer.skip=true", "-Dlicense.skip=true",
@@ -100,12 +107,52 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
 
 
 def _class_dirs(repo_path: Path) -> List[Path]:
-    """Every module's target/classes that actually holds .class files."""
+    """Compiled-output directories holding .class files, Maven or Gradle."""
     out = []
-    for d in sorted(Path(repo_path).rglob("target/classes")):
-        if d.is_dir() and next(d.rglob("*.class"), None) is not None:
-            out.append(d)
+    # Maven: target/classes   Gradle: build/classes/java/main
+    for pattern in ("target/classes", "build/classes/java/main"):
+        for d in sorted(Path(repo_path).rglob(pattern)):
+            if d.is_dir() and next(d.rglob("*.class"), None) is not None:
+                out.append(d)
     return out
+
+
+def gradle_wrapper(repo_path: Path) -> Optional[str]:
+    """The project's own Gradle wrapper, which pins the version the build expects."""
+    import os
+    name = "gradlew.bat" if os.name == "nt" else "gradlew"
+    w = Path(repo_path) / name
+    return str(w) if w.exists() else (shutil.which("gradle") or None)
+
+
+def compile_gradle(repo_path: Path, timeout: int = 2400,
+                   log_path: Optional[Path] = None) -> Dict[str, Any]:
+    """`gradlew classes` so Arcan has bytecode for a Gradle project.
+
+    Arcan reads .class files and does not care which build tool produced them, so a Gradle
+    project can be fully DETECTED even though OpenRewrite's maven plugin cannot refactor it.
+    """
+    repo_path = Path(repo_path)
+    gw = gradle_wrapper(repo_path)
+    if not gw:
+        return {"ok": False, "status": "gradle_not_found",
+                "note": "No gradlew wrapper and no gradle on PATH."}
+    cmd = [gw, "classes", "--no-daemon", "-q",
+           "-x", "test", "--console=plain"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
+                              cwd=str(repo_path))
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return {"ok": False, "status": "compile_timeout", "note": str(e)[:200]}
+    out = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    if log_path:
+        Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(log_path).write_text(out, encoding="utf-8")
+    dirs = _class_dirs(repo_path)
+    ok = bool(dirs)
+    return {"ok": ok, "status": "compiled" if ok else "compile_failed",
+            "class_dirs": [str(d) for d in dirs], "returncode": proc.returncode,
+            "build_tool": "gradle", "command": " ".join(cmd), "tail": out[-2000:]}
 
 
 def run_arcan(classes_dir: Path, out_dir: Path, timeout: int = 2400,

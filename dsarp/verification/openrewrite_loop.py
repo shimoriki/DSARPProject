@@ -398,11 +398,17 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     # refactored or verified here. Say so up front: silently emitting suggestions with no
     # verification looks like the loop ran and found nothing worth doing.
     build = detect_build_system(repo_path)
-    if build != "maven":
-        note = (f"{project_id} is a {build} project. DSARP refactors through OpenRewrite's "
-                "rewrite-maven-plugin and Arcan needs `mvn compile` for bytecode, so this "
-                "repository can be ANALYSED but not refactored or verified. Gradle support "
-                "would need rewrite-gradle-plugin.")
+    if build == "gradle":
+        # Gradle IS supported: Arcan compiles via `gradlew classes`, and OpenRewrite runs
+        # through rewrite-gradle-plugin applied with --init-script so the repo's own build
+        # files are never modified. It is slower and less proven than the Maven path.
+        from ..tools.arcan_runner import gradle_wrapper
+        if not gradle_wrapper(repo_path):
+            build = "gradle-no-wrapper"
+    if build not in ("maven", "gradle"):
+        note = (f"{project_id} is a {build} project. DSARP drives OpenRewrite through the "
+                "Maven and Gradle plugins only, and Arcan needs compiled bytecode, so this "
+                "repository can be ANALYSED but not refactored or verified.")
         before = detect(repo_path, out / f"{detector}_before", detector)
         steps.append({"step": "detect", "tool": tool_name, "status": before["status"],
                       "smells": before.get("smells"), "by_type": before.get("by_type"),

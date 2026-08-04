@@ -129,6 +129,74 @@ def write_composite_recipe(repo_path: Path, entries: List[Any],
     return path
 
 
+GRADLE_PLUGIN_VERSION = "6.29.0"       # rewrite-gradle-plugin
+
+# Applied with `--init-script`, so the target repository's own build files are never touched.
+# `allprojects` reaches every subproject, which matters for the multi-module Gradle builds
+# (Solr, Cassandra, Lucene, Spring) that DSARP could previously only analyse, not refactor.
+_GRADLE_INIT = """\
+initscript {{
+    repositories {{ gradlePluginPortal() }}
+    dependencies {{
+        classpath 'org.openrewrite:plugin:{version}'
+    }}
+}}
+allprojects {{
+    apply plugin: org.openrewrite.gradle.RewritePlugin
+    repositories {{ mavenCentral(); mavenLocal() }}
+    rewrite {{
+        activeRecipe('{recipe}')
+        configFile = file('{config}')
+        exportDatatables = false
+    }}
+    dependencies {{
+        rewrite '{gav}'
+    }}
+}}
+"""
+
+
+def write_gradle_init_script(repo_path: Path, recipe_name: str = RECIPE_NAME) -> Path:
+    """Init script that applies rewrite-gradle-plugin without editing the repo."""
+    repo_path = Path(repo_path)
+    config = str((repo_path / "rewrite.yml").resolve()).replace("\\", "/")
+    script = repo_path / "dsarp-rewrite-init.gradle"
+    script.write_text(_GRADLE_INIT.format(version=GRADLE_PLUGIN_VERSION,
+                                          recipe=recipe_name, config=config,
+                                          gav=CUSTOM_RECIPE_GAV), encoding="utf-8")
+    return script
+
+
+def run_recipe_gradle(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = False,
+                      timeout: int = 2400, log_path: Optional[Path] = None) -> Dict[str, Any]:
+    """Run the generated recipe on a GRADLE project via rewrite-gradle-plugin."""
+    from ..tools.arcan_runner import gradle_wrapper
+    gw = gradle_wrapper(repo_path)
+    if not gw:
+        return {"ok": False, "status": "gradle_not_found",
+                "note": "No gradlew wrapper and no gradle on PATH."}
+    init = write_gradle_init_script(Path(repo_path), recipe_name)
+    task = "rewriteDryRun" if dry_run else "rewriteRun"
+    cmd = [gw, task, "--init-script", str(init), "--no-daemon", "--console=plain",
+           "-x", "test"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
+                              cwd=str(repo_path))
+    except (subprocess.TimeoutExpired, OSError) as e:
+        return {"ok": False, "status": "timeout", "note": str(e)[:200]}
+    out = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    if log_path:
+        Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(log_path).write_text(out, encoding="utf-8")
+    ok = proc.returncode == 0
+    changed = ("Changes have been made" in out) or ("Please review and commit" in out)
+    files = sorted(set(re.findall(r"Changes have been made to\s+(.+?)\s+by:", out)))
+    return {"ok": ok, "status": ("changed" if changed else "clean" if ok else "failed"),
+            "returncode": proc.returncode, "changed_files": files[:50],
+            "recipe": recipe_name, "goal": task, "build_tool": "gradle",
+            "tail": out[-2500:], "gradle": gw}
+
+
 def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = False,
                plugin: str = DEFAULT_PLUGIN, timeout: int = 2400,
                log_path: Optional[Path] = None) -> Dict[str, Any]:
@@ -139,8 +207,13 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
                 "note": "Maven not found (PATH or tools/apache-maven-*)."}
     pom = Path(repo_path) / "pom.xml"
     if not pom.exists():
+        # Gradle projects go through rewrite-gradle-plugin instead.
+        from ..verification.openrewrite_loop import detect_build_system
+        if detect_build_system(repo_path) == "gradle":
+            return run_recipe_gradle(repo_path, recipe_name, dry_run,
+                                     timeout=timeout, log_path=log_path)
         return {"ok": False, "status": "no_pom",
-                "note": "OpenRewrite run needs a Maven pom.xml in the repo."}
+                "note": "OpenRewrite run needs a Maven pom.xml or a Gradle build."}
     goal = "dryRun" if dry_run else "run"
     # Skip build-audit/quality plugins that would otherwise fail the build before OpenRewrite
     # runs (e.g. apache-rat rejecting our generated rewrite.yml for a missing license header).
