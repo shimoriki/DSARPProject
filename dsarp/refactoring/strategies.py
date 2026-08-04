@@ -199,6 +199,22 @@ class SourceFacts:
         rf"(?!(?:{_STMT_KEYWORDS})\b)[\w.<>\[\]]+\s+"
         rf"(?!(?:{_STMT_KEYWORDS})\b)(\w+)\s*\([^;]*\)\s*(?:throws [\w.,\s]+)?\{{", re.M)
 
+    def _pkg_private_ctor(self, fqn: str) -> bool:
+        """True if the type's constructor is package-private.
+
+        Constructors have no return type, so `_MEMBER_DECL` cannot see them. They matter:
+        a subclass calling `super(...)` from a DIFFERENT package cannot reach a
+        package-private constructor, which is a compile error no import can fix.
+        """
+        simple = fqn.rsplit(".", 1)[-1]
+        txt = self.text_of(fqn)
+        if not txt:
+            return False
+        declared = re.search(
+            rf"^[ \t]{{1,8}}(?!.*\b(?:public|protected|private)\b)"
+            rf"{re.escape(simple)}\s*\([^;)]*\)\s*(?:throws [\w.,\s]+)?\{{", txt, re.M)
+        return bool(declared)
+
     def _package_private(self, pkg: str) -> Tuple[set, set]:
         """(package-private type names, package-private member names) declared in `pkg`."""
         if pkg in self._pkg_private_cache:
@@ -240,6 +256,13 @@ class SourceFacts:
         for m in members & present:
             if re.search(rf"\b{re.escape(m)}\s*\(", txt) and f" {m}(" not in txt.split("{")[0]:
                 blockers.append(f"member {m}() is package-private in {pkg}")
+        # Extending a sibling whose constructor is package-private: `super(...)` stops
+        # resolving the moment the two types are in different packages.
+        sup = re.search(rf"\bclass\s+{re.escape(simple_self)}\b[^{{]*?\bextends\s+(\w+)", txt)
+        if sup:
+            parent = sup.group(1)
+            if parent in self._classes.get(pkg, []) and self._pkg_private_ctor(f"{pkg}.{parent}"):
+                blockers.append(f"extends {pkg}.{parent}, whose constructor is package-private")
         return sorted(set(blockers))
 
     _FIELD_DECL = re.compile(

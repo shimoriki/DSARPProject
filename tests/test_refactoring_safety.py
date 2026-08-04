@@ -188,3 +188,50 @@ def test_correctness_parameters_are_not_tunable():
     """Raising these buys a better score by deleting or hiding code that is still used."""
     assert "dead_code_max_references" not in SEARCH_SPACE
     assert "encapsulate_max_external_readers" not in SEARCH_SPACE
+
+
+def test_package_private_constructor_blocks_a_subclass_move(tmp_path):
+    """Regression from a real pass-2 failure: LuhnCheckDigit extends ModulusCheckDigit and
+    calls super(...). Once the two are in different packages a package-private constructor
+    is unreachable, and no import can fix it. Constructors have no return type, so the
+    member regex could not see them."""
+    _write(tmp_path, "com.ex.p.Base", """
+        package com.ex.p;
+        public class Base {
+            Base(int n) {
+            }
+        }
+    """)
+    _write(tmp_path, "com.ex.p.Child", """
+        package com.ex.p;
+        public class Child extends Base {
+            public Child() {
+                super(1);
+            }
+        }
+    """)
+    facts = SourceFacts(tmp_path)
+    assert facts._pkg_private_ctor("com.ex.p.Base")
+    blockers = facts.move_blockers("com.ex.p.Child")
+    assert any("constructor is package-private" in b for b in blockers)
+
+
+def test_public_constructor_does_not_block(tmp_path):
+    _write(tmp_path, "com.ex.q.Base", """
+        package com.ex.q;
+        public class Base {
+            public Base(int n) {
+            }
+        }
+    """)
+    _write(tmp_path, "com.ex.q.Child", """
+        package com.ex.q;
+        public class Child extends Base {
+            public Child() {
+                super(1);
+            }
+        }
+    """)
+    facts = SourceFacts(tmp_path)
+    assert not facts._pkg_private_ctor("com.ex.q.Base")
+    assert facts.move_blockers("com.ex.q.Child") == []

@@ -1,0 +1,18 @@
+{
+  "node_count": 890,
+  "edge_count": 4493,
+  "cycle_count": 2000,
+  "scc_count": 11,
+  "central_components": [
+    "org.apache.solr.core",
+    "org.apache.solr.util",
+    "org.apache.solr.common.util",
+    "org.apache.solr.search",
+    "java.util",
+    "org.apache.solr.schema",
+    "org.apache.solr.cloud",
+    "org.apache.solr.handler",
+    "org.apache.solr.handler.component",
+    "java.io"
+  ]
+}

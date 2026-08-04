@@ -131,6 +131,10 @@ echo         - An LLM proposed deleting a class its own reasoning said was still
 echo           referenced. The closed loop returned verdict=rejected because the
 echo           code did not compile.
 echo.
+echo       Each pass re-suggests against the refactored code, applies what is
+echo       still safe, and re-detects. A pass is KEPT only if it compiles AND
+echo       reduces the smells it targeted; anything else is rolled back.
+echo.
 py -m dsarp.cli refactor-iterative --repo apache-commons-validator --detector both --max-passes 3
 echo.
 echo  Press a key for the next step...
