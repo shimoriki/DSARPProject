@@ -166,8 +166,15 @@ def main() -> int:
             if (dest / ".git").exists():
                 cur = int(subprocess.run(["git", "-C", str(dest), "rev-list", "--count", "HEAD"],
                                          capture_output=True, text=True).stdout.strip() or 0)
-            # Fresh shallow clone is much faster than DEEPENING a depth-1 clone for big repos.
-            if cur <= 1 and args.depth > 1:
+            # NEVER deepen an existing clone. `git fetch --depth=N` on a partial clone
+            # re-negotiates the whole history and is the source of the multi-hour hangs
+            # (observed: tika 521->1200 sat silent for 20+ minutes and produced nothing,
+            # even with a bounded timeout). A fresh shallow clone to the target depth is
+            # bounded, tree-killable, and in practice much faster.
+            if cur >= args.depth:
+                print(f"[rm] {pid}: already has {cur} commits (>= {args.depth}); reusing",
+                      flush=True)
+            elif args.depth > 1:
                 _force_rmtree(dest)  # Windows-safe (clears read-only .git packs)
                 print(f"[rm] fresh clone {slug} --depth {args.depth} ...", flush=True)
                 # tree-killing clone (git grandchildren can't orphan and hang for hours)
@@ -179,12 +186,6 @@ def main() -> int:
                 elif rc_c != 0:
                     tail = (err_c.strip().splitlines() or ["?"])[-1][:120]
                     print(f"[rm] clone failed {pid}: {tail}", flush=True)
-            elif cur < args.depth:
-                print(f"[rm] deepening {slug} {cur}->{args.depth} ...", flush=True)
-                rc_d, _ = _git_bounded(["git", "-C", str(dest), "fetch",
-                                        f"--depth={args.depth}", "--quiet"], timeout=600)
-                if rc_d == 124:
-                    print(f"[rm] deepen timeout for {pid}; using what we have", flush=True)
             if not (dest.exists() and any(dest.rglob("*.java"))):
                 print(f"[rm] SKIP {pid}: no source after clone (too slow/failed)", flush=True)
                 continue

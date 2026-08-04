@@ -93,6 +93,7 @@ class SourceFacts:
         self._text: Dict[Path, str] = {}
         self._pkg_private_cache: Dict[str, Tuple[set, set]] = {}
         self._mentions: Dict[str, set] = {}
+        self._tokens: Dict[Path, set] = {}   # file -> identifiers it contains
         self._scan()
 
     _IDENT = re.compile(r"[A-Za-z_]\w*")
@@ -114,7 +115,9 @@ class SourceFacts:
             # Inverted index of identifiers -> files. Built once here so the "does anything
             # else mention X?" questions (reference counts, crossing classes, field readers)
             # become set lookups instead of a regex sweep over every file per call.
-            for token in set(self._IDENT.findall(txt)):
+            toks = set(self._IDENT.findall(txt))
+            self._tokens[jf] = toks
+            for token in toks:
                 self._mentions.setdefault(token, set()).add(jf)
             m = re.search(r"^\s*package\s+([\w.]+)\s*;", txt, re.M)
             if not m:
@@ -163,14 +166,17 @@ class SourceFacts:
         txt = self.text_of(fqn)
         if not txt:
             return []
+        # Narrow to siblings whose name actually occurs in this file (index lookup) before
+        # doing any regex work; most packages have far more classes than any one file uses.
+        present = self._tokens.get(self._file_of.get(fqn), set())
+        candidates = [c for c in self._classes.get(pkg, [])
+                      if c in present and c != fqn.rsplit(".", 1)[-1]]
+        if not candidates:
+            return []
+        # Strip package/import lines only now: an import alone is not a same-package use.
         body = re.sub(r"^\s*(package|import)\s+[\w.*]+\s*;", "", txt, flags=re.M)
-        out = []
-        for simple in self._classes.get(pkg, []):
-            if simple == fqn.rsplit(".", 1)[-1]:
-                continue
-            if re.search(rf"\b{re.escape(simple)}\b", body):
-                out.append(f"{pkg}.{simple}")
-        return sorted(set(out))
+        return sorted({f"{pkg}.{c}" for c in candidates
+                       if re.search(rf"\b{re.escape(c)}\b", body)})
 
     # -- move preconditions ---------------------------------------------------
     # Relocating a class out of its package severs access to every PACKAGE-PRIVATE type and
@@ -222,13 +228,16 @@ class SourceFacts:
             return []
         simple_self = fqn.rsplit(".", 1)[-1]
         types, members = self._package_private(pkg)
+        jf = self._file_of.get(fqn)
+        # The index already knows which identifiers appear in this file, so intersect first
+        # and only run a regex for the handful of names that are actually present. Scanning
+        # the whole file once per package-private name was the dominant planning cost.
+        present = self._tokens.get(jf, set())
         blockers = []
-        for t in types:
-            if t == simple_self:
-                continue
-            if re.search(rf"\b{re.escape(t)}\b", txt):
+        for t in types & present:
+            if t != simple_self:
                 blockers.append(f"type {pkg}.{t} is package-private")
-        for m in members:
+        for m in members & present:
             if re.search(rf"\b{re.escape(m)}\s*\(", txt) and f" {m}(" not in txt.split("{")[0]:
                 blockers.append(f"member {m}() is package-private in {pkg}")
         return sorted(set(blockers))
