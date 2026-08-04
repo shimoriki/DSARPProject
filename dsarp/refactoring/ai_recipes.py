@@ -239,17 +239,31 @@ def test_proposal(cfg, project_id: str, repo_path: Path, proposal: Proposal,
                                     "smells": before.get("smells")}]
     rep = _apply_and_verify(cfg, f"{project_id}__ai", Path(repo_path), out, steps, before,
                             detector, before.get("tool", detector), proposal.entries,
-                            kind="composite", plans=[proposal.as_dict()])
+                            kind="composite", plans=[proposal.as_dict()],
+                            keep_copy=True)
 
-    built = rep.get("build_after_refactoring") == "compiled"
+    # Only Arcan compiles (it reads bytecode). With a Designite-only detector there is NO
+    # build signal at all, and reporting that as "did not compile" would be the very error
+    # this project guards against: an unmeasured result presented as a measured failure.
+    # So compile explicitly when the detector did not.
+    build_status = rep.get("build_after_refactoring")
+    if build_status is None:
+        from ..tools.arcan_runner import compile_repo
+        copy = Path(rep.get("refactored_copy") or "")
+        build_status = (compile_repo(copy).get("status") if copy.exists()
+                        else "not_verified")
+    built = build_status == "compiled"
     b_by, a_by = rep.get("by_type_before") or {}, rep.get("by_type_after") or {}
     target_before = sum(n for s, n in b_by.items()
                         if proposal.smell_type.lower() in s.lower())
     target_after = sum(n for s, n in a_by.items()
                        if proposal.smell_type.lower() in s.lower())
 
-    if not built:
-        verdict, why = "rejected", "the refactored code did not compile"
+    if build_status == "not_verified":
+        verdict, why = "unverified", ("the build was never checked, so nothing can be "
+                                      "concluded about this proposal")
+    elif not built:
+        verdict, why = "rejected", f"the refactored code did not compile ({build_status})"
     elif rep.get("verification_status") != "verified":
         verdict, why = "unverified", "no tool could measure the result"
     elif target_after < target_before:
@@ -263,6 +277,6 @@ def test_proposal(cfg, project_id: str, repo_path: Path, proposal: Proposal,
             f"compiles, but {proposal.smell_type} stayed at {target_after}")
 
     return {"proposal": proposal.as_dict(), "verdict": verdict, "why": why,
-            "built": built, "target_before": target_before, "target_after": target_after,
+            "built": built, "build_status": build_status, "target_before": target_before, "target_after": target_after,
             "score_before": score(b_by), "score_after": score(a_by) if built else None,
             "files_changed": len(rep.get("changed_files") or [])}
