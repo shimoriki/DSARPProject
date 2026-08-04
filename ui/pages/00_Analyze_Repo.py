@@ -172,11 +172,16 @@ if go and (url or local):
             from dsarp.repositories.manager import RepositoryManager
             repo_path = Path(local) if local else RepositoryManager(data_dir()).path_for(name)
             build = detect_build_system(repo_path)
-            if build != "maven":
+            if build == "gradle":
+                st.info(f"**{name} is a Gradle project.** DSARP compiles it with `gradlew "
+                        "classes` for Arcan and refactors through rewrite-gradle-plugin, "
+                        "applied via an init script so the repo's build files are untouched. "
+                        "The first run downloads the plugin and is slower than Maven.")
+            if build not in ("maven", "gradle"):
                 st.warning(
                     f"**{name} is a {build} project — it can be analysed but not refactored.** "
-                    "DSARP rewrites through OpenRewrite's rewrite-maven-plugin, and Arcan "
-                    "needs `mvn compile` for bytecode. Suggestions below are real; the "
+                    "DSARP drives OpenRewrite through its Maven and Gradle plugins only, and "
+                    "Arcan needs compiled bytecode. Suggestions below are real; the "
                     "verification steps are genuinely unavailable, not merely empty.")
             else:
                 try:

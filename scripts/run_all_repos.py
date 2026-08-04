@@ -35,6 +35,10 @@ def main() -> int:
     ap.add_argument("--include-training", action="store_true",
                     help="also run the training repos (normally held out of evaluation)")
     ap.add_argument("--only", nargs="*", help="restrict to these repo ids")
+    ap.add_argument("--build", choices=("maven", "gradle"),
+                    help="restrict to one build system (Gradle runs are slower)")
+    ap.add_argument("--report", default="all_repos_loop.json",
+                    help="report filename under data/reports/")
     args = ap.parse_args()
 
     cfg = load_config("local")
@@ -52,12 +56,14 @@ def main() -> int:
     for name in repos:
         path = repos_dir / name
         build = detect_build_system(path)
-        if build != "maven":
-            print(f"  {name:34s} SKIP  {build} project — DSARP refactors via "
-                  "rewrite-maven-plugin")
+        if build not in ("maven", "gradle"):
+            print(f"  {name:34s} SKIP  {build} project — DSARP drives OpenRewrite through "
+                  "its Maven and Gradle plugins only")
             results.append({"repo": name, "build_system": build,
                             "verification_status": "not_verifiable_unsupported_build",
                             "targeted_before": None, "targeted_after": None})
+            continue
+        if args.build and build != args.build:
             continue
         t0 = time.time()
         try:
@@ -89,12 +95,14 @@ def main() -> int:
             by_type[t] = by_type.get(t, 0) + 1
     summary = {"repositories": len(results),
                "refactored_and_verified": len(ok),
+               "by_build_system": {b: sum(1 for r in results if r.get("build_system") == b)
+                                   for b in {r.get("build_system") for r in results}},
                "unsupported_build": sum(1 for r in results
                                         if r.get("verification_status") ==
                                         "not_verifiable_unsupported_build"),
                "smell_types_refactored_across_repos": by_type,
                "results": results}
-    out = cfg.data_dir / "reports" / "all_repos_loop.json"
+    out = cfg.data_dir / "reports" / args.report
     write_json(out, summary)
     print(f"\n[all] {len(ok)}/{len(results)} repositories refactored AND verified")
     print(f"[all] smell types refactored across repos: {by_type}")

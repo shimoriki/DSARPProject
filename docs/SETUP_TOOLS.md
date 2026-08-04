@@ -48,6 +48,20 @@ java -jar DesigniteJava.jar -i <repo> -o <output dir>
 > (`The specified output folder is not empty. Quitting..`). DSARP clears the directory before
 > every run, so a stale run can never silently block a later one.
 
+## Build systems
+
+DSARP dispatches on the repository's build system automatically — nothing to configure.
+
+| build | detect (Arcan needs bytecode) | refactor |
+|---|---|---|
+| Maven | `mvn compile` -> `target/classes` | `rewrite-maven-plugin` |
+| Gradle | `gradlew classes` -> `build/classes/java/main` | `rewrite-gradle-plugin` via `--init-script` |
+| Ant / unknown | not supported | reported as `not_verifiable_unsupported_build` |
+
+The Gradle plugin is applied through an init script with an `allprojects` block, so the target
+repository's own build files are never modified and every subproject is covered. The first
+Gradle run downloads the plugin and is noticeably slower than Maven.
+
 ## Maven
 
 Either put `mvn` on `PATH` or unpack a distribution to `tools/apache-maven-*/`. Maven drives
