@@ -80,11 +80,20 @@ def per_type_delta(before: Dict[str, int], after: Dict[str, int],
             "targeted_after": sum(r["after"] for r in rows)}
 
 
+# Splitting these CREATES structure the detector counts, so a single pass looks like a
+# regression even when it is the right move. They get a consecutive second pass to clean up.
+_EXPANSIVE_SMELLS = {"God Component", "Insufficient Modularization", "Broken Modularization"}
+
+DEFAULT_SMELL_ORDER = ["Cyclic Dependency", "Unstable Dependency", "Deficient Encapsulation",
+                       "God Component", "Scattered Functionality", "Insufficient Modularization"]
+
+
 def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                         detector: str = "both", max_passes: int = 5,
                         strategy: str = "merge_package",
                         start_budget: int = 0, patience: int = 1,
-                        min_passes: int = 2) -> Dict[str, Any]:
+                        min_passes: int = 2,
+                        smell_order: Optional[List[str]] = None) -> Dict[str, Any]:
     """Repeat detect -> refactor -> verify, escalating how much is attempted per pass.
 
     Two behaviours that matter, both learned from measured failures:
@@ -117,6 +126,20 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
     # the loop stops when pass 1 does not improve, so the larger budget never applied and a
     # 1400-plan repository like Karaf deferred everything as "outside this pass's budget".
     # The conflict filter and the safety guards already bound what can run together.
+    # One smell type per pass, in an order that puts the type with the best measured record
+    # first. Cyclic Dependency reliably removes smells, so it goes first and every later pass
+    # is measured against a tree it already improved. Types that CREATE smells before they pay
+    # off - splitting a God Component adds a package the detector then flags - get a second
+    # consecutive pass to consolidate what the first one broke apart.
+    sequence: List[Optional[set]] = []
+    if smell_order:
+        for st in smell_order:
+            sequence.append({st})
+            if st in _EXPANSIVE_SMELLS:
+                sequence.append({st})
+        max_passes = len(sequence)
+        min_passes = 0        # each pass stands or falls on its own measured effect
+
     budget = start_budget
     used_patience = 0
     best_score: Optional[int] = None
@@ -126,7 +149,8 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
     for i in range(1, max_passes + 1):
         rep = refactor_with_openrewrite_and_verify(
             cfg, f"{project_id}__pass{i}", current, detector=detector, strategy=strategy,
-            keep_copy=True, known_before=carried, plan_budget=budget)
+            keep_copy=True, known_before=carried, plan_budget=budget,
+            only_smells=(sequence[i - 1] if smell_order else None))
         if i == 1:
             # size the budget from the first pass's actual plan count
             applicable = sum(1 for p in (rep.get("plans") or []) if p.get("applicable"))

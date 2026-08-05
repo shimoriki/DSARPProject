@@ -606,7 +606,8 @@ def _slug_from_url(url: str) -> str:
 
 def cmd_refactor_iterative(cfg: Config, args) -> int:
     """Repeat the closed loop, keeping only passes that build AND reduce smells."""
-    from .verification.iterative_loop import run_until_converged
+    from .verification.iterative_loop import (run_until_converged,
+                                              DEFAULT_SMELL_ORDER)
     from .repositories.manager import RepositoryManager
     mgr = RepositoryManager(cfg.data_dir)
     name = args.repo
@@ -621,7 +622,9 @@ def cmd_refactor_iterative(cfg: Config, args) -> int:
     label = getattr(args, "label", None) or name
     rep = run_until_converged(cfg, label, repo_path, detector=args.detector,
                               max_passes=args.max_passes,
-                              start_budget=getattr(args, "start_budget", 0) or 0)
+                              start_budget=getattr(args, "start_budget", 0) or 0,
+                              smell_order=(DEFAULT_SMELL_ORDER
+                                           if getattr(args, "by_smell", False) else None))
     print(f"[iterative] {label}: {rep['passes_accepted']}/{rep['passes_run']} passes accepted")
     for p in rep["passes"]:
         mark = "KEPT" if p.get("accepted") else "rolled back"
@@ -783,6 +786,9 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     ri.add_argument("--max-passes", type=int, default=5, dest="max_passes")
     ri.add_argument("--start-budget", type=int, default=0, dest="start_budget",
                     help="plans applied in the first pass; 0 sizes it from the plan count")
+    ri.add_argument("--by-smell", action="store_true", dest="by_smell",
+                    help="one smell type per pass, best-recorded type first, so each "
+                         "measurement is attributable to a single type")
     ri.add_argument("--label", help="write outputs under this id instead of the repo name, "
                                     "so parallel runs of one repo do not overwrite each other")
     ri.set_defaults(func=cmd_refactor_iterative)

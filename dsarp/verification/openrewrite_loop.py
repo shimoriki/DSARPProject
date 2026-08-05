@@ -476,7 +476,8 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                                          keep_copy: bool = False,
                                          known_before: Optional[Dict[str, Any]] = None,
                                          plan_budget: int = 0,
-                                         run_tests_after: bool = False
+                                         run_tests_after: bool = False,
+                                         only_smells: Optional[set] = None
                                          ) -> Dict[str, Any]:
     """Full real loop. Returns a step-by-step record with before/after tool smells."""
     repo_path = Path(repo_path)
@@ -577,6 +578,16 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     # once and broke the build. Neither extreme works, so an uncapped request is resolved to a
     # size proportional to the work available - enough to make progress on a large repository,
     # small enough that one bad plan does not cost the whole pass.
+    # A pass may be restricted to ONE smell type. Mixed passes make the result unattributable:
+    # when four smell types are refactored together and the count drops, nothing says which
+    # one did it, and a type that quietly makes things worse hides behind the ones that help.
+    # Isolating a type per pass makes each measurement a statement about that type.
+    if only_smells:
+        for p in routed["plans"]:
+            if p.applicable and p.smell_type not in only_smells:
+                p.applicable = False
+                p.reason = (f"deferred: this pass is refactoring "
+                            f"{', '.join(sorted(only_smells))} only")
     if plan_budget <= 0:
         applicable_now = sum(1 for p in routed["plans"] if p.applicable)
         plan_budget = max(4, min(16, applicable_now // 8)) if applicable_now > 20 else 0
