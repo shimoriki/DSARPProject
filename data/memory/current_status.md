@@ -9,6 +9,30 @@
 DSARP Evidence-Based Refactoring Agent — complete modular platform: local + HPC, multi-repo
 training, unseen-repo testing, evidence-grounded no-hallucination suggestions, human HGRS review.
 
+## STANDING PLAN — user granted autonomy to continue (2026-08-05)
+
+User: "once both are done dont wait for my approval begin the next thing to improve the mvp
+till it is viable to reliably detect analyse suggest refactor verify retest ie do the whole
+loop and remove smells reliably." Continue WITHOUT checking in. Still confirm before anything
+outward-facing or destructive (pushing to new remotes, deleting user data, installing software).
+
+ORDER OF WORK, highest value first:
+1. When v4 and v5 land, compare. v4 = all suggestion types; v5 = outcome-ledger active
+   (refuses Introduce Supertype / Encapsulate Field / Consolidate Package). Report
+   smells_actually_reduced, NOT passes_accepted.
+2. Run `--verify-tests` on validator. Every result so far only proves the code COMPILES.
+   If the project's own tests fail, existing claims need revising — that is the point.
+3. Re-run `scripts/validate_ledger.py` with a different holdout once v5 adds runs. Split
+   Package already failed generalisation; check whether Merge Package / Move Class hold.
+4. Make a refused refactoring actually work rather than re-enabling it. Introduce Supertype is
+   counterproductive because it ADDS a type the detector counts — it must remove something in
+   the same move to net out. That is a design change, not a toggle.
+5. Wire outcomes.py into scripts/tune_refactoring_params.py, using HELD-OUT agreement as the
+   objective, not training-set effect (Split Package is exactly why).
+
+DO NOT: re-enable measured-ineffective suggestions to "cover more smell types". Three batches
+plus held-out validation say that reproduces the 1-in-8 pattern.
+
 ## RELOCATION IS EXHAUSTED — three controlled batches (2026-08-05)
 
 THE HEADLINE FINDING. Three strategy variants, same result on the same 8 Maven repos:
@@ -40,7 +64,17 @@ visibility, so a moved method calling a private helper left behind cannot compil
 See also: package-private constructor blocking subclass moves; package-private types/members
 blocking class moves.
 
-SIX measurement artifacts caught by the verification gate this session (Arcan 20->0, iterative
+HELD-OUT VALIDATION (scripts/validate_ledger.py): 2/3 ledger verdicts held on repos it was
+never built from. **Split Package looked effective on training repos and does NOTHING on
+unseen ones** — reliable core is TWO refactorings: Merge Package (Cyclic) and Move Class
+(Unstable). Fits the earlier evidence: Split Package creates a package the detector then flags.
+
+BEHAVIOUR VERIFICATION added (`run_tests`, CLI `--verify-tests`): runs the repo's OWN test
+suite on the refactored copy. Everything before this only proved the code COMPILES, which
+cannot detect a behaviour change. NOT yet run on a real repo — do that early, it may
+invalidate existing results.
+
+SEVEN measurement artifacts caught by the verification gate this session (Arcan 20->0, iterative
 13.2%, both sectioned runs, run-metric 10->18, batch "5/8 improved"). That reliability is the
 defensible contribution; the smell-reduction numbers are not yet.
 
