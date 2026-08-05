@@ -42,6 +42,34 @@ that removed exactly what it aimed at can therefore make the overall count look 
 loop reports `per_type.targeted` (what was aimed at) separately from `per_type.side_effects`
 (what moved on its own), and the iterative loop scores only the targeted types.
 
+## First verified smell reduction
+
+On commons-validator, with both tools measuring both sides of a **compiling** build:
+
+```
+build_after_refactoring   compiled
+verification_status       verified
+
+Arcan       20 -> 13   (-7)
+Designite   91 -> 86   (-5)
+
+Unstable Dependency  -7    Cyclic Dependency  -4
+God Component        -1    Scattered Functionality  -1
+```
+
+Designite's own total FELL. Every earlier strategy made it rise, because splits created
+packages it then flagged as Feature Concentration.
+
+What unblocked it was not a new refactoring but an ordering rule. An extracted helper stays
+in its origin package and keeps referring to that package's types; a God Component split in
+the same pass was relocating those types out from under it. Extract Class now claims its
+whole package before a split can take from it. The result is fewer, non-conflicting plans —
+28 files changed instead of 50 — and a real reduction rather than churn.
+
+That reframes an earlier conclusion. Three batches showed 1-in-8 and were read as "relocation
+is exhausted"; some of that was plans destroying each other's preconditions within a pass.
+How much is still being measured.
+
 ## Measured results
 
 ### commons-validator — `verification_status: verified`, build `compiled`
