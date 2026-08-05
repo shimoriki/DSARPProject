@@ -48,6 +48,40 @@ that removed exactly what it aimed at can therefore make the overall count look 
 loop reports `per_type.targeted` (what was aimed at) separately from `per_type.side_effects`
 (what moved on its own), and the iterative loop scores only the targeted types.
 
+## Best verified reduction — commons-io, six smell types
+
+Iterative loop, both tools measuring both sides of a **compiling** build:
+
+```
+architectural smells      328 -> 298   (9.1%)
+pass 1  build compiled    kept
+pass 2  build broken      rolled back
+
+Arcan       148 -> 130
+Designite   403 -> 390
+
+Cyclic Dependency  -16   Unstable Dependency  -8
+God Component       -3   Cyclically-dep. Modularization  -2
+Deficient Encaps.   -1   Dense Structure  -1
+```
+
+This repository produced *invalid* numbers until 2026-08-05: `_copy_repo` used
+`ignore_patterns("build")`, which matches at any depth, so every working copy silently lost
+the real source package `org.apache.commons.io.build` and failed to compile with 88
+"package does not exist" errors before any refactoring ran.
+
+The reduction is attributable to one change. Plans were validated individually but applied
+together, so two individually safe moves could separate a subclass from a superclass sharing
+its package and strand a package-private member. The guard deferred four plans, one of them
+verbatim the plan that broke the previous run:
+
+    would move org.apache.commons.io.file.CountingPathVisitor away from its superclass
+    org.apache.commons.io.file.SimplePathVisitor
+
+Same repository, same source, same pipeline, guard the only difference — a controlled
+comparison rather than a correlation. Pass 2 still broke the build and was rolled back, so
+the gate is visibly refusing its own bad work inside the winning run.
+
 ## First verified smell reduction
 
 On commons-validator, with both tools measuring both sides of a **compiling** build:
