@@ -718,7 +718,18 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
     b_by, a_by = _by_type(before), _by_type(after)
     delta = {k: a_by.get(k, 0) - b_by.get(k, 0) for k in set(b_by) | set(a_by)} if both_ok else {}
     removed = (sum(b_by.values()) - sum(a_by.values())) if both_ok else None
-    verification = "verified" if both_ok else "unverified_build_broken"
+    # Measuring both sides is necessary but NOT sufficient. Designite reads source, not
+    # bytecode, so it happily measures a tree that no longer compiles - which stamped
+    # "verified" on runs whose build was broken. A delta from code that does not build is
+    # not evidence, so compilation is part of the verdict, not a separate field beside it.
+    compiled_ok = (after.get("compile") or {}).get("status") == "compiled"
+    if not both_ok:
+        verification = "unverified_build_broken"
+    elif not compiled_ok:
+        verification = "unverified_build_broken"
+    else:
+        verification = "verified"
+    both_ok = both_ok and compiled_ok
     steps.append({"step": "compare", "tool": "DSARP",
                   "status": "ok" if both_ok else "unverified",
                   "smells_before": sum(b_by.values()) if both_ok else before.get("smells"),
