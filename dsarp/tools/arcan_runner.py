@@ -61,6 +61,14 @@ def find_mvn() -> Optional[str]:
     return _f()
 
 
+# A build can fail for reasons that have nothing to do with the source: a plugin goal that
+# needs packaged jars simply cannot run under `compile`. Telling that apart from a real
+# breakage is what separates "the refactoring broke this" from "this command was never
+# going to work on this repository".
+_NEEDS_PACKAGING_RE = re.compile(
+    r"has not been packaged yet|MDEP-187|should be executed after packaging", re.I)
+
+
 def compile_repo(repo_path: Path, timeout: int = 2400,
                  log_path: Optional[Path] = None) -> Dict[str, Any]:
     """`mvn compile` so Arcan has bytecode. Returns status + the class dirs produced."""
@@ -100,11 +108,24 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
                "-pl", rel, "-am", "compile", *skips]
     else:
         cmd = [mvn, "-B", "-ntp", "-f", str(pom), "compile", *skips]
+    def _run(c):
+        p = subprocess.run(c, capture_output=True, text=True, timeout=timeout)
+        return p, (p.stdout or "") + "\n" + (p.stderr or "")
+
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        proc, out = _run(cmd)
+        # Karaf's reactor binds maven-dependency-plugin:copy to a phase that needs its
+        # siblings PACKAGED as jars. Under `compile` they are still target/classes
+        # directories, so the goal fails with MDEP-187 and the whole build reports FAILURE —
+        # before any refactoring is applied. That made Karaf look permanently broken, and
+        # every pass was rolled back for a reason that had nothing to do with the changes.
+        # Arcan only needs bytecode, which `compile` already produced, so the packaging-only
+        # goal is skipped and the build retried once.
+        if proc.returncode != 0 and _NEEDS_PACKAGING_RE.search(out):
+            cmd = [*cmd, "-Dmdep.skip=true"]
+            proc, out = _run(cmd)
     except subprocess.TimeoutExpired:
         return {"ok": False, "status": "compile_timeout", "note": f"exceeded {timeout}s"}
-    out = (proc.stdout or "") + "\n" + (proc.stderr or "")
     if log_path:
         Path(log_path).parent.mkdir(parents=True, exist_ok=True)
         Path(log_path).write_text(out, encoding="utf-8")
