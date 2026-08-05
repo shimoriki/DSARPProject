@@ -19,6 +19,8 @@ finding list is empty.
 from __future__ import annotations
 
 import collections
+import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -182,9 +184,37 @@ def compile_gradle(repo_path: Path, timeout: int = 2400,
         Path(log_path).write_text(out, encoding="utf-8")
     dirs = _class_dirs(repo_path)
     ok = bool(dirs)
-    return {"ok": ok, "status": "compiled" if ok else "compile_failed",
+    status = "compiled" if ok else "compile_failed"
+    note = None
+    # Gradle builds pin a JDK range and refuse anything outside it. Reporting that as a
+    # generic "compile_failed" hid an entirely fixable environment problem behind what
+    # looked like a DSARP bug, so the requirement and the installed JDKs are surfaced.
+    m = re.search(r"java version must be between (\d+) and (\d+)"
+                  r"[^\n]*?your version:\s*(\d+)", out)
+    if m and not ok:
+        lo, hi, got = m.group(1), m.group(2), m.group(3)
+        status = "jdk_version_unsupported"
+        note = (f"This Gradle build requires JDK {lo}-{hi}; gradlew resolved JDK {got} "
+                f"(JAVA_HOME={os.environ.get('JAVA_HOME', 'unset')}). Installed: "
+                f"{', '.join(installed_jdks()) or 'none found'}. Set JAVA_HOME to a JDK in "
+                f"range and re-run; nothing in DSARP needs to change.")
+    return {"ok": ok, "status": status, "note": note,
             "class_dirs": [str(d) for d in dirs], "returncode": proc.returncode,
             "build_tool": "gradle", "command": " ".join(cmd), "tail": out[-2000:]}
+
+
+def installed_jdks() -> List[str]:
+    """JDKs discoverable on this machine, so a version mismatch names the alternatives."""
+    roots = [Path(r"C:/Program Files/Java"), Path(r"C:/Program Files/Eclipse Adoptium"),
+             Path.home() / ".jdks"]
+    found = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for d in sorted(root.iterdir()):
+            if d.is_dir() and (d / "bin" / "javac.exe").exists():
+                found.append(d.name)
+    return found
 
 
 def run_arcan(classes_dir: Path, out_dir: Path, timeout: int = 2400,
