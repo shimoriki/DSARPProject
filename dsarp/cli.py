@@ -614,9 +614,15 @@ def cmd_refactor_iterative(cfg: Config, args) -> int:
         name = args.repo or _slug_from_url(args.repo_url)
         mgr.clone(name, args.repo_url, depth=1)
     repo_path = Path(args.path) if getattr(args, "path", None) else mgr.path_for(name)
-    rep = run_until_converged(cfg, name, repo_path, detector=args.detector,
-                              max_passes=args.max_passes)
-    print(f"[iterative] {name}: {rep['passes_accepted']}/{rep['passes_run']} passes accepted")
+    # `--label` writes the run's outputs under a different id while still reading the same
+    # clone. Without it two arms of a budget comparison share out/<id>/iterative, which the
+    # loop wipes on entry, and share __pass{i} report names - so they would delete each
+    # other's work and blend two experiments into one ledger.
+    label = getattr(args, "label", None) or name
+    rep = run_until_converged(cfg, label, repo_path, detector=args.detector,
+                              max_passes=args.max_passes,
+                              start_budget=getattr(args, "start_budget", 0) or 0)
+    print(f"[iterative] {label}: {rep['passes_accepted']}/{rep['passes_run']} passes accepted")
     for p in rep["passes"]:
         mark = "KEPT" if p.get("accepted") else "rolled back"
         print(f"  pass {p['pass']}: {p['verification_status']} build={p['build']} "
@@ -775,6 +781,10 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     ri.add_argument("--repo-url", dest="repo_url")
     ri.add_argument("--detector", choices=("arcan", "designite", "both"), default="both")
     ri.add_argument("--max-passes", type=int, default=5, dest="max_passes")
+    ri.add_argument("--start-budget", type=int, default=0, dest="start_budget",
+                    help="plans applied in the first pass; 0 sizes it from the plan count")
+    ri.add_argument("--label", help="write outputs under this id instead of the repo name, "
+                                    "so parallel runs of one repo do not overwrite each other")
     ri.set_defaults(func=cmd_refactor_iterative)
 
     ro = sub.add_parser("refactor-openrewrite")  # detect -> OpenRewrite run -> re-detect
