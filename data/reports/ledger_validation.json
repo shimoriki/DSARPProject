@@ -1,0 +1,156 @@
+{
+  "holdout": [
+    "apache-commons-codec",
+    "apache-commons-text"
+  ],
+  "training_reports": 33,
+  "holdout_reports": 6,
+  "testable_pairs": 3,
+  "agreements": 2,
+  "rows": [
+    {
+      "smell": "Cyclic Dependency",
+      "refactoring": "Merge Package",
+      "training": "effective",
+      "training_mean": -0.62,
+      "held_out_runs": 1,
+      "held_out_mean": -2.0,
+      "agrees": true
+    },
+    {
+      "smell": "Deficient Encapsulation",
+      "refactoring": "Encapsulate Field",
+      "training": "no measured benefit",
+      "held_out": "not exercised",
+      "agrees": null
+    },
+    {
+      "smell": "God Component",
+      "refactoring": "Split Package",
+      "training": "effective",
+      "training_mean": -0.5,
+      "held_out_runs": 3,
+      "held_out_mean": 0.0,
+      "agrees": false
+    },
+    {
+      "smell": "Scattered Functionality",
+      "refactoring": "Consolidate Package",
+      "training": "no measured benefit",
+      "held_out": "not exercised",
+      "agrees": null
+    },
+    {
+      "smell": "Unstable Dependency",
+      "refactoring": "Move Class",
+      "training": "effective",
+      "training_mean": -1.25,
+      "held_out_runs": 1,
+      "held_out_mean": -3.0,
+      "agrees": true
+    }
+  ],
+  "training_ledger": [
+    {
+      "smell type": "Cyclic Dependency",
+      "refactoring": "Merge Package",
+      "verified runs": 8,
+      "runs that reduced": 2,
+      "net effect": -5,
+      "mean per run": -0.62,
+      "verdict": "effective"
+    },
+    {
+      "smell type": "Unstable Dependency",
+      "refactoring": "Move Class",
+      "verified runs": 4,
+      "runs that reduced": 3,
+      "net effect": -5,
+      "mean per run": -1.25,
+      "verdict": "effective"
+    },
+    {
+      "smell type": "God Component",
+      "refactoring": "Split Package",
+      "verified runs": 8,
+      "runs that reduced": 4,
+      "net effect": -4,
+      "mean per run": -0.5,
+      "verdict": "effective"
+    },
+    {
+      "smell type": "Deficient Encapsulation",
+      "refactoring": "Encapsulate Field",
+      "verified runs": 4,
+      "runs that reduced": 0,
+      "net effect": 0,
+      "mean per run": 0.0,
+      "verdict": "no measured benefit"
+    },
+    {
+      "smell type": "Insufficient Modularization",
+      "refactoring": "Extract Class",
+      "verified runs": 2,
+      "runs that reduced": 0,
+      "net effect": 0,
+      "mean per run": 0.0,
+      "verdict": "too few runs"
+    },
+    {
+      "smell type": "Scattered Functionality",
+      "refactoring": "Consolidate Package",
+      "verified runs": 4,
+      "runs that reduced": 0,
+      "net effect": 0,
+      "mean per run": 0.0,
+      "verdict": "no measured benefit"
+    },
+    {
+      "smell type": "Wide Hierarchy",
+      "refactoring": "Introduce Supertype",
+      "verified runs": 2,
+      "runs that reduced": 0,
+      "net effect": 1,
+      "mean per run": 0.5,
+      "verdict": "too few runs"
+    }
+  ],
+  "holdout_ledger": [
+    {
+      "smell type": "Unstable Dependency",
+      "refactoring": "Move Class",
+      "verified runs": 1,
+      "runs that reduced": 1,
+      "net effect": -3,
+      "mean per run": -3.0,
+      "verdict": "effective"
+    },
+    {
+      "smell type": "Cyclic Dependency",
+      "refactoring": "Merge Package",
+      "verified runs": 1,
+      "runs that reduced": 1,
+      "net effect": -2,
+      "mean per run": -2.0,
+      "verdict": "effective"
+    },
+    {
+      "smell type": "God Component",
+      "refactoring": "Split Package",
+      "verified runs": 3,
+      "runs that reduced": 0,
+      "net effect": 0,
+      "mean per run": 0.0,
+      "verdict": "no measured benefit"
+    },
+    {
+      "smell type": "Wide Hierarchy",
+      "refactoring": "Introduce Supertype",
+      "verified runs": 1,
+      "runs that reduced": 0,
+      "net effect": 1,
+      "mean per run": 1.0,
+      "verdict": "too few runs"
+    }
+  ]
+}
