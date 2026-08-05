@@ -41,6 +41,19 @@ TWO pieces of work follow, and they are separate:
 Also check why Deficient Encapsulation measures 0: likely `external_field_users` is so
 conservative that almost no field qualifies, so the plan fires but narrows nothing.
 
+BATCH v4 RESULT: 1/8 reduced, totals 4251 -> 4239. Same as v1/v2/v3. FOUR batches now at
+1/8. The claim-ordering fix helped validator's single pass (Arcan 20 -> 13) and did NOT
+generalise. v5 (outcome ledger active) still running.
+
+DEFICIENT ENCAPSULATION DIAGNOSED (3rd most prominent, 1373 instances): **19 of 23 findings
+refuse with "no public/protected instance fields found"** — Designite flags the class but
+`SourceFacts.exposed_fields()` matches nothing, so there is nothing to narrow. The 3 plans
+that DO fire narrow 16 fields and still measure 0 effect, which fits: the class keeps the 19
+fields the regex cannot see, so the smell stays. FIX: make `_FIELD_DECL` match what Designite
+matches — check annotated fields, multi-line declarations, and whether Designite counts
+`public static` non-final. Verify by comparing the field list against Designite's own
+Description text for the same class before changing the regex.
+
 ORDER OF WORK, highest value first:
 1. When v4 and v5 land, compare. v4 = all suggestion types; v5 = outcome-ledger active
    (refuses Introduce Supertype / Encapsulate Field / Consolidate Package). Report
