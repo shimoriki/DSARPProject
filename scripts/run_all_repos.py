@@ -51,7 +51,22 @@ def main() -> int:
     elif not args.include_training:
         repos = [r for r in repos if r not in training]
 
-    print(f"[all] {len(repos)} repositories: {', '.join(repos)}\n")
+    # Smallest first. Each repository is built twice per pass, so a Karaf-sized reactor can
+    # hold up the batch for an hour before anything is learned, while the small ones return
+    # a verdict in minutes. Ordering by source count front-loads the evidence.
+    def _java_count(name):
+        try:
+            return sum(1 for _ in (repos_dir / name).rglob("*.java"))
+        except OSError:
+            return 1 << 30
+
+    sizes = {r: _java_count(r) for r in repos}
+    repos.sort(key=lambda r: sizes[r])
+
+    print(f"[all] {len(repos)} repositories, smallest first:")
+    for r in repos:
+        print(f"       {sizes[r]:6d} java files  {r}")
+    print()
     results = []
     for name in repos:
         path = repos_dir / name
