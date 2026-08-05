@@ -391,7 +391,8 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                                          strategy: str = "merge_package",
                                          keep_copy: bool = False,
                                          known_before: Optional[Dict[str, Any]] = None,
-                                         plan_budget: int = 0
+                                         plan_budget: int = 0,
+                                         run_tests_after: bool = False
                                          ) -> Dict[str, Any]:
     """Full real loop. Returns a step-by-step record with before/after tool smells."""
     repo_path = Path(repo_path)
@@ -544,6 +545,7 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
         return _apply_and_verify(cfg, project_id, repo_path, out, steps, before, detector,
                                  tool_name, entries, kind="composite", plans=plans,
                                  pre_imports=pre_imports, keep_copy=keep_copy,
+                                 run_tests_after=run_tests_after,
                                  new_interfaces=new_interfaces, extractions=extractions)
 
     moves = derive_moves_from_findings(repo_path, findings, max_moves)
@@ -583,7 +585,7 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
                       tool_name: str, plan: List[Any], kind: str = "class",
                       plans: Optional[List[Dict[str, Any]]] = None,
                       pre_imports: Optional[Dict[str, List[str]]] = None,
-                      keep_copy: bool = False,
+                      keep_copy: bool = False, run_tests_after: bool = False,
                       new_interfaces: Optional[Dict[str, List[str]]] = None,
                       extractions: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """Steps 3-5: run OpenRewrite on a copy, re-detect with the same tool(s), compare."""
@@ -631,6 +633,21 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
                   "smells": after.get("smells"), "by_type": after.get("by_type"),
                   "by_tool": after.get("by_tool"),
                   "compile": (after.get("compile") or {}).get("status")})
+
+    # 4a) BEHAVIOUR — run the project's OWN tests against the refactored code. "It compiles"
+    # is a weak guarantee; a refactoring can compile perfectly and still change behaviour.
+    # Reported separately so a run can honestly say "smells reduced but tests failed".
+    tests: Dict[str, Any] = {}
+    if run_tests_after and (after.get("compile") or {}).get("status") == "compiled":
+        from ..tools.arcan_runner import run_tests as _run_tests
+        tests = _run_tests(copy, log_path=out / "mvn_test.log")
+        steps.append({"step": "verify_behaviour", "tool": "project test suite",
+                      "status": tests.get("status"),
+                      "tests_run": tests.get("tests_run"),
+                      "failures": tests.get("failures"), "errors": tests.get("errors"),
+                      "note": ("the project's own tests still pass on the refactored code"
+                               if tests.get("ok") else
+                               "the refactored code compiles but its tests do NOT pass")})
 
     # 4b) RE-SUGGEST — plan against the REFACTORED code. Knowing what was removed is only
     # half the answer; the other half is what to do next. This also surfaces smells the
@@ -714,7 +731,9 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
               "findings_before": before.get("findings", [])[:200],
               "findings_after": after.get("findings", [])[:200],
               "recipe_path": str(recipe), "changed_files": orw.get("changed_files"),
-              "plans": plans or [], "next_suggestions": next_suggestions}
+              "plans": plans or [], "next_suggestions": next_suggestions,
+              "tests": {k: v for k, v in tests.items() if k != "tail"},
+              "behaviour_verified": bool(tests.get("ok")) if tests else None}
     write_json(out / "openrewrite_loop_report.json", report)
     write_json(out / f"loop_{detector}_report.json", report)
     # In-memory only: the iterative loop feeds this straight into the next pass as its

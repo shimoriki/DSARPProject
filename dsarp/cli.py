@@ -529,8 +529,9 @@ def cmd_refactor_openrewrite(cfg: Config, args) -> int:
     strategy = getattr(args, "strategy", "merge_package")
     print(f"[refactor] detector={detector} strategy={strategy} repo={name} "
           f"({len(sugs)} prior suggestions)")
-    report = refactor_with_openrewrite_and_verify(cfg, name, repo_path, sugs,
-                                                  detector=detector, strategy=strategy)
+    report = refactor_with_openrewrite_and_verify(
+        cfg, name, repo_path, sugs, detector=detector, strategy=strategy,
+        run_tests_after=getattr(args, "verify_tests", False))
     for s in report["steps"]:
         line = f"  [{s['step']}] {s.get('tool','')}: {s.get('status')}"
         if "smells" in s:
@@ -574,6 +575,9 @@ def cmd_refactor_openrewrite(cfg: Config, args) -> int:
                          + ", ".join(s["introduced_smell_types"]))
             for t in (s.get("top") or [])[:4]:
                 line += f"\n        -> {t['refactoring']} for {t['smell_type']}"
+        elif s["step"] == "verify_behaviour":
+            line += (f" — {s.get('tests_run')} tests, {s.get('failures')} failures, "
+                     f"{s.get('errors')} errors")
         elif s["step"] == "compare":
             if s.get("verification_status") == "verified":
                 line += f" — removed {s.get('removed')} smells, delta {s.get('delta_by_type')}"
@@ -779,6 +783,9 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
                     help="git URL to clone and analyse (any repo)")
     ro.add_argument("--detector", choices=("arcan", "designite", "both"), default="both",
                     help="real smell tool used BEFORE and AFTER the refactoring")
+    ro.add_argument("--verify-tests", action="store_true", dest="verify_tests",
+                    help="run the project's own test suite on the refactored code; "
+                         "'it compiles' does not prove behaviour is preserved")
     ro.add_argument("--strategy", choices=("merge_package", "move_classes"),
                     default="merge_package",
                     help="merge_package: ChangePackage, relocates whole packages (compile-safe); "

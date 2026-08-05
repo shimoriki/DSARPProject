@@ -280,3 +280,47 @@ def detect_with_arcan(repo_path: Path, out_dir: Path, compile_log: Optional[Path
             "by_type": dict(counts), "findings": findings,
             "compile": {k: v for k, v in comp.items() if k != "tail"},
             "modules": runs, "tool": "Arcan 1.2.1"}
+
+
+def run_tests(repo_path: Path, timeout: int = 3600,
+              log_path: Optional[Path] = None) -> Dict[str, Any]:
+    """Run the project's OWN test suite against the refactored code.
+
+    "It compiles" is a weak guarantee: a refactoring can compile perfectly and still change
+    behaviour. The project's tests are the strongest behavioural evidence available without
+    writing new ones, and every repository DSARP targets already ships them.
+
+    Returned separately from the smell measurement so a run can report "smells reduced but
+    tests failed" honestly, rather than collapsing both into one verdict.
+    """
+    repo_path = Path(repo_path)
+    mvn = find_mvn()
+    if not mvn:
+        return {"ok": False, "status": "maven_not_found"}
+    if not (repo_path / "pom.xml").exists():
+        return {"ok": False, "status": "no_pom"}
+    skips = ["-Drat.skip=true", "-Dcheckstyle.skip=true", "-Denforcer.skip=true",
+             "-Dspotless.check.skip=true", "-Dspotbugs.skip=true", "-Dpmd.skip=true",
+             "-Danimal.sniffer.skip=true", "-Dlicense.skip=true", "-Djacoco.skip=true",
+             "-Dmaven.javadoc.skip=true"]
+    cmd = [mvn, "-B", "-ntp", "-f", str(repo_path / "pom.xml"), "test", *skips]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "status": "test_timeout", "note": f"exceeded {timeout}s"}
+    out = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    if log_path:
+        Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(log_path).write_text(out, encoding="utf-8")
+    totals = None
+    for mm in re.finditer(r"Tests run:\s*(\d+), Failures:\s*(\d+), Errors:\s*(\d+), "
+                          r"Skipped:\s*(\d+)", out):
+        totals = mm                      # the LAST line is the reactor summary
+    ok = proc.returncode == 0
+    result = {"ok": ok, "status": "passed" if ok else "failed",
+              "returncode": proc.returncode, "command": " ".join(cmd),
+              "tail": out[-2500:]}
+    if totals:
+        result.update(tests_run=int(totals.group(1)), failures=int(totals.group(2)),
+                      errors=int(totals.group(3)), skipped=int(totals.group(4)))
+    return result
