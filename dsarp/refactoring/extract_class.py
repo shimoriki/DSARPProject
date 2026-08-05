@@ -85,9 +85,17 @@ def uses_non_public_members(facts: SourceFacts, fqn: str, method: str) -> bool:
 
 
 def _method_body(text: str, name: str) -> str:
-    """The source of one method, found by brace matching from its declaration."""
-    m = re.search(rf"^[ \t]{{1,8}}public\s+static\b[^;{{\n]*\b{re.escape(name)}\s*"
-                  rf"\([^;{{]*\)\s*(?:throws [\w.,\s]+)?\{{", text, re.M)
+    """The source of one method, found by brace matching from its declaration.
+
+    Uses the same shape as STATIC_METHOD (which reliably finds all 17 on GenericValidator)
+    rather than a stricter pattern of its own. The earlier version required the signature to
+    fit on one line via `[^;{\\n]*`, so any method with a wrapped parameter list was missed —
+    _method_body returned "" and uses_non_public_members silently answered False, letting a
+    method that calls a private helper through the guard.
+    """
+    m = re.search(rf"^[ \t]{{1,8}}public\s+static\s+(?:final\s+|synchronized\s+)*"
+                  rf"[\w.<>\[\],\s]+?\s+{re.escape(name)}\s*\([^;{{]*\)\s*"
+                  rf"(?:throws [\w.,\s]+)?\{{", text, re.M)
     if not m:
         return ""
     depth, i = 0, m.end() - 1
@@ -138,7 +146,8 @@ def plan_extract_class(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
     # both run on the same LST pass, the tree is valid at each step.
     entries = [RecipeEntry("com.dsarp.recipes.ExtractStaticHelpers",
                            {"fullyQualifiedClassName": fqn,
-                            "fullyQualifiedTargetTypeName": target})]
+                            "fullyQualifiedTargetTypeName": target,
+                            "methodNames": ",".join(methods)})]
     entries += [RecipeEntry("org.openrewrite.java.ChangeMethodTargetToStatic",
                             {"methodPattern": f"{fqn} {m}(..)",
                              "fullyQualifiedTargetTypeName": target})

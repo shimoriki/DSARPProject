@@ -56,12 +56,37 @@ public class ExtractStaticHelpers extends ScanningRecipe<ExtractStaticHelpers.Ac
             example = "com.example.GenericValidatorHelpers")
     private final String fullyQualifiedTargetTypeName;
 
+    @Option(displayName = "Methods",
+            description = "Comma-separated names of the methods to move. Only these are "
+                    + "extracted; DSARP has already checked each one against preconditions "
+                    + "the recipe cannot see, such as whether it calls a non-public member.",
+            example = "isBlankOrNull,matchRegexp")
+    private final String methodNames;
+
     @JsonCreator
     public ExtractStaticHelpers(
             @JsonProperty("fullyQualifiedClassName") String fullyQualifiedClassName,
-            @JsonProperty("fullyQualifiedTargetTypeName") String fullyQualifiedTargetTypeName) {
+            @JsonProperty("fullyQualifiedTargetTypeName") String fullyQualifiedTargetTypeName,
+            @JsonProperty("methodNames") String methodNames) {
         this.fullyQualifiedClassName = fullyQualifiedClassName;
         this.fullyQualifiedTargetTypeName = fullyQualifiedTargetTypeName;
+        this.methodNames = methodNames;
+    }
+
+    public String getMethodNames() {
+        return methodNames;
+    }
+
+    private Set<String> wanted() {
+        Set<String> out = new LinkedHashSet<>();
+        if (methodNames != null) {
+            for (String n : methodNames.split(",")) {
+                if (!n.isEmpty()) {
+                    out.add(n);
+                }
+            }
+        }
+        return out;
     }
 
     public String getFullyQualifiedClassName() {
@@ -204,9 +229,16 @@ public class ExtractStaticHelpers extends ScanningRecipe<ExtractStaticHelpers.Ac
         };
     }
 
-    private static boolean isExtractable(J.MethodDeclaration m) {
+    private boolean isExtractable(J.MethodDeclaration m) {
         boolean isPublic = m.hasModifier(J.Modifier.Type.Public);
         boolean isStatic = m.hasModifier(J.Modifier.Type.Static);
-        return isPublic && isStatic && m.getBody() != null && !m.isConstructor();
+        if (!isPublic || !isStatic || m.getBody() == null || m.isConstructor()) {
+            return false;
+        }
+        // Honour DSARP's approved list. Extracting every public static method ignored the
+        // preconditions checked upstream — including "does not call a non-public member" —
+        // so methods that could not compile from their new home were moved anyway.
+        Set<String> only = wanted();
+        return only.isEmpty() || only.contains(m.getSimpleName());
     }
 }
