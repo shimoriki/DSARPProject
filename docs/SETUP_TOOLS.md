@@ -91,3 +91,32 @@ py -m dsarp.cli refactor-openrewrite --repo-url https://github.com/apache/common
 ```
 
 The **How It Works** dashboard page shows which tools are runnable on the current machine.
+
+## JDK versions
+
+Different parts of the pipeline need different JDKs, and the mismatch is silent until a
+build fails for a reason that has nothing to do with the code.
+
+| component | needs | note |
+|---|---|---|
+| Maven builds | 17 or 21 | 26 works for most repos |
+| **Gradle builds** | **21 (or 17)** | Gradle REJECTS 26 and no longer supports 8 |
+| Arcan / Designite | 17+ | they read bytecode / source, not the build |
+
+`installed_jdks()` scans Program Files, Eclipse Adoptium, `~/.jdks`,
+`~/AppData/Local/Programs/Java`, Microsoft, Corretto and Zulu. The last four matter because
+the common installers default to a user-scope path that earlier versions of this project did
+not look in - JDK 21 was installed and invisible for exactly that reason.
+
+`compile_gradle()` selects 21 (then 17) explicitly through `JAVA_HOME` and
+`-Dorg.gradle.java.home` rather than inheriting whatever `JAVA_HOME` happens to be, so a
+machine with 26 on the PATH still builds Gradle projects correctly.
+
+Repositories this affects: **solr, lucene, spring-framework** (all Gradle). Without a
+supported JDK they cannot be built or measured at all.
+
+## Build systems that are out of scope
+
+DSARP drives OpenRewrite through its Maven and Gradle plugins. **Ant projects cannot be
+refactored** - `apache-cassandra` is the case in point, and the loop reports
+`not_verifiable_unsupported_build` rather than pretending otherwise.

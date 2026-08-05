@@ -140,6 +140,32 @@ echo.
 echo  Press a key for the next step...
 pause >nul
 
+REM ---------- 7b. One smell type per pass ----------
+cls
+echo [7b/9] Attributing the reduction to a SINGLE smell type.
+echo.
+echo       A mixed pass refactors several smell types at once, so when the count
+echo       drops nothing says which type did it - and a type that quietly makes
+echo       things worse hides behind the ones that help.
+echo.
+echo       --by-smell runs ONE type per pass, best measured record first:
+echo         Cyclic Dependency -^> Unstable Dependency -^> Deficient Encapsulation
+echo         -^> God Component -^> Scattered Functionality -^> Insufficient Modularization
+echo.
+echo       Re-detection happens between every pass, so each type works on a tree
+echo       the earlier ones already improved. Types that CREATE structure before
+echo       they pay off (God Component, Insufficient/Broken Modularization) get a
+echo       consecutive second pass to consolidate. A type that does not help is
+echo       rolled back and the run continues - that is the answer for that type,
+echo       not a reason to abandon the rest.
+echo.
+py -m dsarp.cli refactor-iterative --repo apache-commons-validator --detector both --by-smell
+echo.
+echo  See the "One smell type per pass" page on the dashboard for every repository.
+echo.
+echo  Press a key for the next step...
+pause >nul
+
 REM ---------- 8. Supporting evidence: the learned ranker ----------
 cls
 echo [8/8] Supporting evidence - leave-one-repository-out generalization
