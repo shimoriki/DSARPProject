@@ -484,6 +484,13 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     # clean ones, and gave one bad plan the power to fail the whole pass.
     from ..refactoring.agents import budgeted_plans, rank_plans
     from ..refactoring.outcomes import build_ledger as _bl
+    # A budget of 2 left Karaf's 1400-plan tree untouched; uncapping it applied 151 plans at
+    # once and broke the build. Neither extreme works, so an uncapped request is resolved to a
+    # size proportional to the work available - enough to make progress on a large repository,
+    # small enough that one bad plan does not cost the whole pass.
+    if plan_budget <= 0:
+        applicable_now = sum(1 for p in routed["plans"] if p.applicable)
+        plan_budget = max(4, min(16, applicable_now // 8)) if applicable_now > 20 else 0
     chosen = budgeted_plans(routed["plans"], plan_budget,
                             ledger=_bl(cfg.data_dir / "outputs"))
     chosen_ids = {id(x) for x in chosen}
