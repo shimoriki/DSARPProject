@@ -88,12 +88,25 @@ def main() -> int:
                         "smell_types_refactored": types,
                         "stop_reason": rep.get("stop_reason"), "seconds": secs})
 
-    ok = [r for r in results if r.get("passes_accepted")]
+    # A pass being ACCEPTED only means it compiled and was kept. That is not the same as
+    # reducing smells: batch v2 had 5 repos with accepted passes and exactly 1 that reduced
+    # anything. Report both, and make the headline the one that matters.
+    def reduced(r):
+        b, a = r.get("targeted_before"), r.get("targeted_after")
+        return b is not None and a is not None and a < b
+    ok = [r for r in results if reduced(r)]
+    accepted_only = [r for r in results if r.get("passes_accepted") and not reduced(r)]
     by_type: dict = {}
     for r in results:
         for t in r.get("smell_types_refactored") or []:
             by_type[t] = by_type.get(t, 0) + 1
     summary = {"repositories": len(results),
+               "smells_actually_reduced": len(ok),
+               "accepted_but_no_net_change": len(accepted_only),
+               "total_targeted_before": sum(r.get("targeted_before") or 0 for r in results),
+               "total_targeted_after": sum(
+                   (r.get("targeted_after") if r.get("targeted_after") is not None
+                    else r.get("targeted_before")) or 0 for r in results),
                "refactored_and_verified": len(ok),
                "by_build_system": {b: sum(1 for r in results if r.get("build_system") == b)
                                    for b in {r.get("build_system") for r in results}},

@@ -1,0 +1,132 @@
+{
+  "repositories": 8,
+  "refactored_and_verified": 5,
+  "by_build_system": {
+    "maven": 8
+  },
+  "unsupported_build": 0,
+  "smell_types_refactored_across_repos": {
+    "Cyclic Dependency": 3,
+    "Deficient Encapsulation": 4,
+    "God Component": 2,
+    "Unstable Dependency": 1,
+    "Wide Hierarchy": 2,
+    "Scattered Functionality": 1
+  },
+  "results": [
+    {
+      "repo": "apache-commons-cli",
+      "build_system": "maven",
+      "passes_accepted": 4,
+      "passes_run": 4,
+      "targeted_before": 31,
+      "targeted_after": 31,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "Cyclic Dependency",
+        "Deficient Encapsulation",
+        "God Component",
+        "Unstable Dependency"
+      ],
+      "stop_reason": "every pass compiled, but none reduced the total; the run is reported at its BASELINE because keeping the last state would leave the repository worse than it started",
+      "seconds": 408
+    },
+    {
+      "repo": "apache-commons-codec",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 66,
+      "targeted_after": 66,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "Deficient Encapsulation",
+        "God Component"
+      ],
+      "stop_reason": "every pass compiled, but none reduced the total; the run is reported at its BASELINE because keeping the last state would leave the repository worse than it started",
+      "seconds": 267
+    },
+    {
+      "repo": "apache-commons-csv",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 21,
+      "targeted_after": 21,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "no improvement (3 -> 3); the refactorings applied cannot reduce this smell set; rolled back and stopped",
+      "seconds": 92
+    },
+    {
+      "repo": "apache-commons-io",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 155,
+      "targeted_after": 155,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 119
+    },
+    {
+      "repo": "apache-commons-text",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 101,
+      "targeted_after": 101,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "Deficient Encapsulation",
+        "Wide Hierarchy"
+      ],
+      "stop_reason": "every pass compiled, but none reduced the total; the run is reported at its BASELINE because keeping the last state would leave the repository worse than it started",
+      "seconds": 240
+    },
+    {
+      "repo": "apache-commons-validator",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 76,
+      "targeted_after": 64,
+      "reduction_pct": 15.8,
+      "smell_types_refactored": [
+        "Cyclic Dependency",
+        "Deficient Encapsulation",
+        "Wide Hierarchy"
+      ],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 153
+    },
+    {
+      "repo": "apache-logging-log4j2",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 2847,
+      "targeted_after": 2847,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "Cyclic Dependency",
+        "Scattered Functionality"
+      ],
+      "stop_reason": "no improvement (831 -> 831); patience exhausted; rolled back and stopped",
+      "seconds": 2866
+    },
+    {
+      "repo": "apache-spark",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 977,
+      "targeted_after": 977,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 3031
+    }
+  ]
+}
