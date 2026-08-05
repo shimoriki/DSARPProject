@@ -86,7 +86,11 @@ public class ExtractStaticHelpers extends ScanningRecipe<ExtractStaticHelpers.Ac
     }
 
     public static class Accumulator {
-        final List<J.MethodDeclaration> methods = new ArrayList<>();
+        // The printed SOURCE of each method, captured during the scan where a real
+        // cursor exists. Printing in generate() with a fabricated Cursor(null, m)
+        // fails with "Expected to find enclosing SourceFile".
+        final List<String> methodSources = new ArrayList<>();
+        final List<String> methodNames = new ArrayList<>();
         final Set<String> imports = new LinkedHashSet<>();
         String sourceDir = "";
         boolean generated;
@@ -122,7 +126,8 @@ public class ExtractStaticHelpers extends ScanningRecipe<ExtractStaticHelpers.Ac
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration m,
                                                               ExecutionContext ctx) {
                 if (isExtractable(m)) {
-                    acc.methods.add(m);
+                    acc.methodSources.add(m.printTrimmed(getCursor()));
+                    acc.methodNames.add(m.getSimpleName());
                 }
                 return m;
             }
@@ -131,7 +136,7 @@ public class ExtractStaticHelpers extends ScanningRecipe<ExtractStaticHelpers.Ac
 
     @Override
     public Collection<SourceFile> generate(Accumulator acc, ExecutionContext ctx) {
-        if (acc.methods.isEmpty() || acc.generated) {
+        if (acc.methodSources.isEmpty() || acc.generated) {
             return Collections.emptyList();
         }
         acc.generated = true;
@@ -154,10 +159,10 @@ public class ExtractStaticHelpers extends ScanningRecipe<ExtractStaticHelpers.Ac
                    + " behaviour.\n */\n")
            .append("public final class ").append(simple).append(" {\n\n")
            .append("    private ").append(simple).append("() {\n    }\n\n");
-        // Printing the LST node reproduces the declaration exactly — signature, generics,
-        // annotations, body — which is what text extraction could not do reliably.
-        for (J.MethodDeclaration m : acc.methods) {
-            src.append(m.printTrimmed(new org.openrewrite.Cursor(null, m))).append("\n\n");
+        // These were printed from the LST during the scan, where a real cursor exists, so
+        // each declaration is reproduced exactly — signature, generics, annotations, body.
+        for (String body : acc.methodSources) {
+            src.append("    ").append(body).append("\n\n");
         }
         src.append("}\n");
 
