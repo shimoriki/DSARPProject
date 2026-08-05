@@ -207,7 +207,7 @@ EXPANSIVE_REFACTORINGS = {
 }
 
 
-def rank_plans(plans: List[Plan]) -> List[Plan]:
+def rank_plans(plans: List[Plan], ledger: Optional[Dict] = None) -> List[Plan]:
     """Best-first ordering by what a plan ACHIEVES, not by which smell it targets.
 
     Every smell type matters equally — a Deficient Encapsulation finding is no less worth
@@ -216,13 +216,26 @@ def rank_plans(plans: List[Plan]) -> List[Plan]:
     first. Ties break on fewer recipe operations: a smaller plan is less likely to interfere
     with another and cheaper to roll back when it does.
     """
-    return sorted([p for p in plans if p.applicable],
-                  key=lambda p: (0 if p.resolves_fully else 1, len(p.entries), p.smell_type))
+    # Measured effect first: a refactoring with a track record of reducing this smell should
+    # run before one that merely looks promising. resolves_fully turned out NOT to predict
+    # success (partial God Component splits outperformed "full" ones), so it is now only a
+    # tiebreaker behind evidence.
+    from .outcomes import expected_effect
+
+    def key(p: Plan):
+        eff = expected_effect(ledger, p.smell_type, p.refactoring) if ledger else None
+        # eff is mean smell change per run; negative is good. Unmeasured sorts between
+        # proven-good and proven-useless rather than being assumed either way.
+        measured = eff if eff is not None else 0.0
+        return (measured, 0 if p.resolves_fully else 1, len(p.entries), p.smell_type)
+
+    return sorted([p for p in plans if p.applicable], key=key)
 
 
-def budgeted_plans(plans: List[Plan], budget: int) -> List[Plan]:
+def budgeted_plans(plans: List[Plan], budget: int,
+                   ledger: Optional[Dict] = None) -> List[Plan]:
     """The `budget` best plans. budget <= 0 means take everything (previous behaviour)."""
-    ranked = rank_plans(plans)
+    ranked = rank_plans(plans, ledger)
     return ranked if budget <= 0 else ranked[:budget]
 
 

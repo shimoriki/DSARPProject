@@ -483,7 +483,9 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     # refactorings (a God Component split creates a package the detector flags) mask the
     # clean ones, and gave one bad plan the power to fail the whole pass.
     from ..refactoring.agents import budgeted_plans, rank_plans
-    chosen = budgeted_plans(routed["plans"], plan_budget)
+    from ..refactoring.outcomes import build_ledger as _bl
+    chosen = budgeted_plans(routed["plans"], plan_budget,
+                            ledger=_bl(cfg.data_dir / "outputs"))
     chosen_ids = {id(x) for x in chosen}
     new_interfaces: Dict[str, List[str]] = {}
     extractions: List[Dict[str, Any]] = []
