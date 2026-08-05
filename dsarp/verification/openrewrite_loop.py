@@ -458,7 +458,8 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
 
     findings = before.get("findings", [])
     facts = SourceFacts(repo_path)
-    routed = plan_all(repo_path, findings, facts)
+    routed = plan_all(repo_path, findings, facts,
+                      outputs_dir=cfg.data_dir / "outputs")
     entries: List[Any] = []
     plans: List[Dict[str, Any]] = []
     pre_imports: Dict[str, List[str]] = {}

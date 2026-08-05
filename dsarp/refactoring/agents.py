@@ -112,12 +112,18 @@ def build_agents() -> List[Agent]:
 
 
 def plan_all(repo_path: Path, findings: List[Dict[str, Any]],
-             facts: Optional[SourceFacts] = None) -> Dict[str, Any]:
+             facts: Optional[SourceFacts] = None,
+             outputs_dir: Optional[Path] = None) -> Dict[str, Any]:
     """Route every finding to its agent. Returns plans plus per-agent coverage."""
     facts = facts or SourceFacts(Path(repo_path))
     # The tool states its own class counts; the smallest package it still flagged bounds the
     # threshold a split has to get under. Computed once and handed to every planner.
     god_threshold = infer_god_threshold(findings)
+    # What each suggestion type has actually achieved in past verified runs. Safety gates
+    # cannot see this: Introduce Supertype compiles cleanly and passes every check while
+    # making the count worse, and Encapsulate Field has never moved a number at all.
+    from .outcomes import build_ledger, has_no_measured_benefit, is_counterproductive
+    ledger = build_ledger(outputs_dir) if outputs_dir else {}
     agents = build_agents()
     plans: List[Plan] = []
     unrouted: List[str] = []
@@ -135,7 +141,19 @@ def plan_all(repo_path: Path, findings: List[Dict[str, Any]],
         for agent in agents:
             p = agent.plan(facts, f)
             if p is not None:
-                if p.applicable and is_expansive(p.smell_type) and not p.resolves_fully:
+                if p.applicable and ledger and is_counterproductive(
+                        ledger, p.smell_type, p.refactoring):
+                    p.applicable = False
+                    p.reason = (f"measured counterproductive: across past verified runs this "
+                                f"suggestion made {p.smell_type} WORSE on average, so applying "
+                                "it cannot improve the result")
+                elif p.applicable and ledger and has_no_measured_benefit(
+                        ledger, p.smell_type, p.refactoring):
+                    p.applicable = False
+                    p.reason = (f"no measured benefit: {p.refactoring} has run on "
+                                f"{p.smell_type} several times without ever reducing it; "
+                                "it compiles but does not help")
+                elif p.applicable and is_expansive(p.smell_type) and not p.resolves_fully:
                     # It would create a package or type the detector flags while leaving the
                     # original smell in place: a guaranteed net loss.
                     p.applicable = False
@@ -149,6 +167,7 @@ def plan_all(repo_path: Path, findings: List[Dict[str, Any]],
 
     return {
         "plans": plans, "god_threshold": god_threshold,
+        "outcome_ledger_entries": len(ledger),
         "agents": [a.summary() for a in agents if a.handled],
         "unrouted_smell_types": sorted(set(unrouted)),
         "coverage": {
