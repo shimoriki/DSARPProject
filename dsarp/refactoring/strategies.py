@@ -97,11 +97,16 @@ class SourceFacts:
         self._file_of: Dict[str, Path] = {}           # FQN -> file
         self._text: Dict[Path, str] = {}
         self._pkg_private_cache: Dict[str, Tuple[set, set]] = {}
+        self._nested_of: Dict[str, str] = {}   # nested FQN -> declaring type
         self._mentions: Dict[str, set] = {}
         self._tokens: Dict[Path, set] = {}   # file -> identifiers it contains
         self._scan()
 
     _IDENT = re.compile(r"[A-Za-z_]\w*")
+    # a type declared INSIDE another (indented), not the top-level one
+    _NESTED_TYPE = re.compile(
+        r"^[ 	]+(?:(?:public|private|protected|static|final|abstract|sealed)\s+)*"
+        r"(?:class|interface|enum|record)\s+(\w+)", re.M)
 
     def _scan(self) -> None:
         files = []
@@ -132,6 +137,13 @@ class SourceFacts:
             simple = jf.stem
             self._classes.setdefault(pkg, []).append(simple)
             self._file_of[f"{pkg}.{simple}"] = jf
+            # Index NESTED types too. Detectors report them as Outer.Inner, and mapping FQN
+            # to file by file stem alone left every such finding as "not found in the source
+            # index" — 8 of 10 refusals on the most prominent smell in the corpus.
+            for nested in self._NESTED_TYPE.findall(txt):
+                if nested != simple:
+                    self._file_of.setdefault(f"{pkg}.{simple}.{nested}", jf)
+                    self._nested_of[f"{pkg}.{simple}.{nested}"] = f"{pkg}.{simple}"
 
     def files_mentioning(self, name: str) -> set:
         """Files whose source contains `name` as a whole identifier. O(1) after the scan."""
@@ -160,6 +172,17 @@ class SourceFacts:
 
     def file_for(self, fqn: str) -> Optional[Path]:
         return self._file_of.get(fqn)
+
+    def declaring_type(self, fqn: str) -> Optional[str]:
+        """For a nested type, the outer type that declares it; None for a top-level type.
+
+        Removing a nested type is not the same operation as deleting a file — it lives
+        inside its outer type's source — so callers must be able to tell them apart.
+        """
+        return self._nested_of.get(fqn)
+
+    def is_nested(self, fqn: str) -> bool:
+        return fqn in self._nested_of
 
     def text_of(self, fqn: str) -> str:
         jf = self._file_of.get(fqn)
@@ -633,6 +656,19 @@ def plan_unutilized_abstraction(facts: SourceFacts, finding: Dict[str, Any]) -> 
                     reason=f"{fqn} is public API — unused inside this repo, but removing it "
                            "would be a breaking change for downstream consumers",
                     evidence={"component": fqn, "references": 0, "public_api": True})
+    # A NESTED type lives inside its outer type's file. DeleteSourceFiles would remove the
+    # whole file including the outer class, so it is refused until a remove-member-type
+    # recipe exists. Before nested types were indexed these findings looked like "not found",
+    # which hid the fact that they are the bulk of the most prominent smell in the corpus.
+    if facts.is_nested(fqn):
+        return Plan("Unutilized Abstraction", "Remove Nested Type", comps, applicable=False,
+                    stock=False,
+                    reason=f"{fqn.rsplit('.', 1)[-1]} is a nested type declared inside "
+                           f"{(facts.declaring_type(fqn) or '').rsplit('.', 1)[-1]}; deleting "
+                           "its file would remove the enclosing class too, so this needs a "
+                           "remove-member-type transformation rather than file deletion",
+                    evidence={"component": fqn, "nested_in": facts.declaring_type(fqn),
+                              "references": refs})
     rel = str(jf.relative_to(facts.repo)).replace("\\", "/")
     return Plan("Unutilized Abstraction", "Remove Dead Code", comps, resolves_fully=True,
                 entries=[RecipeEntry("org.openrewrite.DeleteSourceFiles",
