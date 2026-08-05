@@ -202,6 +202,14 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
         if not verified:
             why = ("the refactored code did not compile"
                    if not built else "no tool could measure the result")
+            if smell_order:
+                # Same reasoning as below: this is the verdict for ONE smell type, not for the
+                # run. Roll back and give the remaining types their turn.
+                record.update(accepted=False, stop_reason=None,
+                              note=f"{why} for {', '.join(targeted) or 'this type'}; "
+                                   "rolled back, continuing with the next smell type")
+                passes.append(record)
+                continue
             record.update(accepted=False,
                           stop_reason=f"{why}; rolled back and stopped")
             passes.append(record)
@@ -230,6 +238,17 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                                    f"{after_score}), but this pass applied an expansive "
                                    "refactoring that is expected to add smells before a "
                                    "later pass can consolidate them; compiles, so kept")
+            elif smell_order:
+                # In per-smell mode a type that does not help is not a reason to stop - it is
+                # the answer for THAT type. Roll it back and let the next type have its turn,
+                # otherwise the first unhelpful type hides every type behind it and the run
+                # measures one smell instead of six.
+                record.update(accepted=False, stop_reason=None,
+                              note=f"no improvement ({before_score} -> {after_score}) for "
+                                   f"{', '.join(targeted) or 'this type'}; rolled back, "
+                                   "continuing with the next smell type")
+                passes.append(record)
+                continue
             else:
                 why = ("patience exhausted" if expansive else
                        "the refactorings applied cannot reduce this smell set")
