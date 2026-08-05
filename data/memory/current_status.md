@@ -783,3 +783,20 @@ originally in `routines.checkdigit`). An inheritance-aware conflict filter is th
 ### Demo status
 `apache-commons-validator` pass 1 (Arcan 20->13, Designite 91->86) had a clean before-build
 and is unaffected by all of the above.
+
+### Result: commons-io 328 -> 298 (9.1%), verified, six smell types
+
+The inheritance guard closed the loop on the repository whose numbers were void this
+morning. Causally attributed, not merely correlated: the guard deferred four plans, one of
+them verbatim the plan that broke the previous run -
+
+    would move org.apache.commons.io.file.CountingPathVisitor away from its superclass
+    org.apache.commons.io.file.SimplePathVisitor
+
+Pass 1 compiled and was kept (Arcan 148->130, Designite 403->390, both tools measured both
+sides). Pass 2 broke the build and was rolled back. Smell types reduced: Cyclic Dependency
+-16, Unstable Dependency -8, God Component -3, Cyclically-dependent Modularization -2,
+Deficient Encapsulation -1, Dense Structure -1.
+
+This is now the strongest demo case: six smell types, both detectors, and a verdict the
+gate refused to inflate on the pass that failed.
