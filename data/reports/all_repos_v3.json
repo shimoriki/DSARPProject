@@ -1,0 +1,136 @@
+{
+  "repositories": 8,
+  "smells_actually_reduced": 1,
+  "accepted_but_no_net_change": 4,
+  "total_targeted_before": 4274,
+  "total_targeted_after": 4264,
+  "refactored_and_verified": 1,
+  "by_build_system": {
+    "maven": 8
+  },
+  "unsupported_build": 0,
+  "smell_types_refactored_across_repos": {
+    "Cyclic Dependency": 3,
+    "Deficient Encapsulation": 3,
+    "God Component": 4,
+    "Unstable Dependency": 1,
+    "Wide Hierarchy": 1,
+    "Scattered Functionality": 1
+  },
+  "results": [
+    {
+      "repo": "apache-commons-cli",
+      "build_system": "maven",
+      "passes_accepted": 4,
+      "passes_run": 4,
+      "targeted_before": 31,
+      "targeted_after": 31,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "Cyclic Dependency",
+        "Deficient Encapsulation",
+        "God Component",
+        "Unstable Dependency"
+      ],
+      "stop_reason": "every pass compiled, but none reduced the total; the run is reported at its BASELINE because keeping the last state would leave the repository worse than it started",
+      "seconds": 378
+    },
+    {
+      "repo": "apache-commons-codec",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 66,
+      "targeted_after": 66,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "Deficient Encapsulation",
+        "God Component"
+      ],
+      "stop_reason": "every pass compiled, but none reduced the total; the run is reported at its BASELINE because keeping the last state would leave the repository worse than it started",
+      "seconds": 254
+    },
+    {
+      "repo": "apache-commons-csv",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 21,
+      "targeted_after": 21,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "no improvement (3 -> 3); the refactorings applied cannot reduce this smell set; rolled back and stopped",
+      "seconds": 98
+    },
+    {
+      "repo": "apache-commons-io",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 155,
+      "targeted_after": 155,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 135
+    },
+    {
+      "repo": "apache-commons-text",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 101,
+      "targeted_after": 101,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "God Component",
+        "Wide Hierarchy"
+      ],
+      "stop_reason": "every pass compiled, but none reduced the total; the run is reported at its BASELINE because keeping the last state would leave the repository worse than it started",
+      "seconds": 255
+    },
+    {
+      "repo": "apache-commons-validator",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 76,
+      "targeted_after": 66,
+      "reduction_pct": 13.2,
+      "smell_types_refactored": [
+        "Cyclic Dependency",
+        "Deficient Encapsulation",
+        "God Component"
+      ],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 164
+    },
+    {
+      "repo": "apache-logging-log4j2",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 2847,
+      "targeted_after": 2847,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "Cyclic Dependency",
+        "Scattered Functionality"
+      ],
+      "stop_reason": "no improvement (831 -> 831); patience exhausted; rolled back and stopped",
+      "seconds": 3233
+    },
+    {
+      "repo": "apache-spark",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 977,
+      "targeted_after": 977,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 3255
+    }
+  ]
+}

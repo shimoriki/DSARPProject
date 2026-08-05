@@ -9,6 +9,41 @@
 DSARP Evidence-Based Refactoring Agent — complete modular platform: local + HPC, multi-repo
 training, unseen-repo testing, evidence-grounded no-hallucination suggestions, human HGRS review.
 
+## RELOCATION IS EXHAUSTED — three controlled batches (2026-08-05)
+
+THE HEADLINE FINDING. Three strategy variants, same result on the same 8 Maven repos:
+  v1  apply every applicable plan                                  1/8 reduced
+  v2  + budget escalation, patience, best-state guard              1/8 reduced
+  v3  + threshold-gated splits, no partial expansive plans         1/8 reduced
+Totals across all repos v3: 4274 -> 4264 (0.2%). Four repos ACCEPT passes that compile and
+change nothing. Only commons-validator ever reduces. Reports: data/reports/all_repos_v{2,3}.json.
+CONCLUSION: moving classes between packages / merging packages REDISTRIBUTES smells; it does
+not remove them. No ranking, budgeting, patience or threshold gate changes that. Extract Class
+is the only family that removes MEMBERS and therefore the only path to reliable reduction.
+
+METRIC BUG worth remembering: `refactored_and_verified` was defined as passes_accepted > 0 and
+reported "5/8 improved" when ONE repo reduced anything. An accepted pass only means it compiled
+and was kept. Now `smells_actually_reduced` (after < before) is the headline.
+
+EXTRACT CLASS (dsarp/refactoring/extract_class.py + com.dsarp.recipes.ExtractStaticHelpers):
+Python regex surgery NEVER produced compiling Java — 3 defect classes (lost imports, stranded
+callers, mangled declarations from regex-qualifying DECLARATIONS not calls). Rewritten as an
+OpenRewrite ScanningRecipe on the LST. Progress: regex broke everything -> LST v1 aborted
+("Expected to find enclosing SourceFile": printed with a fabricated Cursor(null, m); fix =
+print during the SCAN where a real cursor exists) -> LST v2 applied 39 files, scattered errors
+-> LST v3 ten errors from two named causes. Cause 2 FIXED (scanner had no class guard, so it
+collected every public static method in the REPO). Cause 1 STILL OPEN: imports not resolving in
+the generated helper.
+PRECONDITION LEARNED (3rd instance of the same pattern): a refactoring's safety depends on
+ACCESS, not just structure. `static` only means no `this` dependency — it says nothing about
+visibility, so a moved method calling a private helper left behind cannot compile.
+See also: package-private constructor blocking subclass moves; package-private types/members
+blocking class moves.
+
+SIX measurement artifacts caught by the verification gate this session (Arcan 20->0, iterative
+13.2%, both sectioned runs, run-metric 10->18, batch "5/8 improved"). That reliability is the
+defensible contribution; the smell-reduction numbers are not yet.
+
 ## OPTIMISATION + git-deepen fix + README rewrite (2026-08-04, latest)
 
 **GIT-DEEPEN HANG — ROOT-CAUSED AND FIXED.** `scripts/mine_and_align_refactorings.py` chose
