@@ -19,17 +19,14 @@ IN_SCOPE = [
     ("Missing / Wide Hierarchy", "Introduce Supertype", "IntroduceSupertype (DSARP)"),
     ("Rebellious Hierarchy", "Extract Interface", "ExtractInterfaceForClass (DSARP)"),
     ("Unutilized Abstraction", "Remove Dead Code", "DeleteSourceFiles (stock, zero-ref only)"),
+    ("Insufficient Modularization / Multifaceted Abstraction", "Extract Class",
+     "ExtractStaticHelpers (DSARP, LST)"),
 ]
 st.dataframe([{"smell": s, "refactoring": r, "recipe": c} for s, r, c in IN_SCOPE],
              use_container_width=True, hide_index=True)
 
 with st.expander("Deliberately out of scope — and the reason for each"):
     st.dataframe([
-        {"smell": "Insufficient Modularization",
-         "why not": "needs member-level extraction into a new type — a design judgement about "
-                    "which fields and methods belong together"},
-        {"smell": "Multifaceted Abstraction",
-         "why not": "splitting responsibilities requires first deciding what they are"},
         {"smell": "Broken Modularization",
          "why not": "needs move-method with real type attribution; the index is regex-based"},
         {"smell": "Broken Hierarchy",
@@ -85,6 +82,23 @@ else:
 # --------------------------------------------------------------------------- #
 # The verification gate
 # --------------------------------------------------------------------------- #
+st.divider()
+st.subheader("First verified smell reduction")
+st.success("**commons-validator — both tools, compiling build.** "
+           "Arcan 20 → 13 (−7), Designite 91 → 86 (−5). "
+           "Unstable Dependency −7, Cyclic Dependency −4, God Component −1, "
+           "Scattered Functionality −1.")
+st.markdown("""
+Designite's own total **fell**. Every earlier strategy made it rise, because splits created
+packages it then flagged as Feature Concentration.
+
+What unblocked it was an **ordering rule**, not a new refactoring. An extracted helper stays in
+its origin package and keeps referring to that package's types; a God Component split in the
+same pass was relocating those types out from under it. Extract Class now claims its whole
+package first. The result is fewer, non-conflicting plans — 28 files changed instead of 50 —
+and a real reduction rather than churn.
+""")
+
 st.divider()
 st.subheader("The verification gate — why these numbers can be trusted")
 st.markdown("""
