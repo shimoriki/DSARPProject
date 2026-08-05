@@ -44,6 +44,14 @@ class RefactoringParams:
     #    could be reading it (0 keeps it strictly safe).
     encapsulate_max_external_readers: int = 0
 
+    # -- Dead code: may an UNREFERENCED public type be removed?
+    #    Every refactoring runs on a COPY, never the user's checkout, so "it is public API"
+    #    is an argument about downstream consumers rather than about this repository. With
+    #    it enabled, removal still requires zero references inside the repo and non-test
+    #    code — the type is provably unused HERE. Disable when the target is a published
+    #    library whose API surface is the product.
+    remove_unreferenced_public_types: bool = True
+
     # -- Iterative loop
     max_passes: int = 5
 

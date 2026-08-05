@@ -54,6 +54,18 @@ matches — check annotated fields, multi-line declarations, and whether Designi
 `public static` non-final. Verify by comparing the field list against Designite's own
 Description text for the same class before changing the regex.
 
+**SMELL DEFINITION MISREAD — Unutilized Abstraction is NOT dead code.** The strategy assumed
+"unutilized" meant unreferenced and planned DeleteSourceFiles. With the public-API guard
+relaxed (new param `remove_unreferenced_public_types`, safe because we always refactor a COPY)
+the refusals resolve to **23 of 32 "still referenced"**. Designite means an abstraction not
+used AS an abstraction — an interface/abstract class with no polymorphic use — not one with
+zero references. Deletion is therefore the wrong refactoring for the corpus's most prominent
+smell (4907 instances). The right one is Collapse Hierarchy / inline the abstraction into its
+single implementor. Same class of error as the nested-type bug: the strategy was not looking
+at what the detector was actually reporting.
+VERIFY THIS FIRST next cycle: read Designite's own Description text for an Unutilized
+Abstraction finding and confirm the definition before writing the replacement strategy.
+
 ORDER OF WORK, highest value first:
 1. When v4 and v5 land, compare. v4 = all suggestion types; v5 = outcome-ledger active
    (refuses Introduce Supertype / Encapsulate Field / Consolidate Package). Report
