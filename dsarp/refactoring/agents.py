@@ -147,12 +147,11 @@ def plan_all(repo_path: Path, findings: List[Dict[str, Any]],
                     p.reason = (f"measured counterproductive: across past verified runs this "
                                 f"suggestion made {p.smell_type} WORSE on average, so applying "
                                 "it cannot improve the result")
-                elif p.applicable and ledger and has_no_measured_benefit(
-                        ledger, p.smell_type, p.refactoring):
-                    p.applicable = False
-                    p.reason = (f"no measured benefit: {p.refactoring} has run on "
-                                f"{p.smell_type} several times without ever reducing it; "
-                                "it compiles but does not help")
+                # NOT refused for "no measured benefit". A strategy that has never helped may
+                # simply have been broken - Deficient Encapsulation was refused on 106 Karaf
+                # findings using measurements taken before its field detection was fixed, which
+                # would have frozen the old behaviour in place permanently. Harm is refused;
+                # mere absence of benefit only costs ranking position.
                 elif p.applicable and is_expansive(p.smell_type) and not p.resolves_fully:
                     # It would create a package or type the detector flags while leaving the
                     # original smell in place: a guaranteed net loss.

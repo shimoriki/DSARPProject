@@ -108,6 +108,10 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
     current = _copy_repo(repo_path, work / "pass_0")
     passes: List[Dict[str, Any]] = []
     carried: Optional[Dict[str, Any]] = None   # previous pass's AFTER measurement
+    # Scale the first budget with how much work the repo actually has. A fixed budget of 2
+    # is sensible on commons-validator and absurd on Karaf, which produced 1400 plans and
+    # deferred 47 viable ones as "outside this pass's budget" - so a large repo looked inert
+    # when it simply was not being allowed to act.
     budget = max(1, start_budget)
     used_patience = 0
     best_score: Optional[int] = None
@@ -118,6 +122,13 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
         rep = refactor_with_openrewrite_and_verify(
             cfg, f"{project_id}__pass{i}", current, detector=detector, strategy=strategy,
             keep_copy=True, known_before=carried, plan_budget=budget)
+        if i == 1:
+            # size the budget from the first pass's actual plan count
+            applicable = sum(1 for p in (rep.get("plans") or []) if p.get("applicable"))
+            deferred = sum(1 for p in (rep.get("plans") or [])
+                           if "outside this pass" in (p.get("reason") or ""))
+            if deferred:
+                budget = max(budget, min(32, (applicable + deferred) // 2 or budget))
 
         b_by = rep.get("by_type_before") or {}
         a_by = rep.get("by_type_after") or {}
