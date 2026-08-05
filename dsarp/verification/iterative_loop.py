@@ -83,7 +83,8 @@ def per_type_delta(before: Dict[str, int], after: Dict[str, int],
 def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                         detector: str = "both", max_passes: int = 5,
                         strategy: str = "merge_package",
-                        start_budget: int = 2, patience: int = 1) -> Dict[str, Any]:
+                        start_budget: int = 0, patience: int = 1,
+                        min_passes: int = 2) -> Dict[str, Any]:
     """Repeat detect -> refactor -> verify, escalating how much is attempted per pass.
 
     Two behaviours that matter, both learned from measured failures:
@@ -112,7 +113,11 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
     # is sensible on commons-validator and absurd on Karaf, which produced 1400 plans and
     # deferred 47 viable ones as "outside this pass's budget" - so a large repo looked inert
     # when it simply was not being allowed to act.
-    budget = max(1, start_budget)
+    # start_budget 0 means "no cap on the first pass". Sizing it AFTER pass 1 was useless:
+    # the loop stops when pass 1 does not improve, so the larger budget never applied and a
+    # 1400-plan repository like Karaf deferred everything as "outside this pass's budget".
+    # The conflict filter and the safety guards already bound what can run together.
+    budget = start_budget
     used_patience = 0
     best_score: Optional[int] = None
     baseline: Optional[int] = None
@@ -186,7 +191,14 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
             # first. Keep the pass and let the next one try to consolidate, but only while
             # patience lasts and only because the build is still sound.
             expansive = any(is_expansive(t) for t in targeted)
-            if used_patience < patience and expansive:
+            if i < min_passes:
+                # A refactoring that adds smells before removing them cannot show its value
+                # in one pass. Give the loop a floor of passes before the no-improvement rule
+                # is allowed to end it; the build gate still rolls back anything broken.
+                record.update(accepted=True, kept_on_min_passes=True, stop_reason=None,
+                              note=f"pass {i} of a {min_passes}-pass floor: kept without "
+                                   "improvement so a later pass can consolidate")
+            elif used_patience < patience and expansive:
                 used_patience += 1
                 record.update(accepted=True, kept_on_patience=True,
                               stop_reason=None,
