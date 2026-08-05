@@ -84,10 +84,10 @@ def plan_extract_class(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
         return Plan(smell, "Extract Class", comps, applicable=False, stock=False,
                     reason=f"{target} already exists", evidence={"component": fqn})
 
-    entries = [RecipeEntry("org.openrewrite.java.ChangeMethodTargetToStatic",
-                           {"methodPattern": f"{fqn} {m}(..)",
-                            "fullyQualifiedTargetTypeName": target})
-               for m in methods]
+    # No recipe entry: DSARP performs the whole extraction, including call sites. Relying
+    # on ChangeMethodTargetToStatic failed because the surgery had to happen first, and the
+    # recipe cannot run on a tree that does not yet compile.
+    entries = [RecipeEntry("org.openrewrite.java.RemoveUnusedImports", {})]
     plan = Plan(smell, "Extract Class", comps, entries=entries, stock=False,
                 resolves_fully=True,
                 reason=f"move {len(methods)} public static method(s) out of {simple} into "
@@ -121,21 +121,65 @@ def apply_extractions(repo_path: Path, extractions: List[Dict[str, Any]]) -> Dic
         if not bodies:
             continue
         pkg, simple = target.rsplit(".", 1)
+        src_simple = src_fqn.rsplit(".", 1)[-1]
         out = src.parent / f"{simple}.java"
         if out.exists():
             continue
+        # DEFECT 1: the extracted bodies reference types the ORIGINAL imported. Writing the
+        # declarations without those imports produced "cannot find symbol" in the new file.
+        imports = "\n".join(re.findall(r"^import [^\n]+;", text, re.M))
         out.write_text(
-            f"package {pkg};\n\n"
-            f"/** Static helpers extracted by DSARP from {src_fqn.rsplit('.', 1)[-1]} to\n"
-            f"  * reduce its size. Static methods cannot reach instance state, so moving\n"
-            f"  * them preserves behaviour. */\n"
+            f"package {pkg};\n\n" + (imports + "\n\n" if imports else "")
+            + f"/** Static helpers extracted by DSARP from {src_simple} to reduce its size.\n"
+            f"  * Static methods cannot reach instance state, so moving them preserves\n"
+            f"  * behaviour. */\n"
             f"public final class {simple} {{\n\n"
             f"    private {simple}() {{\n    }}\n\n"
             + "\n\n".join(bodies) + "\n}\n", encoding="utf-8")
-        src.write_text(remaining, encoding="utf-8")
+
+        # DEFECT 2: cutting the declarations left every caller dangling, and the recipe that
+        # would repoint them cannot run on a tree that no longer compiles. The helper sits in
+        # the SAME package, so no import is needed and DSARP repoints the calls itself —
+        # keeping the tree valid at every step instead of depending on a later recipe.
+        # Repoint ONLY the methods that were actually cut. Passing every planned method
+        # rewrote the DECLARATION of ones _cut_methods could not match, turning
+        # `static boolean isBlank(` into `static boolean Helpers.isBlank(` — a syntax error.
+        extracted = [m for m in methods
+                     if re.search(rf"\b{re.escape(m)}\s*\(", "\n".join(bodies))]
+        src.write_text(_repoint(remaining, src_simple, simple, extracted, own_file=True),
+                       encoding="utf-8")
+        for other in Path(repo_path).rglob("*.java"):
+            if other == src or other == out:
+                continue
+            try:
+                t = other.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if src_simple not in t:
+                continue
+            nt = _repoint(t, src_simple, simple, extracted, own_file=False)
+            if nt != t:
+                other.write_text(nt, encoding="utf-8")
         created.append(target)
         moved += len(bodies)
     return {"classes_created": created, "methods_moved": moved}
+
+
+def _repoint(text: str, src_simple: str, target_simple: str, methods: List[str],
+             own_file: bool) -> str:
+    """Point calls at the new helper class.
+
+    Elsewhere: `Original.method(` -> `Helpers.method(`.
+    Inside the original: those calls were unqualified, so they need qualifying — but only
+    where they are genuinely calls, never after a dot (another type's method of the same
+    name) and never the declaration, which has already been cut.
+    """
+    for m in methods:
+        text = re.sub(rf"\b{re.escape(src_simple)}\s*\.\s*{re.escape(m)}\s*\(",
+                      f"{target_simple}.{m}(", text)
+        if own_file:
+            text = re.sub(rf"(?<![.\w]){re.escape(m)}\s*\(", f"{target_simple}.{m}(", text)
+    return text
 
 
 def _find_file(repo_path: Path, fqn: str) -> Optional[Path]:
