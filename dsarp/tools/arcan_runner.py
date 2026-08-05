@@ -247,9 +247,16 @@ def compile_gradle(repo_path: Path, timeout: int = 2400,
                 "note": "No gradlew wrapper and no gradle on PATH."}
     cmd = [gw, "classes", "--no-daemon", "-q",
            "-x", "test", "--console=plain"]
+    # Gradle supports a window of JDKs. Prefer 21 (current LTS, supported by every Gradle
+    # this project meets), then 17; never 26 or 8, which Gradle rejects outright.
+    env = dict(os.environ)
+    jdk = jdk_home_for("21", "17")
+    if jdk:
+        env["JAVA_HOME"] = str(jdk)
+        cmd.append(f"-Dorg.gradle.java.home={jdk}")
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
-                              cwd=str(repo_path))
+                              cwd=str(repo_path), env=env)
     except (subprocess.TimeoutExpired, OSError) as e:
         return {"ok": False, "status": "compile_timeout", "note": str(e)[:200]}
     out = (proc.stdout or "") + "\n" + (proc.stderr or "")
@@ -280,7 +287,11 @@ def compile_gradle(repo_path: Path, timeout: int = 2400,
 def installed_jdks() -> List[str]:
     """JDKs discoverable on this machine, so a version mismatch names the alternatives."""
     roots = [Path(r"C:/Program Files/Java"), Path(r"C:/Program Files/Eclipse Adoptium"),
-             Path.home() / ".jdks"]
+             Path.home() / ".jdks",
+             # user-scope installs (the JetBrains/Oracle installers default here)
+             Path.home() / "AppData/Local/Programs/Java",
+             Path(r"C:/Program Files/Microsoft"), Path(r"C:/Program Files/Amazon Corretto"),
+             Path(r"C:/Program Files/Zulu")]
     found = []
     for root in roots:
         if not root.is_dir():
@@ -289,6 +300,29 @@ def installed_jdks() -> List[str]:
             if d.is_dir() and (d / "bin" / "javac.exe").exists():
                 found.append(d.name)
     return found
+
+
+def jdk_home_for(*versions: str):
+    """Absolute path of the first installed JDK whose name matches one of `versions`.
+
+    Gradle refuses to run on a JDK it does not support: current Gradle rejects 26 and drops
+    support for 8, so solr, lucene and spring-framework could not be built here at all. Given
+    a supported JDK the same builds work, so the runner points Gradle at one explicitly
+    instead of inheriting whatever JAVA_HOME happens to be.
+    """
+    roots = [Path(r"C:/Program Files/Java"), Path(r"C:/Program Files/Eclipse Adoptium"),
+             Path.home() / ".jdks", Path.home() / "AppData/Local/Programs/Java",
+             Path(r"C:/Program Files/Microsoft"), Path(r"C:/Program Files/Amazon Corretto"),
+             Path(r"C:/Program Files/Zulu")]
+    for want in versions:
+        for root in roots:
+            if not root.is_dir():
+                continue
+            for d in sorted(root.iterdir()):
+                if (d.is_dir() and want in d.name
+                        and (d / "bin" / "javac.exe").exists()):
+                    return d
+    return None
 
 
 def run_arcan(classes_dir: Path, out_dir: Path, timeout: int = 2400,
