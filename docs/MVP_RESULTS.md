@@ -48,6 +48,36 @@ that removed exactly what it aimed at can therefore make the overall count look 
 loop reports `per_type.targeted` (what was aimed at) separately from `per_type.side_effects`
 (what moved on its own), and the iterative loop scores only the targeted types.
 
+## Attributable reduction — commons-validator, one smell type per pass
+
+`refactor-iterative --by-smell` targets a single smell type per pass, so each number is a
+statement about that type rather than about a mixture. 76 -> 62 (**18.4%**), 4 of 13 passes
+kept, both detectors measuring both sides of a compiling build.
+
+| pass | smell type | score | outcome |
+|---|---|---|---|
+| 1 | Cyclic Dependency | 17 -> 16 | kept |
+| 2-3 | Unstable Dependency | — | build broke, rolled back |
+| 4 | Deficient Encapsulation | 23 -> 21 | kept |
+| 5 | Deficient Encapsulation (repeat) | 21 -> 20 | kept |
+| 6-7 | Deficient Encapsulation | 20 -> 20 | flat, stopped |
+| 8 | God Component | 2 -> 2 | compiles, kept |
+| 9-10 | Scattered Functionality | — | build broke, rolled back |
+| 11-13 | Insufficient Modularization | 4 -> 4 | flat, rolled back |
+
+Deficient Encapsulation kept paying for a second pass and then stopped on its own - the loop
+repeats a type while it improves and gives one safety retry before moving on, so nobody has
+to guess a pass count per type.
+
+**Reproducible**: two independent runs produced identical pass outcomes and an identical
+18.4%. The second was run after a fix that stopped package merges leaking into passes that
+were not testing Cyclic Dependency; the numbers did not move, which confirms the merges were
+not the source of the later gains.
+
+Still failing here: Unstable Dependency and Scattered Functionality break the build. Both
+relocate types across packages, so they are plausibly the same import defect that blocked God
+Component until it was fixed - that is the next thing to check, not a claim.
+
 ## Best verified reduction — commons-io, six smell types
 
 Iterative loop, both tools measuring both sides of a **compiling** build:
