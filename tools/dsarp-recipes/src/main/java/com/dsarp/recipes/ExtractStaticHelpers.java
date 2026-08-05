@@ -125,7 +125,14 @@ public class ExtractStaticHelpers extends ScanningRecipe<ExtractStaticHelpers.Ac
             @Override
             public J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration m,
                                                               ExecutionContext ctx) {
-                if (isExtractable(m)) {
+                // Only methods declared BY THE TARGET CLASS. Without this guard the scanner
+                // collected every public static method in the repository, so the generated
+                // helper referenced types the target never imported ("cannot find symbol:
+                // class DateValidator").
+                J.ClassDeclaration owner = getCursor().firstEnclosing(J.ClassDeclaration.class);
+                boolean mine = owner != null && owner.getType() != null
+                        && TypeUtils.isOfClassType(owner.getType(), fullyQualifiedClassName);
+                if (mine && isExtractable(m)) {
                     acc.methodSources.add(m.printTrimmed(getCursor()));
                     acc.methodNames.add(m.getSimpleName());
                 }
