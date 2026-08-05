@@ -75,16 +75,20 @@ def uses_non_public_members(facts: SourceFacts, fqn: str, method: str) -> bool:
     txt = facts.text_of(fqn)
     if not txt:
         return True
-    body = _method_body(txt, method)
-    if not body:
+    # Check EVERY overload. `maxLength` has a 2-arg form that just delegates and a 3-arg
+    # form that calls the private adjustForLineEnding; examining only the first match
+    # cleared the method, and the recipe then extracted both overloads together.
+    bodies = _method_bodies(txt, method)
+    if not bodies:
         return False
+    body = "\n".join(bodies)
     hidden = set(_NON_PUBLIC_MEMBER.findall(txt)) - {method}
     # followed by "(" (call), "." (member access) or "[" (index) — i.e. genuinely used
     after = r"\s*[(.\[]"
     return any(re.search(r"(?<![.\w])" + re.escape(h) + after, body) for h in hidden)
 
 
-def _method_body(text: str, name: str) -> str:
+def _method_bodies(text: str, name: str) -> List[str]:
     """The source of one method, found by brace matching from its declaration.
 
     Uses the same shape as STATIC_METHOD (which reliably finds all 17 on GenericValidator)
@@ -93,21 +97,22 @@ def _method_body(text: str, name: str) -> str:
     _method_body returned "" and uses_non_public_members silently answered False, letting a
     method that calls a private helper through the guard.
     """
-    m = re.search(rf"^[ \t]{{1,8}}public\s+static\s+(?:final\s+|synchronized\s+)*"
-                  rf"[\w.<>\[\],\s]+?\s+{re.escape(name)}\s*\([^;{{]*\)\s*"
-                  rf"(?:throws [\w.,\s]+)?\{{", text, re.M)
-    if not m:
-        return ""
-    depth, i = 0, m.end() - 1
-    while i < len(text):
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-            if depth == 0:
-                return text[m.start():i + 1]
-        i += 1
-    return ""
+    pattern = re.compile(rf"^[ \t]{{1,8}}public\s+static\s+(?:final\s+|synchronized\s+)*"
+                         rf"[\w.<>\[\],\s]+?\s+{re.escape(name)}\s*\([^;{{]*\)\s*"
+                         rf"(?:throws [\w.,\s]+)?\{{", re.M)
+    out: List[str] = []
+    for m in pattern.finditer(text):
+        depth, i = 0, m.end() - 1
+        while i < len(text):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    out.append(text[m.start():i + 1])
+                    break
+            i += 1
+    return out
 
 
 def plan_extract_class(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:

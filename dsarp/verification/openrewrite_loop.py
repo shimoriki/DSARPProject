@@ -321,6 +321,12 @@ def _types_touched(plan) -> set:
                 out.add(o[key])
         if o.get("oldPackageName"):
             out.add(o["oldPackageName"] + ".*")
+        # An extracted helper stays in its origin package and keeps referring to that
+        # package's other types. If another plan in the same pass relocates one of them the
+        # helper cannot resolve it, which is how DateValidator and EmailValidator went
+        # missing. Extract Class therefore claims its whole package for the pass.
+        if e.recipe.endswith("ExtractStaticHelpers") and o.get("fullyQualifiedClassName"):
+            out.add(str(o["fullyQualifiedClassName"]).rsplit(".", 1)[0] + ".*")
     return out
 
 
@@ -489,12 +495,16 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
         # extracting an interface from a class another plan is relocating leaves the new
         # interface pointing at the old package. First plan to claim a type wins.
         touched = _types_touched(p)
-        if p.applicable and touched & claimed:
+        # a "pkg.*" claim covers every type declared in that package
+        blocked_by_pkg = {t for t in touched
+                          for c in claimed if c.endswith(".*")
+                          and t.startswith(c[:-1])}
+        if p.applicable and (touched & claimed or blocked_by_pkg):
             d = p.as_dict()
             d.update(applicable=False,
                      reason="conflicts with another refactoring already scheduled for "
-                            f"{sorted(touched & claimed)[0]} in this pass; deferred to the "
-                            "next iteration of the loop")
+                            f"{sorted(touched & claimed or blocked_by_pkg)[0]} in this "
+                            "pass; deferred to the next iteration of the loop")
             plans.append(d)
             continue
         plans.append(p.as_dict())
