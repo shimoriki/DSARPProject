@@ -744,8 +744,9 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
         # to resolve because the two classes were neighbours.
         _moves = [(e.options["oldFullyQualifiedTypeName"],
                    e.options["newFullyQualifiedTypeName"])
-                  for e in entries
-                  if e.options.get("oldFullyQualifiedTypeName")
+                  for e in (plan or [])
+                  if getattr(e, "options", None)
+                  and e.options.get("oldFullyQualifiedTypeName")
                   and e.options.get("newFullyQualifiedTypeName")]
         for fqn, imps in imports_for_types_left_behind(copy, _moves).items():
             pre_imports.setdefault(fqn, [])
