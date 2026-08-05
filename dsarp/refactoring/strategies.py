@@ -423,12 +423,14 @@ def apply_pre_imports(repo_path: Path, pre_imports: Dict[str, List[str]]) -> Dic
         # a type declared in this file, or living in its own package, needs no import and
         # would collide with one
         taken |= set(re.findall(r"\b(?:class|interface|enum|record)\s+(\w+)", text))
+        # NB: a sibling still in this file's own package is exactly what must be imported.
+        # These imports are written BEFORE the move, when the sibling is still a neighbour;
+        # after the move it is not, and the reference stops resolving. Skipping them as
+        # "redundant" turned the duplicate-import failure into `cannot find symbol`.
         need = []
         for s in siblings:
             simple = s.rsplit(".", 1)[-1]
             if f"import {s};" in text or simple in taken:
-                continue
-            if s.rsplit(".", 1)[0] == own_pkg:      # same package: import is redundant
                 continue
             need.append(s)
             taken.add(simple)

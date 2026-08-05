@@ -27,11 +27,17 @@ def test_conflicting_simple_name_is_not_imported(tmp_path):
     assert text.count("ISBNValidator;") == 1, "a duplicate simple-name import was added"
 
 
-def test_same_package_sibling_is_not_imported(tmp_path):
+def test_same_package_sibling_IS_imported(tmp_path):
+    """The whole point: the sibling is a neighbour now and will not be after the move.
+
+    These imports are written before the refactoring runs. Treating a same-package sibling as
+    a redundant import is what turned the duplicate-import failure into `cannot find symbol` -
+    the reference had nothing to resolve to once the type moved away.
+    """
     f = _write(tmp_path, "package org.apache.commons.validator;\n"
                          "public class CheckDigit {}\n")
     apply_pre_imports(tmp_path, {FQN: ["org.apache.commons.validator.Sibling"]})
-    assert "import org.apache.commons.validator.Sibling;" not in f.read_text(encoding="utf-8")
+    assert "import org.apache.commons.validator.Sibling;" in f.read_text(encoding="utf-8")
 
 
 def test_a_genuinely_needed_import_is_still_added(tmp_path):
