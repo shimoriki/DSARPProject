@@ -16,6 +16,31 @@ till it is viable to reliably detect analyse suggest refactor verify retest ie d
 loop and remove smells reliably." Continue WITHOUT checking in. Still confirm before anything
 outward-facing or destructive (pushing to new remotes, deleting user data, installing software).
 
+TARGET: 4-5 smell types (user directive). Prominence across 37 analysed repos:
+  Unutilized Abstraction      4907   most prominent by far
+  Unnecessary Abstraction     3599
+  Cyclic Dependency           1575   WORKS (-7)
+  Deficient Encapsulation     1373   measured 0 effect
+  Broken Hierarchy             969
+  Unstable Dependency          459   WORKS (-8)
+Target set = Cyclic + Unstable (working) + Unutilized + Unnecessary + Deficient Encapsulation.
+The first two most prominent are 8500 instances of DEAD CODE, and deletion is inherently
+SUBTRACTIVE — unlike splits it cannot create the new packages the detector then flags. That is
+the best available route to reliable multi-smell reduction.
+
+**ROOT CAUSE FOUND for why dead-code removal almost never fires**: the findings are dominated
+by NESTED classes — DomainValidator.Item, CreditCardValidator.Amex, ModulusTenCheckDigit.* —
+and `SourceFacts._file_of` maps FQN -> file by FILE STEM, so `a.b.Outer.Inner` is never
+resolved and the plan reports "not found in the source index". On commons-validator that is 8
+of 10 refusals; 0 plans were applicable.
+TWO pieces of work follow, and they are separate:
+  (a) index nested types (walk `Outer.Inner` back to Outer.java) — a correctness fix that
+      also unblocks every other strategy operating on nested types;
+  (b) a REMOVE NESTED TYPE transformation. DeleteSourceFiles is wrong for a nested class: it
+      lives inside its outer file. This needs an LST recipe that drops the member type.
+Also check why Deficient Encapsulation measures 0: likely `external_field_users` is so
+conservative that almost no field qualifies, so the plan fires but narrows nothing.
+
 ORDER OF WORK, highest value first:
 1. When v4 and v5 land, compare. v4 = all suggestion types; v5 = outcome-ledger active
    (refuses Introduce Supertype / Encapsulate Field / Consolidate Package). Report
