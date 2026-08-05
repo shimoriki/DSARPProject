@@ -22,6 +22,7 @@ real command + status; nothing is faked.
 from __future__ import annotations
 
 import collections
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -330,6 +331,89 @@ def _types_touched(plan) -> set:
     return out
 
 
+_EXTENDS_RE = re.compile(
+    r"\b(?:class|interface)\s+(\w+)\s*(?:<[^{]*?>)?\s*extends\s+([\w.]+)", re.S)
+_PKG_RE = re.compile(r"^\s*package\s+([\w.]+)\s*;", re.M)
+
+
+def inheritance_pairs(repo_path: Path) -> List[tuple]:
+    """(subtype FQN, supertype FQN) for pairs declared in the SAME package.
+
+    Two classes sharing a package may rely on package-private access - a constructor with no
+    modifier is the common case. Each plan is checked on its own, so two individually safe
+    moves can still put a subclass in one package and its superclass in another, and the
+    inherited constructor stops being reachable. That is what broke commons-validator pass 3:
+    LuhnCheckDigit and ModulusCheckDigit started in routines.checkdigit and ended up in
+    validator.digit and validator respectively.
+
+    Only same-package pairs are returned, because a pair already split across packages cannot
+    be relying on package-private access and so is not at risk from being split again.
+    """
+    by_simple: Dict[str, str] = {}
+    extends: List[tuple] = []
+    for jf in Path(repo_path).rglob("*.java"):
+        if any(part in ("target", "build", ".git") for part in jf.parts):
+            continue
+        try:
+            text = jf.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        m = _PKG_RE.search(text)
+        if not m:
+            continue
+        pkg = m.group(1)
+        for sub, sup in _EXTENDS_RE.findall(text):
+            by_simple.setdefault(sub, f"{pkg}.{sub}")
+            extends.append((f"{pkg}.{sub}", sup.rsplit(".", 1)[-1]))
+        # a file may declare types it does not subclass; index them too
+        for decl in re.findall(r"\b(?:class|interface|enum)\s+(\w+)", text):
+            by_simple.setdefault(decl, f"{pkg}.{decl}")
+
+    pairs = []
+    for sub_fqn, sup_simple in extends:
+        sup_fqn = by_simple.get(sup_simple)
+        if not sup_fqn or sup_fqn == sub_fqn:
+            continue
+        if sub_fqn.rsplit(".", 1)[0] == sup_fqn.rsplit(".", 1)[0]:
+            pairs.append((sub_fqn, sup_fqn))
+    return pairs
+
+
+def _destination_packages(plan) -> Dict[str, str]:
+    """Where a plan sends each type or package it moves: identifier -> new package."""
+    dest: Dict[str, str] = {}
+    for e in plan.entries:
+        o = e.options
+        old_t, new_t = o.get("oldFullyQualifiedTypeName"), o.get("newFullyQualifiedTypeName")
+        if old_t and new_t:
+            dest[old_t] = str(new_t).rsplit(".", 1)[0]
+        old_p, new_p = o.get("oldPackageName"), o.get("newPackageName")
+        if old_p and new_p:
+            dest[old_p + ".*"] = str(new_p)
+    return dest
+
+
+def _package_after(fqn: str, moves: Dict[str, str]) -> str:
+    """The package a type ends up in, given the moves scheduled so far."""
+    if fqn in moves:
+        return moves[fqn]
+    pkg = fqn.rsplit(".", 1)[0]
+    return moves.get(pkg + ".*", pkg)
+
+
+def splits_an_inheritance_pair(pairs: List[tuple], moves: Dict[str, str],
+                               candidate: Dict[str, str]) -> Optional[tuple]:
+    """The first same-package (subtype, supertype) the candidate would split apart."""
+    if not candidate:
+        return None
+    merged = {**moves, **candidate}
+    for sub, sup in pairs:
+        before_same = sub.rsplit(".", 1)[0] == sup.rsplit(".", 1)[0]
+        if before_same and _package_after(sub, merged) != _package_after(sup, merged):
+            return (sub, sup)
+    return None
+
+
 def explain_no_moves(repo_path: Path, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Say WHY no compile-safe relocation exists, instead of silently doing nothing.
 
@@ -465,6 +549,11 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     plans: List[Dict[str, Any]] = []
     pre_imports: Dict[str, List[str]] = {}
     claimed: set = set()
+    # Scanned once per pass: subclass/superclass pairs sharing a package, and where the
+    # already-scheduled plans send each type. Together they catch the combination that no
+    # single plan's preconditions can see.
+    inherit_pairs = inheritance_pairs(repo_path)
+    scheduled_moves: Dict[str, str] = {}
 
     merges = plan_package_merges(repo_path, findings) if strategy == "merge_package" else []
     for src, dst in merges:
@@ -524,8 +613,21 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
                             "pass; deferred to the next iteration of the loop")
             plans.append(d)
             continue
+        # Individually safe moves can still be unsafe together: separating a subclass from a
+        # superclass it shares a package with strands any package-private member it inherits.
+        split = splits_an_inheritance_pair(inherit_pairs, scheduled_moves,
+                                           _destination_packages(p)) if p.applicable else None
+        if split:
+            d = p.as_dict()
+            d.update(applicable=False,
+                     reason=f"would move {split[0]} away from its superclass {split[1]}, "
+                            "which shares its package; a package-private member inherited "
+                            "across that boundary would stop compiling")
+            plans.append(d)
+            continue
         plans.append(p.as_dict())
         if p.applicable:
+            scheduled_moves.update(_destination_packages(p))
             claimed |= touched
             entries.extend(p.entries)
             pre_imports.update(p.pre_imports)
