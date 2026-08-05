@@ -485,7 +485,13 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     chosen_ids = {id(x) for x in chosen}
     new_interfaces: Dict[str, List[str]] = {}
     extractions: List[Dict[str, Any]] = []
-    for p in routed["plans"]:
+    # Claim in a deliberate order. An extracted helper stays in its origin package and keeps
+    # referring to that package's types, so it must claim the package BEFORE a God Component
+    # split can relocate those types out from under it. Iterating raw plan order let the
+    # split claim first, which is why DateValidator/EmailValidator kept going missing.
+    def _claims_package(pl) -> int:
+        return 0 if any(e.recipe.endswith("ExtractStaticHelpers") for e in pl.entries) else 1
+    for p in sorted(routed["plans"], key=_claims_package):
         if p.applicable and id(p) not in chosen_ids:
             d = p.as_dict(); d.update(applicable=False,
                                       reason=f"deferred: outside this pass's budget of "
