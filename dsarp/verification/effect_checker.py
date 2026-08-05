@@ -184,11 +184,31 @@ def apply_move_class(repo_path: Path, class_fqn: str, to_package: str) -> Dict[s
 # --------------------------------------------------------------------------- #
 # verify one suggestion end-to-end on a copy of the repo
 # --------------------------------------------------------------------------- #
+_MODULE_MARKERS = ("pom.xml", "build.gradle", "build.gradle.kts", "settings.gradle")
+
+
+def _ignore_build_output(directory, names):
+    """Skip build OUTPUT directories without skipping source packages that share their name.
+
+    `ignore_patterns("build")` matches a directory called `build` at ANY depth, and
+    `org.apache.commons.io.build` is a real commons-io source package. Every copy silently
+    dropped it, so the copy failed to compile with 88 "package does not exist" errors -
+    before any refactoring ran. The measurements taken on those copies were meaningless.
+
+    `target`/`build` are only build output when they sit next to a build file, so that is
+    the test applied here; multi-module repositories still skip each module's output.
+    """
+    ignored = {n for n in names if n == ".git" or n.endswith(".class")}
+    if any(m in names for m in _MODULE_MARKERS):
+        ignored |= {n for n in names
+                    if n in ("target", "build") and (Path(directory) / n).is_dir()}
+    return ignored
+
+
 def _copy_repo(repo_path: Path, dest: Path) -> Path:
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
-    shutil.copytree(repo_path, dest,
-                    ignore=shutil.ignore_patterns(".git", "target", "build", "*.class"))
+    shutil.copytree(repo_path, dest, ignore=_ignore_build_output)
     return dest
 
 

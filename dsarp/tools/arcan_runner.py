@@ -65,8 +65,14 @@ def find_mvn() -> Optional[str]:
 # needs packaged jars simply cannot run under `compile`. Telling that apart from a real
 # breakage is what separates "the refactoring broke this" from "this command was never
 # going to work on this repository".
+#
+# Karaf hits two of these at once: maven-dependency-plugin:copy wants its siblings as jars
+# (MDEP-187), and the reactor builds karaf-maven-plugin and then USES it, which needs the
+# plugin descriptor that only `package` generates. Both are properties of the reactor, not
+# of anything a refactoring did.
 _NEEDS_PACKAGING_RE = re.compile(
-    r"has not been packaged yet|MDEP-187|should be executed after packaging", re.I)
+    r"has not been packaged yet|MDEP-187|should be executed after packaging"
+    r"|Failed to parse plugin descriptor|PluginDescriptorParsingException", re.I)
 
 
 def compile_repo(repo_path: Path, timeout: int = 2400,
@@ -122,7 +128,11 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
         # Arcan only needs bytecode, which `compile` already produced, so the packaging-only
         # goal is skipped and the build retried once.
         if proc.returncode != 0 and _NEEDS_PACKAGING_RE.search(out):
-            cmd = [*cmd, "-Dmdep.skip=true"]
+            # `compile` is the cheap goal and works for almost every repository, so it stays
+            # the default. When the reactor demands real jars, the only correct answer is to
+            # produce them - skipping the offending goal is not enough, because a self-hosted
+            # plugin still has no descriptor. Escalate once, to `package`.
+            cmd = [c if c != "compile" else "package" for c in cmd] + ["-DskipTests"]
             proc, out = _run(cmd)
     except subprocess.TimeoutExpired:
         return {"ok": False, "status": "compile_timeout", "note": f"exceeded {timeout}s"}
