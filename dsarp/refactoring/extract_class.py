@@ -84,10 +84,18 @@ def plan_extract_class(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
         return Plan(smell, "Extract Class", comps, applicable=False, stock=False,
                     reason=f"{target} already exists", evidence={"component": fqn})
 
-    # No recipe entry: DSARP performs the whole extraction, including call sites. Relying
-    # on ChangeMethodTargetToStatic failed because the surgery had to happen first, and the
-    # recipe cannot run on a tree that does not yet compile.
-    entries = [RecipeEntry("org.openrewrite.java.RemoveUnusedImports", {})]
+    # The whole transformation runs INSIDE OpenRewrite on the LST. Python source surgery
+    # never produced compiling Java: text editing cannot see where a method really ends,
+    # which names are types, or which identifiers are calls. ExtractStaticHelpers moves the
+    # declarations, then ChangeMethodTargetToStatic repoints every call site — and because
+    # both run on the same LST pass, the tree is valid at each step.
+    entries = [RecipeEntry("com.dsarp.recipes.ExtractStaticHelpers",
+                           {"fullyQualifiedClassName": fqn,
+                            "fullyQualifiedTargetTypeName": target})]
+    entries += [RecipeEntry("org.openrewrite.java.ChangeMethodTargetToStatic",
+                            {"methodPattern": f"{fqn} {m}(..)",
+                             "fullyQualifiedTargetTypeName": target})
+                for m in methods]
     plan = Plan(smell, "Extract Class", comps, entries=entries, stock=False,
                 resolves_fully=True,
                 reason=f"move {len(methods)} public static method(s) out of {simple} into "
@@ -96,7 +104,6 @@ def plan_extract_class(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
                 evidence={"component": fqn, "new_class": target, "methods": methods[:8],
                           "method_count": len(methods)})
     # The loop performs this surgery on the copy before running the recipe.
-    plan.evidence["extract_class"] = {"source": fqn, "target": target, "methods": methods}
     return plan
 
 

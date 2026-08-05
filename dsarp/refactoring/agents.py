@@ -86,18 +86,10 @@ def build_agents() -> List[Agent]:
         Agent("AbstractionAgent", "abstraction quality", {
             "unutilized abstraction": plan_unutilized_abstraction,
             "unnecessary abstraction": plan_unutilized_abstraction,
-            # Extract Class (extract_class.py) implements the tractable subset — public
-            # static methods — but its source surgery does NOT yet produce a compiling tree,
-            # so it is not wired in. Enabling it would break the build on every repo with
-            # these smells and burn a pass each time. See extract_class.py for the state.
-            "multifaceted abstraction": plan_not_automatable(
-                "Multifaceted Abstraction", "Extract Class",
-                "Extract Class is implemented for public static methods but does not yet "
-                "produce a compiling tree; see dsarp/refactoring/extract_class.py"),
-            "insufficient modularization": plan_not_automatable(
-                "Insufficient Modularization", "Extract Class",
-                "Extract Class is implemented for public static methods but does not yet "
-                "produce a compiling tree; see dsarp/refactoring/extract_class.py"),
+            # Extract Class via the LST recipe (com.dsarp.recipes.ExtractStaticHelpers),
+            # the only family that REMOVES members rather than relocating classes.
+            "multifaceted abstraction": plan_extract_class,
+            "insufficient modularization": plan_extract_class,
         }),
         Agent("HierarchyAgent", "inheritance and type structure", {
             "missing hierarchy": plan_introduce_supertype,
