@@ -72,7 +72,14 @@ def find_mvn() -> Optional[str]:
 # of anything a refactoring did.
 _NEEDS_PACKAGING_RE = re.compile(
     r"has not been packaged yet|MDEP-187|should be executed after packaging"
-    r"|Failed to parse plugin descriptor|PluginDescriptorParsingException", re.I)
+    r"|Failed to parse plugin descriptor|PluginDescriptorParsingException"
+    r"|Could not find artifact \S+:jar:tests", re.I)
+
+# Tika and Spark depend on their SIBLINGS' test-jars. Those are built by the test-jar goal
+# during `package`, from test classes - so escalating while `-Dmaven.test.skip=true` is set
+# produces no test-jar and the resolution fails exactly as before. Test sources have to be
+# compiled; only RUNNING them is skipped, which `-DskipTests` already does.
+_TEST_JAR_RE = re.compile(r"Could not find artifact \S+:jar:tests", re.I)
 
 
 def compile_repo(repo_path: Path, timeout: int = 2400,
@@ -133,6 +140,9 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
             # produce them - skipping the offending goal is not enough, because a self-hosted
             # plugin still has no descriptor. Escalate once, to `package`.
             cmd = [c if c != "compile" else "package" for c in cmd] + ["-DskipTests"]
+            if _TEST_JAR_RE.search(out):
+                # a sibling's test-jar cannot be built from test sources that were skipped
+                cmd = [c for c in cmd if c != "-Dmaven.test.skip=true"]
             proc, out = _run(cmd)
     except subprocess.TimeoutExpired:
         return {"ok": False, "status": "compile_timeout", "note": f"exceeded {timeout}s"}
