@@ -56,6 +56,52 @@ def uses_instance_state(facts: SourceFacts, fqn: str, method: str) -> bool:
     return m is None
 
 
+# Members the class does not expose. A method that touches one of these cannot leave the
+# class, no matter how it is moved.
+_NON_PUBLIC_MEMBER = re.compile(
+    r"^[ \t]{1,8}(?:private|protected)\s+(?:static\s+|final\s+|transient\s+|volatile\s+)*"
+    r"[\w.<>\[\],\s]+?\s+(\w+)\s*[;=(]", re.M)
+
+
+def uses_non_public_members(facts: SourceFacts, fqn: str, method: str) -> bool:
+    """True if the method reaches for a private/protected member of its own class.
+
+    Being `static` only guarantees no `this` dependency — it says nothing about VISIBILITY.
+    A moved method that still calls `adjustForLineEnding(...)`, left behind as a private
+    helper, cannot compile from its new home. Same class of precondition as the
+    package-private guard on class moves, and the reason the "static is always safe"
+    premise was too strong.
+    """
+    txt = facts.text_of(fqn)
+    if not txt:
+        return True
+    body = _method_body(txt, method)
+    if not body:
+        return False
+    hidden = set(_NON_PUBLIC_MEMBER.findall(txt)) - {method}
+    # followed by "(" (call), "." (member access) or "[" (index) — i.e. genuinely used
+    after = r"\s*[(.\[]"
+    return any(re.search(r"(?<![.\w])" + re.escape(h) + after, body) for h in hidden)
+
+
+def _method_body(text: str, name: str) -> str:
+    """The source of one method, found by brace matching from its declaration."""
+    m = re.search(rf"^[ \t]{{1,8}}public\s+static\b[^;{{\n]*\b{re.escape(name)}\s*"
+                  rf"\([^;{{]*\)\s*(?:throws [\w.,\s]+)?\{{", text, re.M)
+    if not m:
+        return ""
+    depth, i = 0, m.end() - 1
+    while i < len(text):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[m.start():i + 1]
+        i += 1
+    return ""
+
+
 def plan_extract_class(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
     """Insufficient Modularization / Multifaceted Abstraction -> pull static helpers out."""
     smell = finding.get("smell_type", "Insufficient Modularization")
@@ -70,7 +116,8 @@ def plan_extract_class(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
                     reason="finding is in test code", evidence={"component": fqn})
 
     methods = [m for m in static_methods(facts, fqn)
-               if not uses_instance_state(facts, fqn, m)]
+               if not uses_instance_state(facts, fqn, m)
+               and not uses_non_public_members(facts, fqn, m)]
     if len(methods) < 3:
         return Plan(smell, "Extract Class", comps, applicable=False, stock=False,
                     reason=f"{fqn.rsplit('.', 1)[-1]} has only {len(methods)} extractable "
