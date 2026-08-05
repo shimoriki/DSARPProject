@@ -81,6 +81,20 @@ _NEEDS_PACKAGING_RE = re.compile(
 # compiled; only RUNNING them is skipped, which `-DskipTests` already does.
 _TEST_JAR_RE = re.compile(r"Could not find artifact \S+:jar:tests", re.I)
 
+# "package x.y.z does not exist" / "cannot find symbol" against a THIRD-PARTY package means
+# the module's dependencies are unobtainable here, not that its source is wrong.
+_FAILED_MODULE_RE = re.compile(r"Failed to execute goal.*? on project ([\w.\-]+)", re.S)
+_MISSING_EXTERNAL_RE = re.compile(
+    r"package [\w.]+ does not exist|Could not resolve dependencies|Could not find artifact")
+
+
+def _unbuildable_module(out: str):
+    """The artifactId of a module that failed for want of a dependency, if any."""
+    if not _MISSING_EXTERNAL_RE.search(out):
+        return None
+    m = _FAILED_MODULE_RE.search(out)
+    return m.group(1) if m else None
+
 
 def compile_repo(repo_path: Path, timeout: int = 2400,
                  log_path: Optional[Path] = None) -> Dict[str, Any]:
@@ -121,6 +135,8 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
                "-pl", rel, "-am", "compile", *skips]
     else:
         cmd = [mvn, "-B", "-ntp", "-f", str(pom), "compile", *skips]
+    excluded: list = []
+
     def _run(c):
         p = subprocess.run(c, capture_output=True, text=True, timeout=timeout)
         return p, (p.stdout or "") + "\n" + (p.stderr or "")
@@ -144,6 +160,22 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
                 # a sibling's test-jar cannot be built from test sources that were skipped
                 cmd = [c for c in cmd if c != "-Dmaven.test.skip=true"]
             proc, out = _run(cmd)
+
+        # A module can need a third-party artifact this machine cannot obtain - Struts' tiles
+        # plugin wants org.apache.velocity.tools, which no goal produces. Installing it by
+        # hand does not generalise: an unseen repository is cloned and built once, with
+        # whatever its poms can actually resolve. Such modules are dropped from the reactor so
+        # the rest can still be measured, and the exclusions are RECORDED, because a delta is
+        # only meaningful when both sides excluded the same set.
+        for _ in range(3):
+            if proc.returncode == 0:
+                break
+            art = _unbuildable_module(out)
+            if not art or art in excluded:
+                break
+            excluded.append(art)
+            cmd = [*cmd, "-pl", "!:" + art, "-am"]
+            proc, out = _run(cmd)
     except subprocess.TimeoutExpired:
         return {"ok": False, "status": "compile_timeout", "note": f"exceeded {timeout}s"}
     if log_path:
@@ -155,6 +187,7 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
             "status": "compiled" if ok else ("compiled_no_classes" if proc.returncode == 0
                                              else "compile_failed"),
             "class_dirs": [str(d) for d in dirs], "returncode": proc.returncode,
+            "excluded_modules": excluded,
             "command": " ".join(cmd), "tail": out[-2000:]}
 
 
