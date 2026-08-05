@@ -91,8 +91,13 @@ public class IntroduceSupertype extends Recipe {
                         i -> TypeUtils.isOfClassType(i.getType(), fullyQualifiedInterfaceName))) {
                     return cd;
                 }
+                // The cursor handed to visitNonNull must be the PARENT of the tree being
+                // visited. Passing getCursor() — which already points at `cd` — throws
+                // "The `parent` cursor must not point to the same `tree`", and because that
+                // escapes the visitor it aborts the ENTIRE rewrite run, not just this recipe.
                 return (J.ClassDeclaration) new ImplementInterface<ExecutionContext>(
-                        cd, fullyQualifiedInterfaceName).visitNonNull(cd, ctx, getCursor());
+                        cd, fullyQualifiedInterfaceName)
+                        .visitNonNull(cd, ctx, getCursor().getParentOrThrow());
             }
         };
     }
