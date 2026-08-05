@@ -411,11 +411,28 @@ def apply_pre_imports(repo_path: Path, pre_imports: Dict[str, List[str]]) -> Dic
             text = target.read_text(encoding="utf-8", errors="ignore")
         except OSError:
             continue
-        need = [s for s in siblings if f"import {s};" not in text]
-        if not need:
-            continue
-        m = re.search(r"^\s*package\s+[\w.]+\s*;\s*$", text, re.M)
+        m = re.search(r"^\s*package\s+([\w.]+)\s*;\s*$", text, re.M)
         if not m:
+            continue
+        own_pkg = m.group(1)
+        # Java allows only ONE single-type-import per simple name. Checking for the exact
+        # import string missed the case that matters: adding a.b.ISBNValidator when
+        # x.y.ISBNValidator is already imported is a duplicate simple name, and javac rejects
+        # the file outright. That is what broke every God Component pass on commons-validator.
+        taken = set(re.findall(r"^\s*import\s+(?:static\s+)?[\w.]*?(\w+)\s*;", text, re.M))
+        # a type declared in this file, or living in its own package, needs no import and
+        # would collide with one
+        taken |= set(re.findall(r"\b(?:class|interface|enum|record)\s+(\w+)", text))
+        need = []
+        for s in siblings:
+            simple = s.rsplit(".", 1)[-1]
+            if f"import {s};" in text or simple in taken:
+                continue
+            if s.rsplit(".", 1)[0] == own_pkg:      # same package: import is redundant
+                continue
+            need.append(s)
+            taken.add(simple)
+        if not need:
             continue
         block = "".join(f"\nimport {s};" for s in sorted(need))
         text = text[:m.end()] + block + text[m.end():]
