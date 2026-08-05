@@ -80,6 +80,9 @@ def per_type_delta(before: Dict[str, int], after: Dict[str, int],
             "targeted_after": sum(r["after"] for r in rows)}
 
 
+# Hard ceiling so a type that keeps improving by one smell at a time cannot run forever.
+_MAX_SEQUENCE = 40
+
 # Splitting these CREATES structure the detector counts, so a single pass looks like a
 # regression even when it is the right move. They get a consecutive second pass to clean up.
 _EXPANSIVE_SMELLS = {"God Component", "Insufficient Modularization", "Broken Modularization"}
@@ -146,7 +149,20 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
     baseline: Optional[int] = None
     best_by_type: Dict[str, int] = {}
 
-    for i in range(1, max_passes + 1):
+    # In per-smell mode the sequence GROWS while a type keeps paying: a type that improved
+    # earns another pass of its own, and a type that did not gets one extra "safety" pass
+    # before the run moves on - a split can add structure that only the following pass can
+    # consolidate, so a single flat pass is not evidence that the type is spent.
+    safety_used: Dict[str, int] = {}
+
+    def _again(pos: int, types: Optional[set], why: str) -> None:
+        """Queue another pass of the same smell type immediately after `pos`."""
+        if smell_order and types and len(sequence) < _MAX_SEQUENCE:
+            sequence.insert(pos, set(types))
+
+    i = 0
+    while i < (len(sequence) if smell_order else max_passes):
+        i += 1
         rep = refactor_with_openrewrite_and_verify(
             cfg, f"{project_id}__pass{i}", current, detector=detector, strategy=strategy,
             keep_copy=True, known_before=carried, plan_budget=budget,
@@ -243,10 +259,19 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                 # the answer for THAT type. Roll it back and let the next type have its turn,
                 # otherwise the first unhelpful type hides every type behind it and the run
                 # measures one smell instead of six.
-                record.update(accepted=False, stop_reason=None,
-                              note=f"no improvement ({before_score} -> {after_score}) for "
-                                   f"{', '.join(targeted) or 'this type'}; rolled back, "
-                                   "continuing with the next smell type")
+                key = ", ".join(sorted(sequence[i - 1])) if i - 1 < len(sequence) else "?"
+                if safety_used.get(key, 0) < 1:
+                    # One more attempt: an expansive split adds structure that only the NEXT
+                    # pass can consolidate, so a single flat pass is not proof the type is
+                    # spent. If the retry is flat too, the type is done.
+                    safety_used[key] = safety_used.get(key, 0) + 1
+                    _again(i, sequence[i - 1], "safety")
+                    note = (f"no improvement ({before_score} -> {after_score}) for {key}; "
+                            "rolled back, retrying this type once more before moving on")
+                else:
+                    note = (f"no improvement ({before_score} -> {after_score}) for {key} on "
+                            "the retry as well; rolled back, moving to the next smell type")
+                record.update(accepted=False, stop_reason=None, note=note)
                 passes.append(record)
                 continue
             else:
@@ -258,6 +283,9 @@ def run_until_converged(cfg: Config, project_id: str, repo_path: Path,
                 passes.append(record)
                 break
         else:
+            if smell_order:
+                # this type is still paying; let it run again before moving on
+                _again(i, sequence[i - 1] if i - 1 < len(sequence) else None, "improved")
             used_patience = 0          # real progress resets the allowance
             budget = min(budget * 2, 64)   # and earns a bigger bite next pass
             best_score = min(best_score, after_score)
