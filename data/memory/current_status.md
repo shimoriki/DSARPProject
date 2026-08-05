@@ -743,3 +743,43 @@ build/slice/cycle-detection works (proven on real commons-cli: 11 nodes, 1 real 
 - Token policy: never load large JSONL/logs/graphs/models into context — use summaries + evidence IDs.
 - `.gitignore` keeps raw/generated data out of git; `data/samples/` + `data/memory/` tracked.
 - `configs/local.yaml` provider is `ollama` (qwen2.5-coder:3b) — tests force offline to stay hermetic.
+
+## 2026-08-05 — four measurement defects found by auditing BEFORE-builds
+
+Auditing every repository's *before*-build (the state prior to any refactoring) found
+failures that had been attributed to our refactorings. A before-build failure cannot have
+been caused by a change not yet applied, so each of these invalidated its own measurement.
+
+1. **`_copy_repo` destroyed source packages named `build`** — `ignore_patterns("build")`
+   matches at any depth, and `org.apache.commons.io.build` is a real commons-io package.
+   Every working copy lost it and failed with 88 "package does not exist" errors.
+   *All commons-io results predating this are invalid.* Fixed: `target`/`build` are skipped
+   only beside a build file. Tests: `tests/test_copy_preserves_source_packages.py`.
+
+2. **Karaf requires `package`, not `compile`** — two independent causes:
+   maven-dependency-plugin:copy needs siblings as jars (MDEP-187), and the reactor builds
+   `karaf-maven-plugin` then uses it, needing the descriptor only `package` generates.
+   Fixed: `compile_repo` escalates to `package -DskipTests` on those signatures only.
+
+3. **`verified` did not imply the build compiled** — `both_ok` asked only whether both
+   detectors measured. Designite parses source, so it measures a broken tree happily.
+   21 historical reports say `verification_status: verified` with
+   `build_after_refactoring: compile_failed`. Fixed. The learned ledger was never affected:
+   `build_ledger` filters on the build status directly.
+
+4. **The budget investigation was chasing a non-variable** — Karaf "broke the build" at
+   budgets 16, 32 and 151 and did nothing at 2. Its before-build carried the identical
+   error every time, so no budget could ever have produced an accepted pass.
+
+### Open, highest value next
+
+**Plans are validated individually but applied together.** `_types_touched` only detects two
+plans touching the same type, and `SourceFacts` has no inheritance knowledge whatsoever. Two
+individually-safe moves can separate a subclass from its superclass, making a package-private
+member inaccessible. This is the signature of commons-validator pass 3's before-build failure
+(`LuhnCheckDigit` in `validator.digit` extending `ModulusCheckDigit` in `validator`, both
+originally in `routines.checkdigit`). An inheritance-aware conflict filter is the next fix.
+
+### Demo status
+`apache-commons-validator` pass 1 (Arcan 20->13, Designite 91->86) had a clean before-build
+and is unaffected by all of the above.
