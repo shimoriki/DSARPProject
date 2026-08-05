@@ -556,7 +556,13 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     inherit_pairs = inheritance_pairs(repo_path)
     scheduled_moves: Dict[str, str] = {}
 
-    merges = plan_package_merges(repo_path, findings) if strategy == "merge_package" else []
+    # Package merges target Cyclic Dependency. They are added to the recipe before the
+    # plan loop, so a pass restricted to one smell type was still applying them - every
+    # by-smell pass on Struts reported "Cyclic Dependency, God Component" and no result
+    # was attributable to the type it claimed to be testing.
+    _merge_ok = (strategy == "merge_package"
+                 and (not only_smells or "Cyclic Dependency" in only_smells))
+    merges = plan_package_merges(repo_path, findings) if _merge_ok else []
     for src, dst in merges:
         entries.append(RecipeEntry("org.openrewrite.java.ChangePackage",
                                    {"oldPackageName": src, "newPackageName": dst,
