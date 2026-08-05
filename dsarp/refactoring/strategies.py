@@ -677,6 +677,15 @@ def plan_unutilized_abstraction(facts: SourceFacts, finding: Dict[str, Any]) -> 
                 evidence={"component": fqn, "references": 0, "file": rel})
 
 
+def _fields_from_description(desc: str) -> List[str]:
+    """Field names Designite itself lists as publicly accessible."""
+    m = re.search(r"declared with public accessi\w*:\s*(.+)", desc)
+    if not m:
+        return []
+    return [f.strip().rstrip(".") for f in re.split(r"[;,]", m.group(1))
+            if re.fullmatch(r"\w+", f.strip().rstrip("."))]
+
+
 def plan_deficient_encapsulation(facts: SourceFacts, finding: Dict[str, Any]) -> Plan:
     """Deficient Encapsulation = exposed field -> narrow it to private.
 
@@ -692,7 +701,13 @@ def plan_deficient_encapsulation(facts: SourceFacts, finding: Dict[str, Any]) ->
         return Plan("Deficient Encapsulation", "Encapsulate Field", comps, applicable=False,
                     reason=f"{fqn} not found in the source index", stock=False,
                     evidence={"component": fqn})
-    exposed = facts.exposed_fields(fqn)
+    # Designite NAMES the offending fields in its Description ("Following fields are
+    # declared with public accessiblity: X, Y"). Reading them is strictly better than
+    # re-deriving them: the regex missed 19 of 23 findings, partly because Designite counts
+    # public constants that the regex deliberately skipped. Take the tool at its word and
+    # fall back to the regex only when the description is absent.
+    reported = _fields_from_description(finding.get("description") or "")
+    exposed = [f for f in reported if f in facts.text_of(fqn)] or facts.exposed_fields(fqn)
     if not exposed:
         return Plan("Deficient Encapsulation", "Encapsulate Field", comps, applicable=False,
                     reason=f"no public/protected instance fields found in {fqn} to narrow",

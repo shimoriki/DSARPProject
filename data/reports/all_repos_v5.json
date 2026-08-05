@@ -1,0 +1,124 @@
+{
+  "repositories": 8,
+  "smells_actually_reduced": 1,
+  "accepted_but_no_net_change": 1,
+  "total_targeted_before": 4251,
+  "total_targeted_after": 4239,
+  "refactored_and_verified": 1,
+  "by_build_system": {
+    "maven": 8
+  },
+  "unsupported_build": 0,
+  "smell_types_refactored_across_repos": {
+    "Cyclic Dependency": 2,
+    "God Component": 2,
+    "Unstable Dependency": 1,
+    "Wide Hierarchy": 1
+  },
+  "results": [
+    {
+      "repo": "apache-commons-cli",
+      "build_system": "maven",
+      "passes_accepted": 4,
+      "passes_run": 4,
+      "targeted_before": 31,
+      "targeted_after": 31,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [
+        "Cyclic Dependency",
+        "God Component",
+        "Unstable Dependency"
+      ],
+      "stop_reason": "every pass compiled, but none reduced the total; the run is reported at its BASELINE because keeping the last state would leave the repository worse than it started",
+      "seconds": 363
+    },
+    {
+      "repo": "apache-commons-codec",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 43,
+      "targeted_after": 43,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 120
+    },
+    {
+      "repo": "apache-commons-csv",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 21,
+      "targeted_after": 21,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 90
+    },
+    {
+      "repo": "apache-commons-io",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 155,
+      "targeted_after": 155,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 109
+    },
+    {
+      "repo": "apache-commons-text",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 101,
+      "targeted_after": 101,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 137
+    },
+    {
+      "repo": "apache-commons-validator",
+      "build_system": "maven",
+      "passes_accepted": 1,
+      "passes_run": 2,
+      "targeted_before": 76,
+      "targeted_after": 64,
+      "reduction_pct": 15.8,
+      "smell_types_refactored": [
+        "Cyclic Dependency",
+        "God Component",
+        "Wide Hierarchy"
+      ],
+      "stop_reason": "no improvement (4 -> 4); the refactorings applied cannot reduce this smell set; rolled back and stopped",
+      "seconds": 178
+    },
+    {
+      "repo": "apache-logging-log4j2",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 2847,
+      "targeted_after": 2847,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "no improvement (938 -> 938); the refactorings applied cannot reduce this smell set; rolled back and stopped",
+      "seconds": 1579
+    },
+    {
+      "repo": "apache-spark",
+      "build_system": "maven",
+      "passes_accepted": 0,
+      "passes_run": 1,
+      "targeted_before": 977,
+      "targeted_after": 977,
+      "reduction_pct": 0.0,
+      "smell_types_refactored": [],
+      "stop_reason": "the refactored code did not compile; rolled back and stopped",
+      "seconds": 19366
+    }
+  ]
+}
