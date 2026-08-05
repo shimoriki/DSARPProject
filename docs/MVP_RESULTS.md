@@ -16,6 +16,7 @@ Everything below is a measured tool run. Where a number could not be measured, i
 | God Component | Split Package | `ChangeType` (stock) |
 | Deficient Encapsulation | Encapsulate Field | `ReduceFieldVisibility` (DSARP) |
 | Missing / Wide Hierarchy | Introduce Supertype | `IntroduceSupertype` (DSARP) |
+| Insufficient Modularization / Multifaceted Abstraction | Extract Class | `ExtractStaticHelpers` (DSARP) |
 
 Plus `ExtractInterfaceForClass` for Rebellious Hierarchy, and dead-code removal via
 `DeleteSourceFiles` when the source index proves zero references.
@@ -24,15 +25,20 @@ Plus `ExtractInterfaceForClass` for Rebellious Hierarchy, and dead-code removal 
 
 | smell | why not |
 |---|---|
-| Insufficient Modularization | needs member-level extraction into a new type — a design judgement about which fields and methods move together |
-| Multifaceted Abstraction | same: splitting responsibilities requires deciding what the responsibilities *are* |
 | Broken Modularization | needs move-method with real type attribution; DSARP's index is regex-based |
 | Broken Hierarchy | replacing inheritance with delegation rewrites the public API and every call site |
 | Dense Structure | a property of the whole system; no local refactoring reduces it |
 
 These are reported as `requires_source_inspection` with the reason above — never silently
-dropped. Closing them means rebuilding the source index on OpenRewrite's LST so member-level
-transformations have type information. That is a rewrite, not an increment.
+dropped.
+
+Insufficient Modularization and Multifaceted Abstraction moved INTO scope via
+`ExtractStaticHelpers`, which does the transformation on OpenRewrite's LST. It is limited to
+**public static methods** — they cannot touch instance state, so moving them is
+behaviour-preserving without any judgement about which members belong together. Methods that
+reach a non-public member of their own class are refused, since visibility does not travel
+with them. The general form, moving instance fields and methods, still needs that judgement
+and remains out of scope.
 
 ## How to read the numbers
 
@@ -72,17 +78,13 @@ How much is still being measured.
 
 ## Measured results
 
-### commons-validator — `verification_status: verified`, build `compiled`
+### commons-validator — superseded by the run above
 
-```
-detect      Arcan 20  +  Designite 91   = 111 smells across 13 types
-plan        8 applicable plans over 5 smell types, 48 recipe operations
-refactor    OpenRewrite composite recipe, 37 files rewritten
-re-detect   Arcan 18  +  Designite 94
-```
-
-Targeted outcome: **Unstable Dependency 6 → 3**, God Component 3 → 2, Arcan total 20 → 18.
-Side effect: Feature Concentration 0 → 3 (the new packages from the God Component split).
+An earlier run of the same repository, before claim ordering, gave Arcan 20 → 18 and
+Designite 91 → 94, with Feature Concentration 0 → 3 as the side effect of a partial God
+Component split. Kept here because the contrast is the point: the same repository and the
+same refactoring families, with only the ordering rule added, went from a net-worse Designite
+count to 91 → 86.
 
 ### commons-codec — random repo, in no split, cloned by URL
 
