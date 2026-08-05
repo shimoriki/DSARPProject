@@ -167,14 +167,25 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
         # whatever its poms can actually resolve. Such modules are dropped from the reactor so
         # the rest can still be measured, and the exclusions are RECORDED, because a delta is
         # only meaningful when both sides excluded the same set.
-        for _ in range(3):
+        for _ in range(6):   # a large reactor can hide several unobtainable modules
             if proc.returncode == 0:
                 break
             art = _unbuildable_module(out)
             if not art or art in excluded:
                 break
             excluded.append(art)
-            cmd = [*cmd, "-pl", "!:" + art, "-am"]
+            # Maven honours only the LAST -pl, so appending one per round silently
+            # re-included everything excluded before it and the retry never converged.
+            # Rebuild a single selector carrying every exclusion found so far.
+            sel = ",".join("!:" + a for a in excluded)
+            if "-pl" in cmd:
+                # keep any existing selector (a reactor submodule build) and add to it,
+                # replacing the VALUE rather than dropping the flag and orphaning it
+                k = cmd.index("-pl")
+                keep = [x for x in cmd[k + 1].split(",") if not x.startswith("!:")]
+                cmd[k + 1] = ",".join([*keep, sel]) if keep else sel
+            else:
+                cmd += ["-pl", sel, "-am"]
             proc, out = _run(cmd)
     except subprocess.TimeoutExpired:
         return {"ok": False, "status": "compile_timeout", "note": f"exceeded {timeout}s"}
