@@ -396,6 +396,54 @@ def _move_entries(facts: SourceFacts, moves: Sequence[Tuple[str, str]]
     return entries, pre_imports, blocked
 
 
+def imports_for_types_left_behind(repo_path: Path,
+                                  moves: Sequence[Tuple[str, str]]) -> Dict[str, List[str]]:
+    """Imports needed by files that STAY when a type they use moves away.
+
+    pre_imports only ever looked one way: the file being moved got imports for the siblings it
+    was leaving. The mirror case breaks just as hard - CASNumberCheckDigit stays in
+    `routines` and refers to ModulusCheckDigit by simple name, because they were neighbours.
+    Move ModulusCheckDigit out and that bare name resolves to nothing, which is why every
+    Unstable Dependency and Scattered Functionality pass failed with `cannot find symbol`.
+
+    For each move, any file remaining in the origin package that mentions the moved type gets
+    an explicit import of its NEW location. The import is written before the rewrite runs, so
+    it names where the type is about to be, not where it is.
+    """
+    repo_path = Path(repo_path)
+    extra: Dict[str, List[str]] = {}
+    by_pkg: Dict[str, List[Tuple[str, str]]] = {}
+    for old, new in moves:
+        if "." not in old or "." not in new:
+            continue
+        old_pkg = old.rsplit(".", 1)[0]
+        if old_pkg == new.rsplit(".", 1)[0]:
+            continue                      # not actually leaving the package
+        by_pkg.setdefault(old_pkg, []).append((old, new))
+    if not by_pkg:
+        return extra
+
+    moving = {old for old, _ in moves}
+    for jf in repo_path.rglob("*.java"):
+        if any(part in ("target", "build", ".git") for part in jf.parts):
+            continue
+        try:
+            text = jf.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        m = re.search(r"^\s*package\s+([\w.]+)\s*;", text, re.M)
+        if not m or m.group(1) not in by_pkg:
+            continue
+        own_fqn = f"{m.group(1)}.{jf.stem}"
+        if own_fqn in moving:
+            continue                      # this file is moving; pre_imports covers it
+        need = [new for old, new in by_pkg[m.group(1)]
+                if re.search(r"\b" + re.escape(old.rsplit(".", 1)[-1]) + r"\b", text)]
+        if need:
+            extra[own_fqn] = sorted(set(need))
+    return extra
+
+
 def apply_pre_imports(repo_path: Path, pre_imports: Dict[str, List[str]]) -> Dict[str, Any]:
     """Insert the explicit sibling imports into the (copied) sources. Returns a summary."""
     facts_repo = Path(repo_path)
