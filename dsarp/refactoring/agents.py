@@ -27,6 +27,7 @@ from .strategies import (Plan, SourceFacts, infer_god_threshold,
                          plan_not_automatable, plan_scattered_functionality,
                          plan_unstable_dependency, plan_unutilized_abstraction)
 from .hierarchy import plan_introduce_supertype, plan_broken_modularization
+from .extract_class import plan_extract_class
 
 
 @dataclass
@@ -85,15 +86,10 @@ def build_agents() -> List[Agent]:
         Agent("AbstractionAgent", "abstraction quality", {
             "unutilized abstraction": plan_unutilized_abstraction,
             "unnecessary abstraction": plan_unutilized_abstraction,
-            "multifaceted abstraction": plan_not_automatable(
-                "Multifaceted Abstraction", "Extract Class",
-                "the class has several responsibilities; splitting it means inventing a new "
-                "type and deciding which fields and methods move with it — that is a design "
-                "judgement, and moving members without it would change behaviour"),
-            "insufficient modularization": plan_not_automatable(
-                "Insufficient Modularization", "Extract Class",
-                "the class is too large; shrinking it requires member-level extraction into a "
-                "new type, which needs the same design judgement as Multifaceted Abstraction"),
+            # Extract Class handles the tractable subset: public static methods, which
+            # cannot touch instance state and so move without a design judgement.
+            "multifaceted abstraction": plan_extract_class,
+            "insufficient modularization": plan_extract_class,
         }),
         Agent("HierarchyAgent", "inheritance and type structure", {
             "missing hierarchy": plan_introduce_supertype,

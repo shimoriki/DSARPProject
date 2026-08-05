@@ -478,6 +478,7 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
     chosen = budgeted_plans(routed["plans"], plan_budget)
     chosen_ids = {id(x) for x in chosen}
     new_interfaces: Dict[str, List[str]] = {}
+    extractions: List[Dict[str, Any]] = []
     for p in routed["plans"]:
         if p.applicable and id(p) not in chosen_ids:
             d = p.as_dict(); d.update(applicable=False,
@@ -504,6 +505,9 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
             iface = (p.evidence or {}).get("creates_interface")
             if iface:
                 new_interfaces[iface] = (p.evidence or {}).get("classes") or []
+            ex = (p.evidence or {}).get("extract_class")
+            if ex:
+                extractions.append(ex)
 
     applicable = [p for p in plans if p["applicable"]]
     by_smell = collections.Counter(p["smell_type"] for p in applicable)
@@ -523,7 +527,7 @@ def refactor_with_openrewrite_and_verify(cfg: Config, project_id: str, repo_path
         return _apply_and_verify(cfg, project_id, repo_path, out, steps, before, detector,
                                  tool_name, entries, kind="composite", plans=plans,
                                  pre_imports=pre_imports, keep_copy=keep_copy,
-                                 new_interfaces=new_interfaces)
+                                 new_interfaces=new_interfaces, extractions=extractions)
 
     moves = derive_moves_from_findings(repo_path, findings, max_moves)
     source = "tool_findings"
@@ -563,7 +567,8 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
                       plans: Optional[List[Dict[str, Any]]] = None,
                       pre_imports: Optional[Dict[str, List[str]]] = None,
                       keep_copy: bool = False,
-                      new_interfaces: Optional[Dict[str, List[str]]] = None) -> Dict[str, Any]:
+                      new_interfaces: Optional[Dict[str, List[str]]] = None,
+                      extractions: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """Steps 3-5: run OpenRewrite on a copy, re-detect with the same tool(s), compare."""
     # 3) REFACTOR — copy repo, generate recipe, RUN OpenRewrite (real source changes)
     copy = _copy_repo(repo_path, out / "openrewrite_copy")
@@ -573,6 +578,16 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
         steps.append({"step": "create_supertypes", "tool": "DSARP", "status": "ok",
                       "note": "empty interfaces written so IntroduceSupertype has a type to "
                               "implement", **made})
+    if extractions:
+        # OpenRewrite has no "move method to a new type" recipe: ChangeMethodTargetToStatic
+        # rewrites call sites but cannot create the target or relocate the declaration, so
+        # DSARP does that surgery on the copy first.
+        from ..refactoring.extract_class import apply_extractions
+        ex = apply_extractions(copy, extractions)
+        steps.append({"step": "extract_classes", "tool": "DSARP", "status": "ok",
+                      "note": "moved static helpers into new classes; the recipe then "
+                              "repoints every call site",
+                      **ex})
     if pre_imports:
         from ..refactoring.strategies import apply_pre_imports
         pre = apply_pre_imports(copy, pre_imports)
