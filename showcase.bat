@@ -36,7 +36,10 @@ pause >nul
 
 REM ---------- 1. Dashboard in its own window ----------
 cls
-echo [1/8] Launching the dashboard (opens in your web browser)...
+echo [1/9] Launching the dashboard (opens in your web browser)...
+echo       START on the "Presentation Summary" page - it is the whole MVP in one view:
+echo       the 18.4%% attributable result, the per-smell-type breakdown, and the list of
+echo       measurement traps the verification gate refuses to fall into.
 echo       A new window will run the server; leave it open during the demo.
 start "DSARP Dashboard" cmd /k py -m streamlit run ui/streamlit_app.py
 echo.
@@ -50,7 +53,7 @@ pause >nul
 
 REM ---------- 2. Tests ----------
 cls
-echo [2/8] Proving the system is correct - running the test suite...
+echo [2/9] Proving the system is correct - running the test suite...
 echo.
 py -m pytest -q
 echo.
@@ -59,7 +62,7 @@ pause >nul
 
 REM ---------- 3. Full pipeline demo ----------
 cls
-echo [3/8] End-to-end pipeline demo (offline, no cloud, no API keys)...
+echo [3/9] End-to-end pipeline demo (offline, no cloud, no API keys)...
 echo.
 py -m dsarp.cli demo full
 echo.
@@ -68,7 +71,7 @@ pause >nul
 
 REM ---------- 4. Live suggestions on the UNSEEN test repo ----------
 cls
-echo [4/8] Ranked, evidence-grounded suggestions for Apache Log4j2
+echo [4/9] Ranked, evidence-grounded suggestions for Apache Log4j2
 echo       (the strictly held-out, UNSEEN test repository - never trained on)...
 echo.
 py -m dsarp.cli suggest --repo apache-logging-log4j2 --model offline --top-k 3
@@ -78,7 +81,7 @@ pause >nul
 
 REM ---------- 5. Works on ANY repo + leakage guard ----------
 cls
-echo [5/8] Inference on an unseen local Java repo (proves it is not hardcoded)...
+echo [5/9] Inference on an unseen local Java repo (proves it is not hardcoded)...
 echo.
 py -m dsarp.cli evaluate --name mini-java --path data\samples\mini-java-repo --model offline
 echo.
@@ -91,7 +94,7 @@ pause >nul
 
 REM ---------- 6. THE REAL CLOSED LOOP (headline result) ----------
 cls
-echo [6/8] REAL closed-loop verification - this is the core contribution.
+echo [6/9] REAL closed-loop verification - this is the core contribution.
 echo.
 echo       Both real tools run BEFORE and AFTER an actual refactoring:
 echo         detect     Arcan 1.2.1 (package cycles, unstable, hub-like)
@@ -116,7 +119,7 @@ pause >nul
 
 REM ---------- 7. The verification gate - the core contribution ----------
 cls
-echo [7/8] The verification gate - why the numbers can be trusted.
+echo [7/9] The verification gate - why the numbers can be trusted.
 echo.
 echo       Every claim is measured, and measurement failures are never scored as
 echo       success. Three real examples caught by this gate during development:
@@ -168,7 +171,7 @@ pause >nul
 
 REM ---------- 8. Supporting evidence: the learned ranker ----------
 cls
-echo [8/8] Supporting evidence - leave-one-repository-out generalization
+echo [9/9] Supporting evidence - leave-one-repository-out generalization
 echo       (gradient-boosted trees vs the grokking neural ranker).
 echo       This ranks suggestions; it is an evaluation artifact, not part of the
 echo       refactoring critical path.

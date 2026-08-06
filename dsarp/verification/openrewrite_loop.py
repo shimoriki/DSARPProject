@@ -821,6 +821,16 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
     for tool, b_rec in (before.get("by_tool") or {}).items():
         a_rec = (after.get("by_tool") or {}).get(tool) or {}
         both = bool(b_rec.get("measured")) and bool(a_rec.get("measured"))
+        # A tool that found hundreds of smells and now finds NONE has almost certainly
+        # stopped seeing the source, not fixed everything. Tika produced exactly this:
+        # Designite 2255 -> 0 with measured=True, one build success away from being
+        # reported as a 100% reduction. A total collapse to zero is treated as lost
+        # measurement unless the before-count was small enough for it to be credible.
+        if both and a_rec.get("smells") == 0 and (b_rec.get("smells") or 0) >= 10:
+            both = False
+            a_rec = {**a_rec, "note": (f"{tool} reported 0 smells after refactoring, down "
+                                      f"from {b_rec.get('smells')}; treated as unmeasured "
+                                      "rather than as a complete fix")}
         per_tool[tool] = {
             "before": b_rec.get("smells"), "after": a_rec.get("smells"), "measured": both,
             "removed": (b_rec.get("smells") - a_rec.get("smells")) if both else None,
