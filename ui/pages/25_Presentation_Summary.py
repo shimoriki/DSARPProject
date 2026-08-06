@@ -17,7 +17,7 @@ st.caption("Detect architectural smells with real tools → plan refactorings �
 c = st.columns(4)
 c[0].metric("Best verified reduction", "18.4%", "commons-validator")
 c[1].metric("Reproduced", "3 runs", "identical result")
-c[2].metric("Smell types with a verdict", "6")
+c[2].metric("Unseen repo, from scratch", "2.2%", "apache/pdfbox")
 c[3].metric("Detectors agreeing", "Arcan + Designite")
 
 st.divider()
@@ -42,6 +42,29 @@ st.dataframe([
 ], use_container_width=True, hide_index=True)
 st.info("**4 of 13 passes were kept.** The other nine were refused — a rolled-back pass is "
         "the system declining to claim an improvement it cannot demonstrate.")
+
+st.divider()
+st.subheader("From scratch on a repository nobody had tuned against")
+st.caption("apache/pdfbox was cloned, detected, refactored and re-detected in a single "
+           "session with no prior exposure. 1782 -> 1743 architectural smells (2.2%).")
+st.dataframe([
+    {"pass": "1-2", "smell type": "Cyclic Dependency", "score": "—",
+     "outcome": "build broke, rolled back"},
+    {"pass": "3", "smell type": "Deficient Encapsulation", "score": "197 -> 180",
+     "outcome": "kept (-17)"},
+    {"pass": "4", "smell type": "Deficient Encapsulation (repeat)", "score": "180 -> 164",
+     "outcome": "kept (-16)"},
+    {"pass": "5", "smell type": "Deficient Encapsulation (repeat)", "score": "164 -> 158",
+     "outcome": "kept (-6)"},
+    {"pass": "6-7", "smell type": "Deficient Encapsulation", "score": "158 -> 158",
+     "outcome": "stopped - no longer paying"},
+    {"pass": "8-12", "smell type": "God Component, Scattered Funct., Insuff. Modularization",
+     "score": "—", "outcome": "build broke, rolled back"},
+], use_container_width=True, hide_index=True)
+st.success("**Three consecutive paying passes with diminishing returns, then a clean stop.** "
+           "Nobody told the loop how many passes Deficient Encapsulation deserved on this "
+           "repository - it repeats a type while it improves, allows one safety retry, and "
+           "moves on. Nine of twelve passes were refused.")
 
 st.divider()
 st.subheader("Other measured repositories")
