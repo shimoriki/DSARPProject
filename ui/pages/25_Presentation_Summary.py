@@ -102,6 +102,18 @@ and per pass rather than as a single headline.
 """)
 
 st.divider()
+st.subheader("Where to look next")
+st.markdown("""
+| page | what it adds |
+|---|---|
+| **One smell type per pass** | every per-type pass across every repository, live from the reports |
+| **Real Tool Loop** | the raw before/after tool output for a single run, step by step |
+| **What actually works** | the outcome ledger — what each refactoring has achieved across all verified runs, and whether it survived held-out testing |
+| **Iterative Loop** | pass-by-pass acceptance and rollback decisions |
+| **Analyze Repo** | point it at any local Java repo and run the pipeline |
+""")
+
+st.divider()
 st.subheader("Scope — stated, not hidden")
 st.dataframe([
     {"area": "Maven projects", "status": "✅ supported"},
