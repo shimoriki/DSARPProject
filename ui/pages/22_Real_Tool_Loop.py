@@ -4,6 +4,8 @@ Shows the measured smell counts BEFORE and AFTER OpenRewrite actually rewrote th
 per tool and per smell type. Everything on this page comes from a real tool run recorded in
 data/outputs/<repo>/openrewrite_loop_report.json — nothing is simulated.
 """
+import re
+
 import streamlit as st
 from _common import cfg, data_dir
 from dsarp.util import read_json
@@ -25,8 +27,45 @@ if not projects:
             "```\npy -m dsarp.cli refactor-openrewrite --repo-url https://github.com/apache/commons-text --detector both\n```")
     st.stop()
 
-sel = st.selectbox("Project", projects)
-rep = read_json(out / sel / "openrewrite_loop_report.json", default=None)
+def _base(name: str) -> str:
+    """Strip the pass and run labels so every pass of one repository groups together."""
+    return re.split(r"__(pass\d+|bysmell\d*)", name)[0]
+
+
+def _gain(dir_name: str):
+    """(smells removed, report) for a pass, or None when it cannot be judged.
+
+    A pass whose build broke is not a candidate however good its numbers look — that is the
+    same rule the loop itself applies before accepting anything.
+    """
+    r = read_json(out / dir_name / "openrewrite_loop_report.json", default=None)
+    if not r or r.get("build_after_refactoring") != "compiled":
+        return None
+    b, a = r.get("smells_before"), r.get("smells_after")
+    if b is None or a is None:
+        return None
+    return (b - a, r)
+
+
+# One row per repository, not per pass. 166 raw reports is mostly noise: what matters is the
+# best VERIFIED pass and how far it moved the baseline.
+groups = {}
+for d in projects:
+    groups.setdefault(_base(d), []).append(d)
+
+sel_base = st.selectbox("Project", sorted(groups))
+candidates = [(g[0], g[1], d) for d in groups[sel_base] if (g := _gain(d))]
+if candidates:
+    removed, rep, sel = max(candidates, key=lambda t: t[0])
+    st.success(f"Showing the best VERIFIED pass of {len(groups[sel_base])} recorded for this "
+               f"repository — `{sel}` — which removed **{removed}** smells "
+               f"({rep.get('smells_before')} → {rep.get('smells_after')}). Passes that did not "
+               "compile are excluded, since the loop would not accept them either.")
+else:
+    sel = sorted(groups[sel_base])[0]
+    rep = read_json(out / sel / "openrewrite_loop_report.json", default=None)
+    st.warning(f"No pass of this repository both compiled and produced a measured "
+               f"before/after pair. Showing `{sel}` so the attempt is still inspectable.")
 if not rep:
     st.error("Report could not be read.")
     st.stop()
