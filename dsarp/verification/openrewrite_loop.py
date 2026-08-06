@@ -736,21 +736,13 @@ def _apply_and_verify(cfg: Config, project_id: str, repo_path: Path, out: Path,
                               "repoints every call site",
                       **ex})
     if pre_imports:
-        from ..refactoring.strategies import (apply_pre_imports,
-                                              imports_for_types_left_behind)
-        # The mirror of pre_imports: files that STAY need an import for a type that is about
-        # to move out from under them. Without it every Unstable Dependency and Scattered
-        # Functionality pass failed with `cannot find symbol` on a bare simple name that used
-        # to resolve because the two classes were neighbours.
-        _moves = [(e.options["oldFullyQualifiedTypeName"],
-                   e.options["newFullyQualifiedTypeName"])
-                  for e in (plan or [])
-                  if getattr(e, "options", None)
-                  and e.options.get("oldFullyQualifiedTypeName")
-                  and e.options.get("newFullyQualifiedTypeName")]
-        for fqn, imps in imports_for_types_left_behind(copy, _moves).items():
-            pre_imports.setdefault(fqn, [])
-            pre_imports[fqn] = sorted(set(pre_imports[fqn]) | set(imps))
+        from ..refactoring.strategies import apply_pre_imports
+        # NOTE: importing a departing type into the files left behind was tried here and
+        # MEASURABLY regressed commons-validator - God Component went from a kept pass to a
+        # compile failure, and neither Unstable Dependency nor Scattered Functionality was
+        # fixed (4/13 and 18.4% became 3/13 and 17.1%). imports_for_types_left_behind() and
+        # its tests are kept because the reasoning about the missing symbol still holds, but
+        # writing those imports up front is the wrong remedy and is not wired in.
         pre = apply_pre_imports(copy, pre_imports)
         steps.append({"step": "prepare_imports", "tool": "DSARP", "status": "ok",
                       "note": "made same-package references explicit so relocated classes "
