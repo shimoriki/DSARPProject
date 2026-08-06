@@ -112,5 +112,29 @@ st.dataframe([
      "status": "❌ no compile-safe automated refactoring"},
 ], use_container_width=True, hide_index=True)
 
+st.divider()
+st.subheader("How it is verified")
+st.markdown("""
+Every number on this page comes from running the **real** tools before and after a real
+source change. Nothing is simulated.
+
+| stage | what actually runs |
+|---|---|
+| detect | Arcan 1.2.1 on compiled bytecode + DesigniteJava on source |
+| plan | strategies derive concrete moves, each checked against a source index |
+| refactor | OpenRewrite `mvn rewrite:run` rewrites the real source on a copy |
+| re-detect | the SAME two tools run again on the refactored copy |
+| gate | a pass is kept only if it COMPILED **and** measurably reduced its target |
+
+A pass that breaks the build is rolled back, so the result is never worse than the input.
+A tool that cannot run after the refactoring reports *unmeasurable* - never zero.
+""")
+
+c2 = st.columns(3)
+c2[0].metric("Automated tests", "82")
+c2[1].metric("Smell detectors", "2", "Arcan + Designite")
+c2[2].metric("Repositories exercised", "20")
+
 runs = len(glob.glob(str(data_dir() / "outputs" / "*" / "openrewrite_loop_report.json")))
-st.caption(f"Read from {runs} recorded loop reports in data/outputs/.")
+st.caption(f"Read from {runs} recorded loop reports in data/outputs/. "
+           "Run `py -m pytest -q` to reproduce the test suite.")

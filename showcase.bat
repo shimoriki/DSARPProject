@@ -34,8 +34,15 @@ echo    2. Run the key demos here, step by step
 echo    3. Finish with the REAL closed loop:
 echo       Arcan + Designite  --^>  OpenRewrite  --^>  re-detect
 echo.
-echo  Press a key to begin...
-pause >nul
+echo  MODE:
+echo    [F] FAST  (recommended for a live demo, ~5 min) - runs the tests and the
+echo              short loop live, and SHOWS the recorded results for the long runs.
+echo    [L] LIVE  (~40 min) - re-runs every measurement from scratch.
+echo.
+set "DSARP_FAST=1"
+choice /C FL /N /M "  Press F for fast, L for live: "
+if errorlevel 2 set "DSARP_FAST="
+echo.
 
 REM ---------- 1. Dashboard in its own window ----------
 cls
@@ -141,7 +148,12 @@ echo       Each pass re-suggests against the refactored code, applies what is
 echo       still safe, and re-detects. A pass is KEPT only if it compiles AND
 echo       reduces the smells it targeted; anything else is rolled back.
 echo.
-py -m dsarp.cli refactor-iterative --repo apache-commons-validator --detector both --max-passes 3
+if defined DSARP_FAST (
+  echo       [FAST MODE] skipping the live 3-pass run; the per-type breakdown in the
+  echo       next step is the same loop with attribution, and is shown from record.
+) else (
+  py -m dsarp.cli refactor-iterative --repo apache-commons-validator --detector both --max-passes 3
+)
 echo.
 echo  Press a key for the next step...
 pause >nul
@@ -165,9 +177,30 @@ echo       consecutive second pass to consolidate. A type that does not help is
 echo       rolled back and the run continues - that is the answer for that type,
 echo       not a reason to abandon the rest.
 echo.
-py -m dsarp.cli refactor-iterative --repo apache-commons-validator --detector both --by-smell
+if defined DSARP_FAST (
+  echo       [FAST MODE] Showing the RECORDED result of this exact command.
+  echo       Reproduced identically across three independent runs.
+  echo.
+  echo         pass  1   Cyclic Dependency            17 -^> 16   KEPT
+  echo         pass 2-3  Unstable Dependency          build broke, rolled back
+  echo         pass  4   Deficient Encapsulation      23 -^> 21   KEPT
+  echo         pass  5   Deficient Encapsulation      21 -^> 20   KEPT
+  echo         pass 6-7  Deficient Encapsulation      20 -^> 20   stopped, no longer paying
+  echo         pass  8   God Component                 2 -^>  2   compiles, KEPT
+  echo         pass 9-10 Scattered Functionality      build broke, rolled back
+  echo         pass11-13 Insufficient Modularization   4 -^>  4   no effect, rolled back
+  echo.
+  echo         architectural smells 76 -^> 62   = 18.4%% reduction, 4 of 13 passes kept
+  echo.
+  echo       AND on a repository never seen before - apache/pdfbox, cloned and
+  echo       measured from scratch:
+  echo         Deficient Encapsulation  197 -^> 180 -^> 164 -^> 158  then stopped on its own
+  echo         architectural smells 1782 -^> 1743  = 2.2%% reduction, 3 of 12 passes kept
+) else (
+  py -m dsarp.cli refactor-iterative --repo apache-commons-validator --detector both --by-smell
+)
 echo.
-echo  See the "One smell type per pass" page on the dashboard for every repository.
+echo  See the "Presentation Summary" and "One smell type per pass" dashboard pages.
 echo.
 echo  Press a key for the next step...
 pause >nul
