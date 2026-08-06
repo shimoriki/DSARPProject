@@ -7,7 +7,7 @@ data/outputs/<repo>/openrewrite_loop_report.json — nothing is simulated.
 import re
 
 import streamlit as st
-from _common import cfg, data_dir
+from _common import cfg, data_dir, default_index
 from dsarp.util import read_json
 
 st.title("🔁 Real tool loop — Arcan + Designite → OpenRewrite → re-detect")
@@ -53,7 +53,8 @@ groups = {}
 for d in projects:
     groups.setdefault(_base(d), []).append(d)
 
-sel_base = st.selectbox("Project", sorted(groups))
+sel_base = st.selectbox("Project", sorted(groups),
+                        index=default_index(sorted(groups)))
 candidates = [(g[0], g[1], d) for d in groups[sel_base] if (g := _gain(d))]
 if candidates:
     removed, rep, sel = max(candidates, key=lambda t: t[0])

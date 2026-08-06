@@ -1,12 +1,13 @@
 import streamlit as st
 from pathlib import Path
-from _common import list_projects, load_suggestions
+from _common import list_projects, load_suggestions, default_index
 
 st.title("🍳 OpenRewrite Recipes")
 st.caption("Loop 11: recipe drafts/plans. Marked draft until dry-run/build/test pass.")
 
 projects = list_projects()
-sel = st.selectbox("Project", projects or ["(none)"])
+sel = st.selectbox("Project", projects or ["(none)"],
+                   index=default_index(projects or ["(none)"]))
 sugs = load_suggestions(sel)
 possible = [s for s in sugs if s.get("openrewrite_recipe_plan", {}).get("recipe_possible")]
 st.metric("Recipe-possible suggestions", len(possible))

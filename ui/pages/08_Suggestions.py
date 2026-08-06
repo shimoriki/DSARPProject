@@ -1,5 +1,5 @@
 import streamlit as st
-from _common import list_projects, load_suggestions, load_graph
+from _common import list_projects, load_suggestions, load_graph, default_index
 from dsarp.schemas import DependencyGraph
 from dsarp.insights import recipe_risk_meter, graph_delta_preview, issue_pr_draft
 
@@ -7,7 +7,8 @@ st.title("💡 Suggestions")
 st.caption("Loop 10: ranked, evidence-grounded refactoring suggestions with full provenance.")
 
 projects = list_projects()
-sel = st.selectbox("Project", projects or ["(none)"])
+sel = st.selectbox("Project", projects or ["(none)"],
+                   index=default_index(projects or ["(none)"]))
 sugs = load_suggestions(sel)
 graph_data = load_graph(sel)
 dg = DependencyGraph(**graph_data) if graph_data else DependencyGraph()

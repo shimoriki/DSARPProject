@@ -1,11 +1,12 @@
 import streamlit as st
-from _common import list_projects, load_graph
+from _common import list_projects, load_graph, default_index
 
 st.title("🕸️ Dependency Graphs")
 st.caption("Loop 5: package graph, cycles, SCCs, central components (fan-in/out).")
 
 projects = list_projects()
-sel = st.selectbox("Project", projects or ["(none)"])
+sel = st.selectbox("Project", projects or ["(none)"],
+                   index=default_index(projects or ["(none)"]))
 g = load_graph(sel)
 gm = g.get("graph_metrics", {})
 c = st.columns(4)

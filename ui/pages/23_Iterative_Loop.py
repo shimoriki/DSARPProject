@@ -1,6 +1,6 @@
 """Iterative refactoring: repeat the closed loop until it stops helping."""
 import streamlit as st
-from _common import cfg, data_dir
+from _common import cfg, data_dir, default_index
 from dsarp.util import read_json
 
 st.title("♻️ Iterative refactoring — repeat until converged")
@@ -22,7 +22,7 @@ if not projects:
             "--detector both --max-passes 4", language="bash")
     st.stop()
 
-sel = st.selectbox("Project", projects)
+sel = st.selectbox("Project", projects, index=default_index(projects))
 rep = read_json(out / sel / "iterative_loop_report.json", default=None)
 if not rep:
     st.error("Report could not be read.")
