@@ -60,8 +60,10 @@ if kept:
                ", ".join(sorted({r['smell type'] for r in kept})) +
                ". Each was measured alone, so the reduction is attributable to that type "
                "rather than to a mixture.")
+# "—" is the placeholder for a pass that recorded no smell type (it broke before
+# reporting one); listing it as a smell type that "did not pay off" is nonsense.
 rolled = sorted({r["smell type"] for r in rows if not r["kept"].startswith("✅")}
-                - {r["smell type"] for r in kept})
+                - {r["smell type"] for r in kept} - {"—", ""})
 if rolled:
     st.warning("**Types that did not pay off here:** " + ", ".join(rolled) +
                ". They compiled or were rolled back cleanly, and the run continued to the "

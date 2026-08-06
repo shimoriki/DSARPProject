@@ -51,7 +51,13 @@ echo       START on the "Presentation Summary" page - it is the whole MVP in one
 echo       the 18.4%% attributable result, the per-smell-type breakdown, and the list of
 echo       measurement traps the verification gate refuses to fall into.
 echo       A new window will run the server; leave it open during the demo.
-start "DSARP Dashboard" cmd /k py -m streamlit run ui/streamlit_app.py
+netstat -ano | findstr ":8501" >nul 2>&1
+if not errorlevel 1 (
+  echo       A dashboard is ALREADY running on http://localhost:8501 - reusing it
+  echo       instead of starting a second copy on another port.
+) else (
+  start "DSARP Dashboard" cmd /k py -m streamlit run ui/streamlit_app.py
+)
 echo.
 echo       Waiting a few seconds for the dashboard to start...
 timeout /t 8 >nul
