@@ -5,7 +5,10 @@ REM  Double-click this file, or run it from a terminal in the project.
 REM  Press a key to advance between steps (you control the pacing).
 REM
 REM  SPLIT (current experiment):
-REM    TRAINING     : 9 repos incl. Apache Cassandra (too big to test on)
+REM    TRAINING     : 9 repos. Cassandra is ANT-based, so it is detected but
+REM                   NOT refactorable - DSARP drives OpenRewrite through its
+REM                   Maven and Gradle plugins only. Reported as
+REM                   not_verifiable_unsupported_build, never as a clean result.
 REM    UNSEEN TEST  : Apache Log4j2      - never trained on
 REM    RANDOM TEST  : commons-validator  - small held-out repo
 REM ===================================================================
