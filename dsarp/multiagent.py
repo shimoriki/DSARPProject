@@ -133,18 +133,29 @@ def consensus(rule_plans, transformer_plans) -> Dict[str, Any]:
     log4j2 predictions are Move And Rename Method. Two models pointing at the same smell in
     the same component IS the signal; expecting them to name the same transformation is not.
     """
+    def parts(c: str):
+        """Both endpoints of a component string.
+
+        Relocation plans record a component as the move itself - "a.b -> a" - while the
+        transformer reports bare package names. Comparing the raw strings finds nothing even
+        when both models named the same package, which is what made log4j2 report 0 agreed
+        out of 307 on the first run.
+        """
+        return [x.strip() for x in str(c).split("->") if x.strip()]
+
     seen = {}
     for t in transformer_plans:
         for c in t.get("components") or []:
-            if c:
-                seen.setdefault((str(t.get("smell_type", "")).lower(), c.strip()), t)
+            for part in parts(c):
+                seen.setdefault((str(t.get("smell_type", "")).lower(), part), t)
     agreed, solo = [], []
     for p in rule_plans:
         if not getattr(p, "applicable", False):
             continue
         smell = str(getattr(p, "smell_type", "")).lower()
-        hit = next((seen[(smell, c)] for c in (getattr(p, "components", None) or [])
-                    if (smell, c) in seen), None)
+        hit = next((seen[(smell, part)]
+                    for c in (getattr(p, "components", None) or [])
+                    for part in parts(c) if (smell, part) in seen), None)
         (agreed if hit else solo).append((p, hit))
     return {"agreed": agreed, "rule_only": solo}
 

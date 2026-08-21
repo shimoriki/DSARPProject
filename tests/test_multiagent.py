@@ -58,3 +58,13 @@ def test_consensus_is_empty_when_nothing_overlaps():
     r = consensus([_P("Cyclic Dependency", ["a.b"])],
                   [{"smell_type": "Cyclic Dependency", "components": ["x.y"]}])
     assert r["agreed"] == [] and len(r["rule_only"]) == 1
+
+
+def test_consensus_sees_through_move_descriptions():
+    """Plans record a component as the move ("a.b -> a"); the transformer reports bare names.
+    Raw string comparison reported 0 agreed of 307 on log4j2 while both named the same package."""
+    from dsarp.multiagent import consensus
+    rules = [_P("Cyclic Dependency", ["org.apache.log4j.bridge -> org.apache.log4j"])]
+    preds = [{"smell_type": "Cyclic Dependency", "components": ["org.apache.log4j.bridge"],
+              "refactoring": "Move And Rename Method"}]
+    assert len(consensus(rules, preds)["agreed"]) == 1
