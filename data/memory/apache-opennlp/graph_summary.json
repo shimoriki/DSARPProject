@@ -1,0 +1,18 @@
+{
+  "node_count": 197,
+  "edge_count": 1181,
+  "cycle_count": 2000,
+  "scc_count": 1,
+  "central_components": [
+    "opennlp.tools.util",
+    "java.io",
+    "java.util",
+    "opennlp.tools.cmdline",
+    "opennlp.tools.tokenize",
+    "opennlp.tools.commons",
+    "opennlp.tools.postag",
+    "opennlp.tools.util.model",
+    "opennlp.tools.formats",
+    "org.slf4j"
+  ]
+}

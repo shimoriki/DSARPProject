@@ -1,0 +1,32 @@
+"""Severity ranking and the transformer adapter — the only new logic worth a check."""
+from dsarp.multiagent import rank_by_severity, severity_of
+
+
+def test_severity_reads_numbers_words_and_prose():
+    assert severity_of({"severity": 4.27}) == 4.27
+    assert severity_of({"severity": "3.31"}) == 3.31
+    assert severity_of({"severity": "critical"}) == 4.0
+    assert severity_of({"description": "... Severity: 3.3071. Size: 3."}) == 3.3071
+    assert severity_of({}) == 2.0                      # unknown -> medium, never 0
+
+
+def test_rank_is_worst_first_and_stable():
+    a = {"id": "a", "severity": "low"}
+    b = {"id": "b", "severity": 4.27}
+    c = {"id": "c", "severity": "high"}
+    d = {"id": "d", "severity": "high"}               # ties keep detector order
+    assert [f["id"] for f in rank_by_severity([a, b, c, d])] == ["b", "c", "d", "a"]
+
+
+def test_transformer_predictions_parse(tmp_path):
+    from dsarp.multiagent import refactor_transformer_agent
+    csv = tmp_path / "p.csv"
+    csv.write_text(
+        "project,versionId,architecture_smell,affected_elements,input_text,suggestions\n"
+        'logging-log4j2,abc,Cyclic Dependency,a.b|a.c,"Severity: 4.26. Size: 4.",'
+        '"Move Class (0.484) | Extract Method (0.47)"\n', encoding="utf-8")
+    bb = refactor_transformer_agent(
+        {"project_id": "apache-logging-log4j2", "predictions_csv": csv, "cfg": None})
+    p = bb["transformer_plans"][0]
+    assert p["refactoring"] == "Move Class" and p["confidence"] == 0.484
+    assert p["severity"] == 4.26 and p["executable"] is False

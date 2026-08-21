@@ -656,6 +656,26 @@ def cmd_refactor_sectioned(cfg: Config, args) -> int:
     return 0
 
 
+def cmd_multiagent(cfg: Config, args) -> int:
+    """Run the agent pipeline: ingestion -> graph -> two refactoring agents -> validator."""
+    from .multiagent import orchestrate
+    bb = orchestrate(args.repo, cfg=cfg, repo_url=getattr(args, "repo_url", None),
+                     detector=args.detector,
+                     predictions_csv=getattr(args, "predictions_csv", None))
+    rep = bb.get("report") or {}
+    rules = bb.get("rule_plans") or []
+    tr = bb.get("transformer_plans") or []
+    print(f"[multiagent] {args.repo}")
+    print(f"  findings (severity-ranked): {len(bb.get('findings') or [])}")
+    print(f"  rule agent        : {sum(1 for p in rules if p.applicable)} applicable "
+          f"of {len(rules)} plans")
+    print(f"  transformer agent : {len(tr)} predictions (advisory - type names, not recipes)")
+    print(f"  validator         : {rep.get('verification_status')} "
+          f"build={rep.get('build_after_refactoring')} "
+          f"smells {rep.get('smells_before')} -> {rep.get('smells_after')}")
+    return 0
+
+
 def cmd_ui(cfg: Config, args) -> int:
     import subprocess
     app = Path(__file__).resolve().parent.parent / "ui" / "streamlit_app.py"
@@ -807,6 +827,14 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
                     help="merge_package: ChangePackage, relocates whole packages (compile-safe); "
                          "move_classes: ChangeType, surgical but can break same-package refs")
     ro.set_defaults(func=cmd_refactor_openrewrite)
+
+    ma = sub.add_parser("multiagent")   # orchestrator over the agent split
+    ma.add_argument("--repo", required=True)
+    ma.add_argument("--repo-url", dest="repo_url")
+    ma.add_argument("--detector", choices=("arcan", "designite", "both"), default="both")
+    ma.add_argument("--predictions", dest="predictions_csv",
+                    help="transformer predictions CSV (defaults to data/raw/predictions/)")
+    ma.set_defaults(func=cmd_multiagent)
 
     sub.add_parser("ui").set_defaults(func=cmd_ui)
     return p
