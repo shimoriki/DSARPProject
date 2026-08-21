@@ -162,21 +162,23 @@ def consensus(rule_plans, transformer_plans) -> Dict[str, Any]:
 
 def validator_agent(bb: Dict[str, Any]) -> Dict[str, Any]:
     """Apply the executable plans for real, rebuild, re-detect, keep only what helped."""
-    from .verification.openrewrite_loop import refactor_with_openrewrite_and_verify
+    from .verification.iterative_loop import run_until_converged, DEFAULT_SMELL_ORDER
 
     agree = consensus(bb.get("rule_plans") or [], bb.get("transformer_plans") or [])
     bb["consensus"] = {"agreed": len(agree["agreed"]), "rule_only": len(agree["rule_only"])}
-    # `require_consensus` restricts execution to smells both agents flagged. Off by default:
-    # the transformer only covers repos it was trained on, and an empty prediction file would
-    # otherwise silently execute nothing.
-    if bb.get("require_consensus") and agree["agreed"]:
-        bb["only_smells"] = {getattr(p, "smell_type") for p, _ in agree["agreed"]}
 
-    bb["report"] = refactor_with_openrewrite_and_verify(
+    # The iterative loop IS the validator: it re-detects and re-plans between passes, keeps a
+    # pass only when the build still compiles and the targeted smells actually fell, and rolls
+    # back everything else. A single pass could not do the second half of that.
+    order = DEFAULT_SMELL_ORDER if bb.get("by_smell") else None
+    if bb.get("require_consensus") and agree["agreed"]:
+        order = [t for t in (order or DEFAULT_SMELL_ORDER)
+                 if t in {getattr(p, "smell_type") for p, _ in agree["agreed"]}] or order
+
+    bb["report"] = run_until_converged(
         bb["cfg"], f"{bb['project_id']}__multiagent", bb["repo_path"],
-        detector=bb.get("detector", "both"), keep_copy=True,
-        known_before=bb.get("before"), plan_budget=bb.get("budget", 0),
-        only_smells=bb.get("only_smells"))
+        detector=bb.get("detector", "both"), max_passes=bb.get("max_passes", 5),
+        smell_order=order)
 
     # Strategy 2: for smells no rule plan covered, let the LLM path propose - it composes
     # from a fixed recipe allowlist and is judged by the same build+measure gate, so it adds
@@ -203,9 +205,11 @@ def validator_agent(bb: Dict[str, Any]) -> Dict[str, Any]:
     return bb
 
 
+# The transformer agent is opt-in (`use_transformer=True`). Its predictions only cover the
+# repositories it was trained on, and on everything else it contributes nothing while making
+# the run look like it consulted two models.
 PIPELINE: List[Callable[[Dict[str, Any]], Dict[str, Any]]] = [
-    ingestion_agent, graph_agent, refactor_rules_agent,
-    refactor_transformer_agent, validator_agent,
+    ingestion_agent, graph_agent, refactor_rules_agent, validator_agent,
 ]
 
 
@@ -220,7 +224,10 @@ def orchestrate(project_id: str, **kw) -> Dict[str, Any]:
     from .util import write_json
 
     bb: Dict[str, Any] = {"project_id": project_id, **kw}
-    for agent in PIPELINE:
+    pipeline = list(PIPELINE)
+    if bb.get("use_transformer"):
+        pipeline.insert(pipeline.index(validator_agent), refactor_transformer_agent)
+    for agent in pipeline:
         bb = agent(bb)
         print(f"[{agent.__name__}] ok", flush=True)
 
@@ -236,9 +243,12 @@ def orchestrate(project_id: str, **kw) -> Dict[str, Any]:
                                if getattr(p, "applicable", False)),
         "transformer_predictions": len(bb.get("transformer_plans") or []),
         "consensus": bb.get("consensus"),
-        "verification_status": rep.get("verification_status"),
-        "build": rep.get("build_after_refactoring"),
-        "smells_before": rep.get("smells_before"), "smells_after": rep.get("smells_after"),
+        "passes_run": rep.get("passes_run"), "passes_accepted": rep.get("passes_accepted"),
+        "smells_before": rep.get("architectural_smells_before"),
+        "smells_after": rep.get("architectural_smells_after"),
+        "reduction_pct": rep.get("reduction_pct"),
+        "smell_types_kept": sorted({t for p in (rep.get("passes") or []) if p.get("accepted")
+                                    for t in (p.get("smell_types_refactored") or [])}),
         "ai_trials": [t.get("verdict") for t in (bb.get("ai_trials") or [])],
         "ledger_entries": len(build_ledger(bb["cfg"].data_dir / "outputs")),
     }

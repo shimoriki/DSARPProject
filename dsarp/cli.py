@@ -663,6 +663,9 @@ def cmd_multiagent(cfg: Config, args) -> int:
                      detector=args.detector,
                      predictions_csv=getattr(args, "predictions_csv", None),
                      require_consensus=getattr(args, "require_consensus", False),
+                     use_transformer=getattr(args, "use_transformer", False),
+                     by_smell=getattr(args, "by_smell", False),
+                     max_passes=getattr(args, "max_passes", 5),
                      use_ai_recipes=getattr(args, "use_ai_recipes", False))
     rep = bb.get("report") or {}
     rules = bb.get("rule_plans") or []
@@ -671,15 +674,21 @@ def cmd_multiagent(cfg: Config, args) -> int:
     print(f"  findings (severity-ranked): {len(bb.get('findings') or [])}")
     print(f"  rule agent        : {sum(1 for p in rules if p.applicable)} applicable "
           f"of {len(rules)} plans")
-    print(f"  transformer agent : {len(tr)} predictions (advisory - type names, not recipes)")
+    if tr:
+        print(f"  transformer agent : {len(tr)} predictions (advisory - not recipes)")
     con = bb.get("consensus") or {}
     print(f"  consensus         : {con.get('agreed', 0)} agreed, "
           f"{con.get('rule_only', 0)} rule-only")
     if bb.get("ai_trials"):
         print(f"  ai strategy       : {[t.get('verdict') for t in bb['ai_trials']]}")
-    print(f"  validator         : {rep.get('verification_status')} "
-          f"build={rep.get('build_after_refactoring')} "
-          f"smells {rep.get('smells_before')} -> {rep.get('smells_after')}")
+    print(f"  validator (loop)  : {rep.get('passes_accepted')}/{rep.get('passes_run')} "
+          f"passes kept, smells {rep.get('architectural_smells_before')} -> "
+          f"{rep.get('architectural_smells_after')} ({rep.get('reduction_pct')}%)")
+    for pa in rep.get("passes") or []:
+        mark = "KEPT" if pa.get("accepted") else "rolled back"
+        types = ", ".join(pa.get("smell_types_refactored") or []) or "-"
+        print(f"      pass {pa['pass']}: {types[:44]:44s} "
+              f"{pa.get('score_before')} -> {pa.get('score_after')} [{mark}]")
     return 0
 
 
@@ -841,6 +850,11 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     ma.add_argument("--detector", choices=("arcan", "designite", "both"), default="both")
     ma.add_argument("--predictions", dest="predictions_csv",
                     help="transformer predictions CSV (defaults to data/raw/predictions/)")
+    ma.add_argument("--transformer", action="store_true", dest="use_transformer",
+                    help="add the transformer agent (only useful for repos it was trained on)")
+    ma.add_argument("--by-smell", action="store_true", dest="by_smell",
+                    help="validator targets one smell type per pass")
+    ma.add_argument("--max-passes", type=int, default=5, dest="max_passes")
     ma.add_argument("--require-consensus", action="store_true", dest="require_consensus",
                     help="execute only smells BOTH refactoring agents flagged")
     ma.add_argument("--ai-recipes", action="store_true", dest="use_ai_recipes",
