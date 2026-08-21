@@ -124,15 +124,71 @@ def refactor_transformer_agent(bb: Dict[str, Any]) -> Dict[str, Any]:
     return bb
 
 
+def consensus(rule_plans, transformer_plans) -> Dict[str, Any]:
+    """Which rule plans a second, independently-trained model also flagged.
+
+    Agreement is on WHAT to fix, not how. The transformer names method-level refactorings
+    (Move And Rename Method, Extract Method) while the rule agent relocates packages and
+    classes, so matching on refactoring name would agree essentially never - 658 of 716
+    log4j2 predictions are Move And Rename Method. Two models pointing at the same smell in
+    the same component IS the signal; expecting them to name the same transformation is not.
+    """
+    seen = {}
+    for t in transformer_plans:
+        for c in t.get("components") or []:
+            if c:
+                seen.setdefault((str(t.get("smell_type", "")).lower(), c.strip()), t)
+    agreed, solo = [], []
+    for p in rule_plans:
+        if not getattr(p, "applicable", False):
+            continue
+        smell = str(getattr(p, "smell_type", "")).lower()
+        hit = next((seen[(smell, c)] for c in (getattr(p, "components", None) or [])
+                    if (smell, c) in seen), None)
+        (agreed if hit else solo).append((p, hit))
+    return {"agreed": agreed, "rule_only": solo}
+
+
 def validator_agent(bb: Dict[str, Any]) -> Dict[str, Any]:
     """Apply the executable plans for real, rebuild, re-detect, keep only what helped."""
     from .verification.openrewrite_loop import refactor_with_openrewrite_and_verify
+
+    agree = consensus(bb.get("rule_plans") or [], bb.get("transformer_plans") or [])
+    bb["consensus"] = {"agreed": len(agree["agreed"]), "rule_only": len(agree["rule_only"])}
+    # `require_consensus` restricts execution to smells both agents flagged. Off by default:
+    # the transformer only covers repos it was trained on, and an empty prediction file would
+    # otherwise silently execute nothing.
+    if bb.get("require_consensus") and agree["agreed"]:
+        bb["only_smells"] = {getattr(p, "smell_type") for p, _ in agree["agreed"]}
 
     bb["report"] = refactor_with_openrewrite_and_verify(
         bb["cfg"], f"{bb['project_id']}__multiagent", bb["repo_path"],
         detector=bb.get("detector", "both"), keep_copy=True,
         known_before=bb.get("before"), plan_budget=bb.get("budget", 0),
         only_smells=bb.get("only_smells"))
+
+    # Strategy 2: for smells no rule plan covered, let the LLM path propose - it composes
+    # from a fixed recipe allowlist and is judged by the same build+measure gate, so it adds
+    # coverage without adding trust. Only runs when asked, since it costs model calls.
+    if bb.get("use_ai_recipes"):
+        from .refactoring.ai_recipes import propose, test_proposal
+        from .refactoring.strategies import SourceFacts
+        from .models import get_provider
+        covered = {getattr(p, "smell_type") for p in (bb.get("rule_plans") or [])
+                   if getattr(p, "applicable", False)}
+        facts = SourceFacts(bb["repo_path"])
+        model = get_provider(bb.get("model") or {"type": "offline"})
+        trials = []
+        for f in bb["findings"]:
+            if f.get("smell_type") in covered or len(trials) >= bb.get("ai_budget", 3):
+                continue
+            prop = propose(model, facts, f)
+            trials.append(test_proposal(bb["cfg"], f"{bb['project_id']}__ai",
+                                        bb["repo_path"], prop, bb.get("detector", "both"))
+                          if not prop.rejection else
+                          {"verdict": "rejected", "why": prop.rejection,
+                           "smell_type": f.get("smell_type")})
+        bb["ai_trials"] = trials
     return bb
 
 
@@ -149,8 +205,32 @@ def orchestrate(project_id: str, **kw) -> Dict[str, Any]:
     parallelise until two refactoring agents can propose against the same findings, which is
     what `rule_plans` and `transformer_plans` already set up.
     """
+    from .refactoring.outcomes import build_ledger
+    from .util import write_json
+
     bb: Dict[str, Any] = {"project_id": project_id, **kw}
     for agent in PIPELINE:
         bb = agent(bb)
         print(f"[{agent.__name__}] ok", flush=True)
+
+    # What the orchestrator carries into the next iteration. The ledger is the real memory -
+    # it already aggregates measured effect per (smell, refactoring) over every verified run,
+    # and rank_plans consults it - so this records the run and leaves the learning where it
+    # already works rather than inventing a second store that could disagree with it.
+    rep = bb.get("report") or {}
+    memory = {
+        "project_id": project_id,
+        "findings": len(bb.get("findings") or []),
+        "rule_applicable": sum(1 for p in (bb.get("rule_plans") or [])
+                               if getattr(p, "applicable", False)),
+        "transformer_predictions": len(bb.get("transformer_plans") or []),
+        "consensus": bb.get("consensus"),
+        "verification_status": rep.get("verification_status"),
+        "build": rep.get("build_after_refactoring"),
+        "smells_before": rep.get("smells_before"), "smells_after": rep.get("smells_after"),
+        "ai_trials": [t.get("verdict") for t in (bb.get("ai_trials") or [])],
+        "ledger_entries": len(build_ledger(bb["cfg"].data_dir / "outputs")),
+    }
+    write_json(bb["out"] / "orchestrator_memory.json", memory)
+    bb["memory"] = memory
     return bb

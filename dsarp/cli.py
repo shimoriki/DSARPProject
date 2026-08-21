@@ -661,7 +661,9 @@ def cmd_multiagent(cfg: Config, args) -> int:
     from .multiagent import orchestrate
     bb = orchestrate(args.repo, cfg=cfg, repo_url=getattr(args, "repo_url", None),
                      detector=args.detector,
-                     predictions_csv=getattr(args, "predictions_csv", None))
+                     predictions_csv=getattr(args, "predictions_csv", None),
+                     require_consensus=getattr(args, "require_consensus", False),
+                     use_ai_recipes=getattr(args, "use_ai_recipes", False))
     rep = bb.get("report") or {}
     rules = bb.get("rule_plans") or []
     tr = bb.get("transformer_plans") or []
@@ -670,6 +672,11 @@ def cmd_multiagent(cfg: Config, args) -> int:
     print(f"  rule agent        : {sum(1 for p in rules if p.applicable)} applicable "
           f"of {len(rules)} plans")
     print(f"  transformer agent : {len(tr)} predictions (advisory - type names, not recipes)")
+    con = bb.get("consensus") or {}
+    print(f"  consensus         : {con.get('agreed', 0)} agreed, "
+          f"{con.get('rule_only', 0)} rule-only")
+    if bb.get("ai_trials"):
+        print(f"  ai strategy       : {[t.get('verdict') for t in bb['ai_trials']]}")
     print(f"  validator         : {rep.get('verification_status')} "
           f"build={rep.get('build_after_refactoring')} "
           f"smells {rep.get('smells_before')} -> {rep.get('smells_after')}")
@@ -834,6 +841,11 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     ma.add_argument("--detector", choices=("arcan", "designite", "both"), default="both")
     ma.add_argument("--predictions", dest="predictions_csv",
                     help="transformer predictions CSV (defaults to data/raw/predictions/)")
+    ma.add_argument("--require-consensus", action="store_true", dest="require_consensus",
+                    help="execute only smells BOTH refactoring agents flagged")
+    ma.add_argument("--ai-recipes", action="store_true", dest="use_ai_recipes",
+                    help="second validator strategy: let the LLM propose for smells no rule "
+                         "plan covered (same allowlist and same build+measure gate)")
     ma.set_defaults(func=cmd_multiagent)
 
     sub.add_parser("ui").set_defaults(func=cmd_ui)

@@ -30,3 +30,31 @@ def test_transformer_predictions_parse(tmp_path):
     p = bb["transformer_plans"][0]
     assert p["refactoring"] == "Move Class" and p["confidence"] == 0.484
     assert p["severity"] == 4.26 and p["executable"] is False
+
+
+class _P:
+    """Minimal stand-in for a Plan — consensus only reads three attributes."""
+    def __init__(self, smell, comps, applicable=True):
+        self.smell_type, self.components, self.applicable = smell, comps, applicable
+
+
+def test_consensus_matches_on_smell_and_component_not_refactoring_name():
+    """658 of 716 log4j2 predictions are 'Move And Rename Method' while the rule agent
+    relocates packages, so name-matching would agree never. Agreement is on WHAT to fix."""
+    from dsarp.multiagent import consensus
+    rules = [_P("Cyclic Dependency", ["org.apache.log4j.bridge"]),
+             _P("God Component", ["org.apache.log4j.spi"]),
+             _P("Cyclic Dependency", ["not.flagged"], applicable=False)]   # skipped
+    preds = [{"smell_type": "Cyclic Dependency", "components": ["org.apache.log4j.bridge"],
+              "refactoring": "Move And Rename Method"}]
+    r = consensus(rules, preds)
+    assert len(r["agreed"]) == 1 and len(r["rule_only"]) == 1        # inapplicable excluded
+    assert r["agreed"][0][0].components == ["org.apache.log4j.bridge"]
+    assert r["agreed"][0][1]["refactoring"] == "Move And Rename Method"
+
+
+def test_consensus_is_empty_when_nothing_overlaps():
+    from dsarp.multiagent import consensus
+    r = consensus([_P("Cyclic Dependency", ["a.b"])],
+                  [{"smell_type": "Cyclic Dependency", "components": ["x.y"]}])
+    assert r["agreed"] == [] and len(r["rule_only"]) == 1

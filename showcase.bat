@@ -211,6 +211,35 @@ echo.
 echo  Press a key for the next step...
 pause >nul
 
+REM ---------- 7c. Multi-agent split ----------
+cls
+echo [7c/9] Multi-agent architecture - five agents over one blackboard.
+echo.
+echo       ingestion   clone, compile, run BOTH real detectors
+echo       graph       dependency graph + rank every finding by severity
+echo       rule agent  the evidence-gated planners (deterministic, executable)
+echo       transformer a separately-trained model, read from its predictions CSV
+echo       validator   apply, rebuild, re-detect, keep only what compiled AND helped
+echo.
+echo       The two refactoring agents agree on WHAT to fix, not how: 658 of 716
+echo       log4j2 predictions are "Move And Rename Method", a method-level change
+echo       the rule agent never emits, so they are matched on smell + component.
+echo.
+echo       --require-consensus executes only the smells BOTH agents flagged.
+echo       --ai-recipes adds a second validator strategy: the LLM proposes from a
+echo       fixed allowlist and faces the same build+measure gate.
+echo.
+if defined DSARP_FAST (
+  echo       [FAST MODE] see the "Multi-agent pipeline" dashboard page for the
+  echo       recorded log4j2 run; the live command is:
+  echo         py -m dsarp.cli multiagent --repo apache-logging-log4j2 --require-consensus
+) else (
+  py -m dsarp.cli multiagent --repo apache-commons-validator --detector both
+)
+echo.
+echo  Press a key for the next step...
+pause ^>nul
+
 REM ---------- 8. Supporting evidence: the learned ranker ----------
 cls
 echo [9/9] Supporting evidence - leave-one-repository-out generalization
