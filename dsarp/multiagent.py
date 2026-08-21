@@ -62,7 +62,11 @@ def ingestion_agent(bb: Dict[str, Any]) -> Dict[str, Any]:
             mgr.clone(bb["project_id"], bb["repo_url"], depth=1)
         repo = mgr.path_for(bb["project_id"])
     repo = Path(repo)
-    out = cfg.data_dir / "outputs" / bb["project_id"] / "multiagent"
+    # `label` keeps concurrent runs of one repo apart: run_until_converged wipes
+    # outputs/<id>/iterative on entry, so two runs sharing an id delete each other's tree.
+    tag = bb.get("label") or "multiagent"
+    out = cfg.data_dir / "outputs" / bb["project_id"] / tag
+    bb["tag"] = tag
     before = detect(repo, out / "before", bb.get("detector", "both"))
     bb.update(cfg=cfg, repo_path=repo, out=out, before=before,
               build_system=detect_build_system(repo),
@@ -176,7 +180,7 @@ def validator_agent(bb: Dict[str, Any]) -> Dict[str, Any]:
                  if t in {getattr(p, "smell_type") for p, _ in agree["agreed"]}] or order
 
     bb["report"] = run_until_converged(
-        bb["cfg"], f"{bb['project_id']}__multiagent", bb["repo_path"],
+        bb["cfg"], f"{bb['project_id']}__{bb.get('tag', 'multiagent')}", bb["repo_path"],
         detector=bb.get("detector", "both"), max_passes=bb.get("max_passes", 5),
         smell_order=order)
 

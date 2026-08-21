@@ -664,6 +664,7 @@ def cmd_multiagent(cfg: Config, args) -> int:
                      predictions_csv=getattr(args, "predictions_csv", None),
                      require_consensus=getattr(args, "require_consensus", False),
                      use_transformer=getattr(args, "use_transformer", False),
+                     label=getattr(args, "label", None),
                      by_smell=getattr(args, "by_smell", False),
                      max_passes=getattr(args, "max_passes", 5),
                      use_ai_recipes=getattr(args, "use_ai_recipes", False))
@@ -850,6 +851,7 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     ma.add_argument("--detector", choices=("arcan", "designite", "both"), default="both")
     ma.add_argument("--predictions", dest="predictions_csv",
                     help="transformer predictions CSV (defaults to data/raw/predictions/)")
+    ma.add_argument("--label", help="output tag, so parallel runs of one repo stay apart")
     ma.add_argument("--transformer", action="store_true", dest="use_transformer",
                     help="add the transformer agent (only useful for repos it was trained on)")
     ma.add_argument("--by-smell", action="store_true", dest="by_smell",
