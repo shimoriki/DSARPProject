@@ -800,3 +800,230 @@ Deficient Encapsulation -1, Dense Structure -1.
 
 This is now the strongest demo case: six smell types, both detectors, and a verdict the
 gate refused to inflate on the pass that failed.
+
+## 2026-08-31 — Spoon agent: a SECOND transformer, wired to the log4j predictions
+
+A local-model agent that turns the transformer's advisory predictions into executable moves,
+applies them with Spoon, and cross-checks with Arcan. Runs beside OpenRewrite, not instead
+of it: OpenRewrite dies on the target repo's Maven build, Spoon parses with `noClasspath` and
+does not care whether the repo resolves — which is the point on repos of log4j2's size.
+
+NEW MODULES
+  dsarp/models/providers.py        OpenAI-compatible local client (Ollama/vLLM/llama.cpp).
+                                   NOTE: `dsarp.models` was imported by pipeline.py:19,
+                                   multiagent.py:193 and agents/explainer.py and DID NOT
+                                   EXIST — the explanation pipeline and --ai-recipes were
+                                   both dead. 4 tests were failing on it; now 99 pass.
+  dsarp/refactoring/spoon_plan.py  op allowlist + validation against SourceFacts
+  dsarp/tools/spoon_runner.py      build/invoke the driver jar
+  dsarp/agents/spoon_refactor.py   propose -> apply -> re-detect -> verdict
+  tools/dsarp-spoon/               Spoon 10.4.2 driver (shaded jar, builds clean)
+  .claude/skills/spoon-refactoring/SKILL.md   the specialist instructions, loaded verbatim
+                                   as the model's system prompt so documented rules and
+                                   enforced rules cannot drift
+
+  CLI: dsarp multiagent --repo <r> --spoon --model <tag> [--base-url] [--spoon-budget N]
+
+ONE OP: `moveClass`. Everything else the model may propose is rejected by the allowlist.
+Extract Method is the transformer's most confident prediction on log4j2 and is NOT
+executable — the agent declines it rather than faking it.
+
+SPOON FINDINGS (cost three failed attempts each, do not re-derive):
+  1. Reparenting a CtType does NOT move the CtTypeReferences naming it. Each holds its own
+     package reference. Without an explicit retarget pass the file lands in the right
+     directory with the right package declaration and the old package's callers no longer
+     resolve it. Looks perfect, does not compile. javac is in the test for this reason.
+  2. The type must be removed from its old CompilationUnit's declaredTypes BEFORE
+     `delete()`, or the printer later walks a null and NPEs.
+  3. The SNIPER printer cannot be used for moves. It preserves formatting by slicing the
+     original source text, and a detached type no longer has any -> StringIndexOutOfBounds.
+     Using the default printer instead, which REFORMATS every file in the modeled source
+     root. Acceptable only because the target is a throwaway copy measured by Arcan. A
+     reviewable patch would need sniper or a per-CU printer.
+  4. Shading Spoon copies a signed jar's META-INF signatures and the JVM then rejects the
+     uber-jar ("Invalid signature file digest"). The pom filters *.SF/*.DSA/*.RSA.
+
+VERIFIED: driver moves a class across packages, rewrites the caller's import, and the result
+compiles under javac (tests/test_spoon_driver.py). 716 log4j2 predictions load, SourceFacts
+scans the repo in 3.2s, prompts are grounded in real crossing types.
+NOT YET RUN: the full --spoon pass on log4j2 (needs a Nemotron tag pulled; Ollama here has
+only qwen2.5-coder). No measured smell delta from this agent yet.
+
+Verification is BATCHED — one baseline, all edits, one re-measure — because Arcan on log4j2
+costs minutes per run. Per-edit attribution would be better evidence.
+
+################################################################################
+PER-CANDIDATE ATTRIBUTION (supersedes the batched note above)
+################################################################################
+
+The "per-edit attribution would be better evidence" note was acted on. It changed the
+conclusion, so the batched numbers above should not be quoted on their own.
+
+BATCHED, pdfbox, 7 moves applied together:   952 -> 957, targeted +5, verdict
+  rejected_smells_increased. Reads as "the agent makes things worse".
+INDIVIDUALLY, the same candidates, one per trial (scratchpad/outcome_labels.py):
+  8/8 compiled, 4/8 reduced the targeted smell. The +5 was ArrayEntry (+1 targeted,
+  +2 collateral) plus three no-ops swamping four genuinely good moves.
+  -> data/outputs/outcomes/apache-pdfbox/outcomes.json
+
+So the ceiling on batching is not candidate quality, it is interaction between moves applied
+to one tree. Isolated application is the configuration with a measured positive rate.
+
+BACKEND COMPARISON, identical moves through both (scratchpad/backend_compare.py):
+  Spoon        5/5 compiled, 2/5 reduced targeted
+  OpenRewrite  2/5 compiled, 0/5 reduced targeted
+  Where both compiled they agreed exactly on the smell delta. OpenRewrite's deficit is
+  execution (ChangeType left the tree unbuildable on 3/5), not judgement.
+  -> data/outputs/backend_compare/apache-pdfbox/backend_compare.json
+
+WHICH FEATURES ACTUALLY PREDICT OUTCOME (dsarp/dataset/ranker.py):
+  The 9 MOVE_FEATURES have IDENTICAL means across reduced/not-reduced on the 8 labelled
+  candidates (name_affinity 0.000/0.000, pkg_distance 1.250/1.250, depth_from 5.000/5.000).
+  Leave-one-out 0/8 against a 0.500 majority baseline. They describe the move; outcome
+  depends on the structure the move acts on.
+  The 9 GRAPH_FEATURES separate 4 of 9, the strongest being fan_out_from 10.75 (reduced)
+  vs 20.75 (not) - a 2x gap. would_close_cycle is constant 1.00 on all eight, so it is
+  untested here, not useless.
+  n=8 is too small to TRAIN on and no trained accuracy is claimed from it.
+
+HONEST RANKER NUMBERS (mined data, repo-held-out folds):
+  Gold candidate originally sat at position 0 in every group, so "always pick the first"
+  scored P@1 = 1.000. After shuffling, ranker P@1 fell 0.65 -> 0.55. Quote 0.55.
+
+################################################################################
+TWO MEASUREMENT BUGS FOUND WHILE RUNNING THE FULL EXPERIMENT (2026-09-12)
+################################################################################
+
+Both produced numbers that looked like results. Any test count or smell delta recorded
+before this section should be re-derived rather than quoted.
+
+1. SPOON INVENTS IMPORTS -> whole runs lost to a quality gate.
+   Spoon's printer emits an import for a type that exists only as a lambda's INFERRED
+   functional interface. `compoundWords.forEach(word -> ...)` printed
+   `import java.util.function.Consumer;` into CompoundCharacterTokenizer, which never names
+   Consumer. pdfbox fails the build on UnusedImports, Arcan then measured a tree that had
+   not compiled, and the run reported 952 -> 2 smells, targeted -946. A 99.8% improvement,
+   entirely fake. verdict() caught it as inconclusive_quality_gate_failed.
+   FIX: dsarp/refactoring/java_text.py, shared by the Spoon and OpenRewrite arms. Scoped to
+   the files the backend actually changed -- an unused import IS a dependency edge Arcan
+   counts, so pruning tree-wide would lower the smell count by itself and credit the
+   refactoring for it.
+   With the fix the identical 4 moves gave 952 -> 951, targeted -1, collateral 0.
+
+2. TEST TOTALS READ OFF THE LAST REACTOR MODULE.
+   Maven prints one surefire summary PER MODULE and no aggregate. run_tests() kept the last
+   match, with a comment asserting it was the reactor summary. It is not.
+     pdfbox   reported   38 run / 0 fail   ACTUAL 2050 run / 0 fail / 0 err
+     log4j2   reported  940 run / 6 fail   ACTUAL  950 run / 6 fail / 29 ERRORS
+   So pdfbox's positive result is much STRONGER than recorded (2050 passing, not 38) and
+   log4j2's damage much WORSE (35 broken tests, not 6).
+   This also explains the tika oddity logged earlier as "status failed, 0 failures, 0
+   errors, 726 run, inconsistent, untraced": the failing module simply was not the last one.
+   FIX: sum module summaries, skip lines carrying "Time elapsed" (those are single test
+   classes inside a module already counted). tests/test_test_counts.py.
+
+GRAPH SELECTION DID NOT GENERALISE.
+  fan_out_from separated reduced from not-reduced on 8 pdfbox candidates (10.75 vs 20.75).
+  Used to pick 4 of N legal moves on unseen repos it predicted nothing:
+    tika   picks at 16-24 -> 314 -> 326 (+12), 1 test broken
+    log4j2 picks at 7-16  -> 677 -> 684 (+7), 35 tests broken
+  One feature, one repo, n=8. Do not retune it on three batch-level points.
+
+STANDING: batched full-repo passes 1 of 4 (pdfbox -1 only). Isolated per-candidate 4 of 8.
+Isolated remains the only configuration that reliably reduces a targeted smell.
+
+MOVECLASS IS NOT SEMANTICS-PRESERVING WHERE DISPATCH ORDER FOLLOWS CLASS NAME.
+  tika: ServiceLoaderUtilsTest.testSort failed after moving FileCommandDetector from
+  tika.detect to tika.utils. ServiceLoaderUtils.sortLoadedClasses sorts by
+  CompareUtils::compareClassName, so the relocated detector sorts LAST instead of third and
+  service dispatch order changes. fix_references correctly rewrote the test's reference to
+  the new FQN; nothing can know the hardcoded EXPECTED ORDER also had to change.
+  Invisible to the compiler and invisible to the smell count. Only the project's own tests
+  catch it -- which is the argument for keeping the test stage in the gate.
+  Generalises to any repo using ServiceLoader, SPI files, annotation scanning, or
+  name-ordered registries. A move that is legal, type-correct and smell-reducing can still
+  be wrong.
+
+TIKA'S TEST RUN IS PARTIAL. The reactor halts at the first failing module (tika-core), so
+every module after it is SKIPPED. "1 failure in 734" means 1 failure before the run aborted,
+not a clean full suite. Do not read it as full behavioural coverage.
+
+  MODULE COVERAGE OF THE TEST STAGE (measured, 2026-09-12):
+    pdfbox   13 passed   0 failed    0 skipped  -> complete suite, 2050 tests, trustworthy
+    tika      3 passed   1 failed  119 skipped  -> 4 of 123 modules ran
+    log4j2    6 passed   1 failed   34 skipped  -> 7 of 41 modules ran
+  The reactor halts at the first failing module, so tika's "1 failure" and log4j2's "35
+  broken" are LOWER BOUNDS taken before the run aborted. The true damage can only be larger.
+  Consequence: the one positive result (pdfbox -1) is also the only one with full test
+  coverage behind it, and the two negatives are worse than their numbers look, not better.
+  To get a real figure, the test stage needs -fae (fail at end) so later modules still run.
+
+################################################################################
+BACKENDS ARE EQUIVALENT (settled 2026-09-12, do not re-litigate)
+################################################################################
+Identical 5 moves, one shared pdfbox baseline, measured both ways:
+                       compiled   reduced targeted
+  Spoon                  5/5          2/5
+  OpenRewrite BEFORE     2/5          0/5
+  OpenRewrite AFTER      5/5          2/5
+Per-candidate agreement after the fix is EXACT on all five (+1/+1, 0/0, -1/-1, 0/0, -1/-1).
+
+The 2/5 was never a capability gap. Two defects in OUR pipeline, nothing to do with the tool:
+  a) ChangeType rewrites references TO a moved type and leaves references FROM it alone, so
+     the moved file lost the imports for ex-siblings it still names. Spoon escapes this only
+     because it reprints the moved file with real imports.
+     -> java_text.add_origin_imports, moves read back from rewrite.yml via recipe_moves().
+  b) the tidy pass was a NO-OP. OpenRewrite prints changed-file paths relative to the maven
+     PROCESS cwd; we joined them onto repo_path, got paths that do not exist, skipped every
+     file, and pdfbox kept failing the four RedundantImport errors the pass existed to remove.
+     -> _java_files resolves against cwd too, and refuses anything outside the repo copy.
+Both were found only because KEEP_LOGS=1 kept the work dirs. "It did not compile" is not a
+finding; the javac line is.
+
+TEST SOURCES ARE NOW IN THE PRECHECK MODEL.
+  A move can be legal for main and illegal for tests. commons-validator: ISBNValidator moved
+  routines -> routines.checkdigit, main compiled, Arcan measured 21 smells, then testCompile
+  died on "ISBN10_REGEX is not public". precheckInRoot only ever modelled src/main/java.
+  illegalReason already scanned the whole model and its userPkg.equals(from) test would have
+  caught it -- the test file was simply never parsed.
+  FIX: newLauncher(root, cp, compliance, includeTests) adds <module>/src/test/java, derived
+  from the layout so a caller cannot forget it. Falls back to main-only if the model build
+  throws (test-scope types unresolvable) and reports testsModelled=false so a weaker verdict
+  never passes as a full one. module_classpath switched to includeScope=test + test-classes.
+  VERIFIED: ISBNValidator now ILLEGAL with
+    "ISBNValidatorTest in ...routines uses field ISBNValidator.ISBN10_REGEX, not public"
+  CodeValidator stays legal. commons-validator 2 legal -> 1 legal.
+
+################################################################################
+THE 50% FIGURE DOES NOT SURVIVE BETTER MEASUREMENT (2026-09-12)
+################################################################################
+Old: "4/8 = 50% of moves reduce the targeted smell". That number was produced by
+  - HEAD sampling (all candidates came from the few worst findings),
+  - targeted-delta only (ignores what the move does to every other smell),
+  - no test verification,
+  - 4 of 9 features constant zero because features_for() was called without signatures.
+
+Re-measured on pdfbox, stride-sampled across the ATDI range, n=15 so far:
+    label        targeted smell fell             3/15 = 20%
+    label_strict targeted fell + tests pass      3/15 = 20%
+    total smells fell (any cause)                4/15 = 27%
+    label_net    targeted + tests + total fell   2/15 = 13%
+Quote label_net. It is the only one that means "the codebase got better and still works".
+
+TARGETED-ONLY IS WRONG IN BOTH DIRECTIONS, not merely lenient:
+  PDResources                   targeted -2, collateral +3 -> label=1 but the repo got WORSE
+  PDAppearanceStream            targeted  0, collateral -4 -> label=0 but the repo got BETTER
+  PDTransparencyGroupAttributes targeted  0, collateral -11 -> label=0 but the repo got BETTER
+  The "reduced" set and the "improved" set are different sets, not subset and superset.
+
+VALUE IS WILDLY NON-UNIFORM, and this matters more than the rate:
+  MissingOperandException, contentstream.operator -> contentstream, Cyclic Dependency:
+  952 -> 712 total (net -240, a QUARTER of the repository's smells), 2050 tests pass,
+  all 13 modules. One class move. Arcan counts Cyclic Dependency per participating element,
+  so breaking one large package cycle clears every finding it generated.
+  A dozen other moves did nothing at all. Chasing a uniform 50% hit rate is probably the
+  wrong goal; reliably FINDING the rare cycle-breaking move is worth far more.
+
+Build-failure guard confirmed working: PDMarkedContent and PDAnnotation both came back
+total_after=57 (the same shape as the fake -946) and both scored label=0 via
+quality_gate_failed. They are excluded, not celebrated.
