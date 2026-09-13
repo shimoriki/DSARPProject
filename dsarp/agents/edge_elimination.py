@@ -112,15 +112,80 @@ def candidates_for_edge(facts: SourceFacts, edge: Dict[str, Any]) -> Optional[Di
     }
 
 
-def plan(facts: SourceFacts, cycle_data: Dict[str, Any], max_classes: int = 3,
+# Shapes that cannot be put behind an interface, in the order they actually occur. Measured on
+# pdfbox's cheapest 18 edges, every one of which was refused: 7 were already interfaces, 4 had
+# no instance method called, 4 were constructed directly, 2 were read as constants, 1 was a
+# static helper.
+_UNINVERTIBLE_HINTS = ("Exception", "Error", "Constants", "Util", "Utils", "Helper",
+                       "Version", "Hex", "Name", "Names", "Mode", "Type", "Kind")
+
+
+def invertibility(facts: SourceFacts, fqn: str) -> Tuple[int, str]:
+    """A cheap source-level guess at whether a type can go behind an interface.
+
+    Returns (score, why); higher is more promising. This never overrules the Spoon precheck,
+    which decides legality with resolved types -- it exists so the expensive check is spent on
+    candidates that have a chance, instead of on the eighteen that were refused in a row.
+
+    Ranking by the number of classes carrying an edge was exactly backwards. An edge carried by
+    ONE class is carried by a utility, a constant, an exception or an interface: cheap to name
+    and impossible to abstract. What makes a type invertible is having behaviour to abstract --
+    public instance methods someone calls.
+    """
+    text = facts.text_of(fqn) or ""
+    simple = fqn.rsplit(".", 1)[-1]
+    if not text:
+        return -100, "no source"
+    body = chr(10).join(ln for ln in text.splitlines() if not ln.strip().startswith("import "))
+    if " interface " in body or body.lstrip().startswith("public interface"):
+        return -100, "already an interface"
+    if " enum " in body:
+        return -100, "enum"
+    if any(simple.endswith(h) for h in ("Exception", "Error")):
+        return -90, "exception type"
+    score, why = 0, []
+    # Public instance methods are the whole substance of an interface.
+    instance = sum(1 for ln in body.splitlines()
+                   if ln.strip().startswith("public ") and "(" in ln
+                   and " static " not in ln and " class " not in ln
+                   and "=" not in ln.split("(")[0])
+    score += instance * 10
+    why.append(f"{instance} public instance methods")
+    statics = body.count(" static ")
+    score -= statics * 4
+    if statics:
+        why.append(f"{statics} statics")
+    if any(simple.endswith(h) for h in _UNINVERTIBLE_HINTS):
+        score -= 25
+        why.append("utility-shaped name")
+    return score, ", ".join(why)
+
+
+def plan(facts: SourceFacts, cycle_data: Dict[str, Any], max_classes: int = 40,
          limit: int = 12, component_index: Optional[int] = None) -> List[Dict[str, Any]]:
-    """Cheapest-first edge eliminations, each with a checkable success criterion."""
-    out = []
-    for e in cheap_edges(cycle_data, max_classes, component_index):
+    """Edge eliminations ordered by how invertible the edge's types are.
+
+    NOT cheapest-first. Aiming at the cheapest edges produced 0 legal candidates out of 18,
+    because an edge is cheap precisely when a single utility or constant class carries it. The
+    invertible edges are the behaviour-rich ones, which sit further up the cost curve, so
+    `max_classes` defaults high enough to reach them and the ordering does the work.
+    """
+    scored = []
+    for e in feedback_edges(cycle_data, component_index):
+        if e.get("classes", 1) > max_classes:
+            continue
         c = candidates_for_edge(facts, e)
         if c is None:
             continue
-        out.append(c)
-        if len(out) >= limit:
-            break
-    return out
+        parts = [invertibility(facts, t) for t in c["types_to_abstract"]]
+        # The group is only as invertible as its worst member: invertEdge abstracts every type
+        # the consumer names, and one enum in the set sinks the edge.
+        worst = min(p[0] for p in parts)
+        c["invertibility"] = worst
+        c["invertibility_why"] = "; ".join(
+            f"{t.rsplit('.', 1)[-1]}: {w}" for t, (s, w) in zip(c["types_to_abstract"], parts))
+        if worst <= -90:
+            continue                      # provably pointless to precheck
+        scored.append(c)
+    scored.sort(key=lambda c: (-c["invertibility"], c["classes_carrying_edge"]))
+    return scored[:limit]

@@ -99,40 +99,54 @@ def test_extract_interface_inverts_the_dependency_and_compiles():
     shutil.rmtree(repo, ignore_errors=True)
 
 
-def test_precheck_refuses_when_the_consumer_constructs_the_class():
-    """`new Engine(...)` in the consumer needs a factory too — out of scope, so refuse."""
-    files = dict(CYCLE)
-    files["com/x/app/Runner.java"] = (
-        "package com.x.app;\n\nimport com.x.engine.Engine;\n\n"
-        "public class Runner {\n"
-        "    private Engine engine = new Engine(new Config());\n"
-        "    public int go() { return engine.run(2); }\n}\n")
+def test_construction_is_not_a_blocker_under_type_constraints():
+    """`Iface x = new Impl()` is legal Java, and the checklist refused it anyway.
+
+    Refusing construction cost 16 of 44 pdfbox candidates. A declaration's type changing says
+    nothing about what is assigned into it -- which is what a constraint system knows and a
+    checklist cannot express. The initialiser keeps the concrete class, and the old import
+    stays because something still names it.
+    """
+    files = dict(TWO_CLASS_CYCLE)
+    files["com/x/app/Runner.java"] = 'package com.x.app;\n\nimport com.x.engine.Engine;\nimport com.x.engine.Meter;\n\npublic class Runner {\n    private Engine engine;\n    private Meter meter = new Meter();\n    public void wire(Engine e) { this.engine = e; }\n    public int go() { return engine.run(2) + meter.read(); }\n}\n'
     repo = _repo(files)
-    res = precheck_edits(repo, [{"op": "extractInterface", "type": "com.x.engine.Engine",
-                                 "toPackage": "com.x.app"}],
-                         source_roots=["src/main/java"], classpath=[str(repo)])
-    assert not (res.get("legal") or []), res
-    assert "constructs" in (res["illegal"][0]["why"]), res["illegal"][0]["why"]
+    assert _javac(repo).returncode == 0
+    res = apply_edits(repo, [{"op": "invertEdge", "type": "com.x.engine.Engine",
+                              "toPackage": "com.x.app",
+                              "types": ["com.x.engine.Engine", "com.x.engine.Meter"]}],
+                      source_roots=["src/main/java"], classpath=[str(repo / "classes")])
+    assert res.get("applied"), res
+    assert res["applied"][0]["classesInverted"] == 2, res["applied"][0]
+    runner = (repo / "src/main/java/com/x/app/Runner.java").read_text(encoding="utf-8")
+    assert "private MeterApi meter = new Meter();" in runner, runner
+    assert "import com.x.engine.Meter;" in runner, "the constructor still needs its import"
+    shutil.rmtree(repo / "classes", ignore_errors=True)
+    r = _javac(repo)
+    assert r.returncode == 0, "must compile: " + r.stderr
     shutil.rmtree(repo, ignore_errors=True)
 
 
-def test_precheck_refuses_static_and_field_access():
-    files = dict(CYCLE)
-    files["com/x/engine/Engine.java"] = (
-        "package com.x.engine;\n\npublic class Engine {\n"
-        "    public static int VERSION = 2;\n"
-        "    public int run(int t) { return t; }\n}\n")
-    files["com/x/app/Runner.java"] = (
-        "package com.x.app;\n\nimport com.x.engine.Engine;\n\n"
-        "public class Runner {\n"
-        "    private Engine engine;\n"
-        "    public int go() { return engine.run(2) + Engine.VERSION; }\n}\n")
+def test_static_access_through_the_type_does_not_block_declarations():
+    """`Engine.VERSION` keeps working: the class still exists, it just gained an interface.
+
+    The checklist blocked the whole candidate on any static use anywhere. Constraints ask
+    whether a DECLARATION can move, and a static read through the type name is not one.
+    """
+    files = dict(TWO_CLASS_CYCLE)
+    files["com/x/engine/Engine.java"] = 'package com.x.engine;\n\nimport com.x.app.Config;\n\npublic class Engine {\n    public static final int VERSION = 2;\n    private final Config cfg;\n    public Engine(Config cfg) { this.cfg = cfg; }\n    public int run(int times) { return times * cfg.factor(); }\n}\n'
+    files["com/x/app/Runner.java"] = 'package com.x.app;\n\nimport com.x.engine.Engine;\n\npublic class Runner {\n    private Engine engine;\n    public void wire(Engine e) { this.engine = e; }\n    public int go() { return engine.run(2) + Engine.VERSION; }\n}\n'
     repo = _repo(files)
-    res = precheck_edits(repo, [{"op": "extractInterface", "type": "com.x.engine.Engine",
-                                 "toPackage": "com.x.app"}],
-                         source_roots=["src/main/java"], classpath=[str(repo)])
-    assert not (res.get("legal") or []), res
-    assert "field" in res["illegal"][0]["why"], res["illegal"][0]["why"]
+    assert _javac(repo).returncode == 0
+    res = apply_edits(repo, [{"op": "extractInterface", "type": "com.x.engine.Engine",
+                              "toPackage": "com.x.app", "interfaceName": "EngineApi"}],
+                      source_roots=["src/main/java"], classpath=[str(repo / "classes")])
+    assert res.get("applied"), res
+    runner = (repo / "src/main/java/com/x/app/Runner.java").read_text(encoding="utf-8")
+    assert "private EngineApi engine;" in runner, runner
+    assert "Engine.VERSION" in runner, "the static read must survive untouched"
+    shutil.rmtree(repo / "classes", ignore_errors=True)
+    r = _javac(repo)
+    assert r.returncode == 0, "must compile: " + r.stderr
     shutil.rmtree(repo, ignore_errors=True)
 
 
@@ -146,7 +160,8 @@ def test_precheck_refuses_when_the_consumer_calls_nothing():
                                  "toPackage": "com.x.app"}],
                          source_roots=["src/main/java"], classpath=[str(repo)])
     assert not (res.get("legal") or []), res
-    assert "nothing to abstract" in res["illegal"][0]["why"], res["illegal"][0]["why"]
+    why = res["illegal"][0]["why"]
+    assert "no instance method" in why or "nothing to abstract" in why, why
     shutil.rmtree(repo, ignore_errors=True)
 
 
@@ -223,21 +238,15 @@ def test_invert_edge_removes_the_package_dependency_entirely():
 
 
 def test_invert_edge_applies_the_legal_subset_of_a_group():
-    """Partial inversion, because all-or-nothing was measurably the wrong call.
+    """A field read blocks that one type; the rest of the group still goes through.
 
-    It rejected 43 of 45 pdfbox candidates and both survivors held a single class, so the
-    group operation never ran as a group on real code — while FontHeaders, a partial
-    inversion, reduced the smell count anyway (targeted -1, collateral -1, tests clean).
+    Construction stopped being a blocker once constraints replaced the checklist, so the
+    partial case is shown with a field read -- which an interface genuinely cannot declare, at
+    any level of analysis.
     """
     files = dict(TWO_CLASS_CYCLE)
-    # Meter is now constructed by the consumer, which needs a factory as well.
-    files["com/x/app/Runner.java"] = (
-        "package com.x.app;\n\nimport com.x.engine.Engine;\nimport com.x.engine.Meter;\n\n"
-        "public class Runner {\n"
-        "    private Engine engine;\n"
-        "    private Meter meter = new Meter();\n"
-        "    public void wire(Engine e) { this.engine = e; }\n"
-        "    public int go() { return engine.run(2) + meter.read(); }\n}\n")
+    files["com/x/engine/Meter.java"] = 'package com.x.engine;\n\npublic class Meter {\n    public int reading = 7;\n    public int read() { return reading; }\n}\n'
+    files["com/x/app/Runner.java"] = 'package com.x.app;\n\nimport com.x.engine.Engine;\nimport com.x.engine.Meter;\n\npublic class Runner {\n    private Engine engine;\n    private Meter meter;\n    public void wire(Engine e, Meter m) { this.engine = e; this.meter = m; }\n    public int go() { return engine.run(2) + meter.reading; }\n}\n'
     repo = _repo(files)
     assert _javac(repo).returncode == 0
     res = apply_edits(repo, [{"op": "invertEdge", "type": "com.x.engine.Engine",
@@ -246,18 +255,13 @@ def test_invert_edge_applies_the_legal_subset_of_a_group():
                       source_roots=["src/main/java"], classpath=[str(repo / "classes")])
     assert res.get("applied"), res
     a = res["applied"][0]
-    # Engine is invertible; Meter is constructed by the consumer and is not.
     assert a["classesInverted"] == 1, a
     assert a["classesSkipped"] == 1, a
-    assert "constructs" in " ".join(a["skippedInGroup"]), a["skippedInGroup"]
-
+    assert "field" in " ".join(a["skippedInGroup"]).lower(), a["skippedInGroup"]
     src = repo / "src" / "main" / "java"
     assert (src / "com" / "x" / "app" / "EngineApi.java").exists()
     assert not (src / "com" / "x" / "app" / "MeterApi.java").exists()
-    runner = (src / "com" / "x" / "app" / "Runner.java").read_text(encoding="utf-8")
-    assert "EngineApi" in runner
-    # Meter keeps the edge alive, which a partial inversion accepts rather than refusing.
-    assert "com.x.engine.Meter" in runner or "Meter meter" in runner, runner
+    shutil.rmtree(repo / "classes", ignore_errors=True)
     r = _javac(repo)
     assert r.returncode == 0, "partial inversion must still compile: " + r.stderr
     shutil.rmtree(repo, ignore_errors=True)

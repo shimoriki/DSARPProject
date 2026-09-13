@@ -356,17 +356,59 @@ def _ensure_import(text: str, fqn: str) -> str:
     return "".join(out) if done else line + chr(10) + text
 
 
-def retarget_type(text: str, old_fqn: str, new_fqn: str) -> str:
-    """Point a consumer file at the extracted interface instead of the implementation.
+def _declaration_use(name: str):
+    """Matches a type name used as a DECLARED TYPE, not in the places an interface cannot go.
 
-    Safe only because the precheck already refused every candidate where the consumer
-    constructs the class, touches its fields, or calls a static on it: what is left can only
-    be a declared type, which the interface satisfies.
+    A blunt whole-word swap was wrong in a way the compiler caught immediately: the constraint
+    solver said the declaration `Meter meter` could become `MeterApi meter`, the textual pass
+    also rewrote the initialiser, and javac answered "MeterApi is abstract; cannot be
+    instantiated". Changing a declaration's type says nothing about what is assigned into it.
+
+    So these are left alone:
+        new X(...)      the constructor still names the class
+        X.something     static access and X.class
+        X::something    method and constructor references
     """
     import re as _re
+    return _re.compile(r"(?<!new )(?<![A-Za-z0-9_$.])" + _re.escape(name)
+                       + r"(?![A-Za-z0-9_$.:])")
+
+
+def retarget_type(text: str, old_fqn: str, new_fqn: str) -> str:
+    """Point a consumer file's DECLARATIONS at the extracted interface.
+
+    The driver decides which declarations may move, by type constraints over the resolved
+    model. This applies that decision to the original text rather than taking the printer's
+    reformatted copy, because the printer reflows whole files and pdfbox rejects the result on
+    line length. The patterns here mirror what the solver allows; the compile gate is still
+    what confirms it.
+    """
     old_simple = old_fqn.rsplit(".", 1)[-1]
     new_simple = new_fqn.rsplit(".", 1)[-1]
-    text = text.replace("import " + old_fqn + ";" + chr(10), "")
-    text = _word(old_fqn).sub(new_fqn, text)
-    text = _word(old_simple).sub(new_simple, text)
-    return _ensure_import(text, new_fqn)
+
+    # Imports are rewritten by their own rules, never by the declaration substitution. Letting
+    # the substitution near them turned `import com.x.engine.Meter;` into
+    # `import com.x.app.MeterApi;` -- the old import was transformed rather than kept, so the
+    # surviving `new Meter()` lost its declaration and javac said "cannot find symbol".
+    lines = text.splitlines(keepends=True)
+    imports = [i for i, ln in enumerate(lines) if import_fqn(ln) is not None]
+    body_idx = [i for i in range(len(lines)) if i not in set(imports)]
+    for i in body_idx:
+        lines[i] = _declaration_use(old_fqn).sub(new_fqn, lines[i])
+        lines[i] = _declaration_use(old_simple).sub(new_simple, lines[i])
+
+    body = "".join(lines[i] for i in body_idx)
+    names = idents(body)
+    # Keep the old import only while something still names the class -- a retargeted
+    # declaration routinely keeps its initialiser, and `MeterApi meter = new Meter()` needs it.
+    keep_old = old_simple in names
+    out = []
+    for i, ln in enumerate(lines):
+        fqn = import_fqn(ln)
+        if fqn == old_fqn and not keep_old:
+            continue
+        out.append(ln)
+    text = "".join(out)
+    if new_simple in names:
+        text = _ensure_import(text, new_fqn)
+    return text

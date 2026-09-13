@@ -83,6 +83,8 @@ public final class ApplyEdits {
         // chooses between moves that can actually be applied.
         boolean precheckOnly = "precheck".equals(plan.path("mode").asText(""));
         conservative = plan.path("conservative").asBoolean(conservative);
+        useConstraints = plan.path("constraints").asBoolean(useConstraints);
+        result.put("constraints", useConstraints);
         result.put("conservative", conservative);
         for (Path root : sourceRoots(repo, plan)) {
             if (pending.isEmpty()) break;
@@ -406,7 +408,8 @@ public final class ApplyEdits {
                       : "invertEdge needs a classpath";
             } else if ("extractInterface".equals(edit.path("op").asText("moveClass"))) {
                 why = classpath.length > 0
-                      ? extractIllegalReason(type, to, new ArrayList<>())
+                      ? (useConstraints ? constraintReason(type, to, new ArrayList<>())
+                                        : extractIllegalReason(type, to, new ArrayList<>()))
                       : "extractInterface needs a classpath to resolve the consumer's calls";
             } else {
                 why = classpath.length > 0 ? illegalReason(type, to, moving) : null;
@@ -509,7 +512,8 @@ public final class ApplyEdits {
             if ("extractInterface".equals(edit.path("op").asText("moveClass"))) {
                 List<CtMethod<?>> methods = new ArrayList<>();
                 String bad = classpath.length > 0
-                             ? extractIllegalReason(type, to, methods)
+                             ? (useConstraints ? constraintReason(type, to, methods)
+                                               : extractIllegalReason(type, to, methods))
                              : "extractInterface needs a classpath to resolve the consumer's calls";
                 if (bad != null) {
                     ObjectNode sk = skipped.addObject();
@@ -639,6 +643,62 @@ public final class ApplyEdits {
         if (inPackage(decl, pkg)) return true;
         CtType<?> top = topLevel(decl);
         return top != null && top.getModifiers().contains(ModifierKind.PUBLIC);
+    }
+
+    /**
+     * Constraint-based legality: which declarations can move, rather than whether any bad
+     * usage exists anywhere.
+     *
+     * Set -Ddsarp.constraints=false to fall back to the old checklist. It is kept only so the
+     * two can be compared on the same candidates; the checklist leaked four times and was
+     * still leaking on generic containers when it was retired.
+     */
+    private static boolean useConstraints =
+            !"false".equalsIgnoreCase(System.getProperty("dsarp.constraints", "true"));
+
+    private static String constraintReason(CtType<?> type, String consumerPkg,
+                                           List<CtMethod<?>> out) {
+        // Structural refusals the constraint solver does not speak to: it decides which
+        // DECLARATIONS may change, and these are facts about the type itself.
+        if (!(type instanceof spoon.reflect.declaration.CtClass))
+            return type.getSimpleName() + " is not a class";
+        if (!type.getModifiers().contains(ModifierKind.PUBLIC))
+            return type.getSimpleName() + " is not public";
+        if (!type.getFormalCtTypeParameters().isEmpty())
+            return type.getSimpleName() + " is generic; not supported yet";
+        final String self = type.getQualifiedName();
+        CtModel model = type.getFactory().getModel();
+        for (CtType<?> sub : model.getElements(new TypeFilter<>(CtType.class))) {
+            if (!inPackage(topLevel(sub), consumerPkg)) continue;
+            CtTypeReference<?> sup = sub.getSuperclass();
+            if (sup != null && self.equals(sup.getQualifiedName()))
+                return sub.getSimpleName() + " extends " + type.getSimpleName()
+                       + "; an extends clause cannot name an interface";
+        }
+
+        TypeConstraints.Result r = TypeConstraints.solve(model, type, consumerPkg);
+        if (r.totalSlots == 0)
+            return consumerPkg + " declares nothing of type " + type.getSimpleName();
+        if (r.retargetable.isEmpty())
+            return "no declaration of " + type.getSimpleName() + " can move: "
+                   + first(r.blocked);
+        if (r.methods.isEmpty())
+            return consumerPkg + " calls no instance method on the movable declarations";
+        for (CtMethod<?> m : r.methods) {
+            if (!visibleFrom(m.getType(), consumerPkg))
+                return m.getSimpleName() + "() returns a type not visible from " + consumerPkg;
+            for (spoon.reflect.declaration.CtParameter<?> prm : m.getParameters())
+                if (!visibleFrom(prm.getType(), consumerPkg))
+                    return m.getSimpleName() + "() takes a type not visible from " + consumerPkg;
+        }
+        out.addAll(r.methods);
+        return null;
+    }
+
+    private static String first(java.util.Map<String, String> m) {
+        for (java.util.Map.Entry<String, String> e : m.entrySet())
+            return e.getKey() + " " + e.getValue();
+        return "no reason recorded";
     }
 
     /**
@@ -892,21 +952,28 @@ public final class ApplyEdits {
         launcher.getFactory().CompilationUnit().getOrCreate(iface);
         type.addSuperInterface((CtTypeReference) iface.getReference());
 
-        // Retarget the consumer's references. Constructor calls, static access and field
-        // access were all refused above, so everything still naming the class here is a
-        // declared type: a field, parameter, local or return type, which the interface
-        // satisfies.
+        // Retarget DECLARATIONS ONLY, and only the ones the constraint solver cleared.
+        //
+        // Rewriting every reference to the class is what an earlier version did, and it does
+        // not survive contact with `new Meter()`: the constructor call is a reference too, so
+        // the field became `MeterApi meter = new MeterApi()` and javac said "MeterApi is
+        // abstract; cannot be instantiated". A declaration's type changing says nothing about
+        // what is assigned into it -- that asymmetry is the whole reason constraints beat a
+        // reference sweep.
         java.util.LinkedHashSet<CtType<?>> touched = new java.util.LinkedHashSet<>();
-        String self = type.getQualifiedName();
-        for (CtTypeReference<?> ref : launcher.getModel()
-                .getElements(new TypeFilter<>(CtTypeReference.class))) {
-            if (!self.equals(ref.getQualifiedName())) continue;
-            CtType<?> user = topLevel(ref.getParent(CtType.class));
-            if (!inPackage(user, consumerPkg)) continue;
-            if (user == iface) continue;
-            ref.setPackage(launcher.getFactory().Package().createReference(consumerPkg));
-            ref.setSimpleName(ifaceName);
-            touched.add(user);
+        CtTypeReference<?> ifaceRef = iface.getReference();
+        TypeConstraints.Result solved =
+                TypeConstraints.solve(launcher.getModel(), type, consumerPkg);
+        for (spoon.reflect.declaration.CtElement d : solved.retargetable) {
+            if (d instanceof spoon.reflect.declaration.CtVariable) {
+                ((spoon.reflect.declaration.CtVariable) d).setType(ifaceRef.clone());
+            } else if (d instanceof CtMethod) {
+                ((CtMethod) d).setType(ifaceRef.clone());
+            } else {
+                continue;
+            }
+            CtType<?> user = topLevel(d.getParent(CtType.class));
+            if (user != null && user != iface) touched.add(user);
         }
         return touched;
     }
@@ -971,7 +1038,8 @@ public final class ApplyEdits {
                 continue;
             }
             List<CtMethod<?>> ms = new ArrayList<>();
-            String why = extractIllegalReason(t, consumerPkg, ms);
+            String why = useConstraints ? constraintReason(t, consumerPkg, ms)
+                                        : extractIllegalReason(t, consumerPkg, ms);
             if (why != null) {
                 refused.add(t.getSimpleName() + ": " + why);
                 continue;
