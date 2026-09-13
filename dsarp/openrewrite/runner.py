@@ -9,6 +9,7 @@ build. `run_recipe` is bounded and returns status + a tail of the Maven log.
 """
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -45,13 +46,85 @@ def build_custom_recipes(timeout: int = 900) -> Dict[str, Any]:
         return {"ok": False, "status": "recipe_module_missing", "pom": str(pom)}
     try:
         proc = subprocess.run([mvn, "-q", "-B", "-ntp", "-f", str(pom), "install"],
-                              capture_output=True, text=True, timeout=timeout)
+                              capture_output=True, text=True, timeout=timeout,
+                              env=_build_env())
     except subprocess.TimeoutExpired:
         return {"ok": False, "status": "timeout"}
     ok = proc.returncode == 0 and custom_recipes_installed()
     return {"ok": ok, "status": "installed" if ok else "build_failed",
             "gav": CUSTOM_RECIPE_GAV, "recipes": list(CUSTOM_RECIPES),
             "tail": ((proc.stdout or "") + (proc.stderr or ""))[-1500:]}
+
+
+# Maven's default heap is far too small for the rewrite plugin on a large repo: it holds the
+# whole module's LST in memory at once, so Spark/Lucene-sized projects die with an
+# OutOfMemoryError that surfaces here only as a non-zero exit. Overridable by exporting
+# MAVEN_OPTS/GRADLE_OPTS -- the right heap depends on the machine.
+def free_ram_gb() -> Optional[float]:
+    """Physical memory actually available right now, via the OS. No dependency."""
+    try:
+        if os.name == "nt":
+            import ctypes
+
+            class _Stat(ctypes.Structure):
+                _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                            ("ullTotalPhys", ctypes.c_ulonglong),
+                            ("ullAvailPhys", ctypes.c_ulonglong),
+                            ("ullTotalPageFile", ctypes.c_ulonglong),
+                            ("ullAvailPageFile", ctypes.c_ulonglong),
+                            ("ullTotalVirtual", ctypes.c_ulonglong),
+                            ("ullAvailVirtual", ctypes.c_ulonglong),
+                            ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+
+            st = _Stat()
+            st.dwLength = ctypes.sizeof(_Stat)
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+                return None
+            return st.ullAvailPhys / (1024 ** 3)
+        return (os.sysconf("SC_AVPHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")) / (1024 ** 3)
+    except Exception:
+        return None
+
+
+def _build_env(var: str = "MAVEN_OPTS", heap: Optional[str] = None) -> Dict[str, str]:
+    """Maven's default heap is far too small for the rewrite plugin on a large repo, but a
+    fixed large one is worse: asking for 6g with 1.7g free does not fail slowly, the JVM
+    fails to initialise and Windows reports 0xC0000142 with no output, which reads exactly
+    like a compile error and is not one. Size it from what is actually free."""
+    env = dict(os.environ)
+    if heap is None:
+        free = free_ram_gb()
+        gb = 6 if free is None else max(1, min(6, int(free * 0.6)))
+        heap = f"-Xmx{gb}g"
+    env.setdefault(var, heap)
+    return env
+
+
+# Maven could not build the dependency classpath. This matters more than it looks: OpenRewrite
+# still parses the sources, but without the classpath the LST carries no type attribution, and
+# every type-based recipe (ChangeType, ChangeMethodName, our own) then matches NOTHING and the
+# build exits 0. "Ran fine, changed no files" and "could not see any types" are the same
+# observation unless we separate them here.
+_DEP_FAIL = re.compile(r"Could not resolve dependencies|Non-resolvable|"
+                       r"Failed to collect dependencies|Could not transfer artifact|"
+                       r"Unable to resolve|dependency resolution failed", re.I)
+
+
+def _classify(out: str, returncode: int, changed: bool) -> str:
+    if changed:
+        return "changed"
+    if "OutOfMemoryError" in out or "GC overhead limit exceeded" in out:
+        return "oom"
+    if returncode != 0:
+        return "failed"
+    return "clean_no_types" if _DEP_FAIL.search(out) else "clean"
+
+
+def _first_errors(out: str, limit: int = 5) -> List[str]:
+    """First few [ERROR] lines. On a multi-module build the cause is near the TOP of the log
+    and the 2500-char tail only ever shows the reactor summary."""
+    hits = [ln.strip() for ln in out.splitlines() if "[ERROR]" in ln or "OutOfMemoryError" in ln]
+    return hits[:limit]
 
 
 def find_mvn() -> Optional[str]:
@@ -167,6 +240,34 @@ def write_gradle_init_script(repo_path: Path, recipe_name: str = RECIPE_NAME) ->
     return script
 
 
+def recipe_moves(repo_path) -> List[Tuple[str, str]]:
+    """(old_fqn, new_fqn) pairs from the ChangeType entries of the generated rewrite.yml.
+
+    Read back from the file rather than threaded through every caller: the moved file needs
+    imports for the types it left behind, and run_recipe is the one place that knows a real
+    run just happened.
+    """
+    f = Path(repo_path) / "rewrite.yml"
+    if not f.exists():
+        return []
+    try:
+        import yaml
+        doc = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+    out = []
+    for item in (doc.get("recipeList") or []):
+        if not isinstance(item, dict):
+            continue
+        for key, val in item.items():
+            if str(key).endswith("ChangeType") and isinstance(val, dict):
+                o, n = (val.get("oldFullyQualifiedTypeName"),
+                        val.get("newFullyQualifiedTypeName"))
+                if o and n:
+                    out.append((o, n))
+    return out
+
+
 def run_recipe_gradle(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = False,
                       timeout: int = 2400, log_path: Optional[Path] = None) -> Dict[str, Any]:
     """Run the generated recipe on a GRADLE project via rewrite-gradle-plugin."""
@@ -181,7 +282,7 @@ def run_recipe_gradle(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: 
            "-x", "test"]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
-                              cwd=str(repo_path))
+                              cwd=str(repo_path), env=_build_env("GRADLE_OPTS"))
     except (subprocess.TimeoutExpired, OSError) as e:
         return {"ok": False, "status": "timeout", "note": str(e)[:200]}
     out = (proc.stdout or "") + "\n" + (proc.stderr or "")
@@ -191,10 +292,18 @@ def run_recipe_gradle(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: 
     ok = proc.returncode == 0
     changed = ("Changes have been made" in out) or ("Please review and commit" in out)
     files = sorted(set(re.findall(r"Changes have been made to\s+(.+?)\s+by:", out)))
-    return {"ok": ok, "status": ("changed" if changed else "clean" if ok else "failed"),
+    # ChangeType rewrites the type but leaves behind the debris that fails a quality
+    # gate. The identical move compiled under Spoon and came back quality_gate_failed
+    # here purely on a now-same-package import, so the cleanup runs for both backends.
+    tidy = None
+    if changed and not dry_run:
+        from ..refactoring.java_text import tidy_tree
+        tidy = tidy_tree(repo_path, only=files or None,
+                         moves=recipe_moves(repo_path))
+    return {"ok": ok, "tidy": tidy, "status": _classify(out, proc.returncode, changed),
             "returncode": proc.returncode, "changed_files": files[:50],
             "recipe": recipe_name, "goal": task, "build_tool": "gradle",
-            "tail": out[-2500:], "gradle": gw}
+            "errors": _first_errors(out), "tail": out[-2500:], "gradle": gw}
 
 
 def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = False,
@@ -231,7 +340,8 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
     if custom_recipes_installed():
         cmd.append(f"-Drewrite.recipeArtifactCoordinates={CUSTOM_RECIPE_GAV}")
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
+                              env=_build_env())
     except subprocess.TimeoutExpired:
         return {"ok": False, "status": "timeout", "note": f"exceeded {timeout}s"}
     out = (proc.stdout or "") + "\n" + (proc.stderr or "")
@@ -241,6 +351,15 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
     ok = proc.returncode == 0
     changed = ("Changes have been made" in out) or ("Please review and commit" in out)
     files = sorted(set(re.findall(r"Changes have been made to\s+(.+?)\s+by:", out)))
-    return {"ok": ok, "status": ("changed" if changed else "clean" if ok else "failed"),
+    # ChangeType rewrites the type but leaves behind the debris that fails a quality
+    # gate. The identical move compiled under Spoon and came back quality_gate_failed
+    # here purely on a now-same-package import, so the cleanup runs for both backends.
+    tidy = None
+    if changed and not dry_run:
+        from ..refactoring.java_text import tidy_tree
+        tidy = tidy_tree(repo_path, only=files or None,
+                         moves=recipe_moves(repo_path))
+    return {"ok": ok, "tidy": tidy, "status": _classify(out, proc.returncode, changed),
             "returncode": proc.returncode, "changed_files": files[:50],
-            "recipe": recipe_name, "goal": goal, "tail": out[-2500:], "mvn": mvn}
+            "recipe": recipe_name, "goal": goal, "errors": _first_errors(out),
+            "tail": out[-2500:], "mvn": mvn}
