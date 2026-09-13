@@ -1068,3 +1068,26 @@ pdmodel, filter -> util). Each is one invertEdge from gone. They do not dissolve
 "this specific edge no longer exists" is verifiable by the ArchUnit oracle, reviewable by a
 human, and is what ArchUnit users already enforce. Stop claiming smell removal; claim edge
 elimination with a stated cost.
+
+CHEAP-EDGE ELIMINATION IS DEAD (2026-09-13). Ruled out by measurement, not opinion.
+  Aimed the pipeline at the 57 pdfbox feedback-arc edges carried by <= 2 classes, on the
+  reasoning that each was one invertEdge from gone. Precheck: 0 LEGAL OF 18.
+    not a class         7   PDImage, COSObjectable -- already interfaces
+    no instance method  4   Version, MissingImageReaderException -- utility / exception
+    constructs          4   PDLineDashPattern -- value objects, built directly
+    reads field         2   BlendMode.NORMAL -- enum constant
+    static              1   Hex.writeHexByte()
+  An edge carried by ONE class is carried by one class because that class is a utility,
+  constant, exception, value object or already an interface: single-purpose types used one
+  narrow way. That is what makes the edge cheap to IDENTIFY and simultaneously what makes it
+  impossible to invert. Cost-to-identify does not predict cost-to-fix; the two sets are close
+  to disjoint. Seven of the eighteen were already interfaces -- pdfbox's architects applied
+  DIP there long ago and the cycle persists regardless.
+
+THREE TARGETS NOW RULED OUT BY MEASUREMENT:
+  1. dissolve the SCC        167 edges / 1177 classes on pdfbox -- unreachable
+  2. reduce smell counts     counts participation in 5 components; generates outliers;
+                             three rankings failed on it (-0.127, -0.115, 0.689 but -0.786)
+  3. eliminate cheap edges   cheap ones are structurally un-invertible (above)
+WHAT SURVIVES: invertEdge on behaviour-rich classes, 8/22 net across three repos, beating
+moveClass on every one. Those are MID-COST edges. Rank by invertibility, not by class count.
