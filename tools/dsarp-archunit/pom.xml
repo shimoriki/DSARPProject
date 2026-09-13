@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A cycle oracle built on ArchUnit.
+
+  Every ranking this project has tried was scored against Arcan's smell-count delta, and three
+  in a row failed to generalise. One class move accounts for -240 of the 325 smells ever
+  removed here, so a model trained on that target is mostly predicting a single outlier.
+
+  This asks a sharper question instead: is THIS package cycle gone, yes or no. A binary label
+  per candidate, with no outlier to dominate it.
+
+  ArchUnit is used as a bytecode dependency extractor rather than as an assertion library. It
+  reads compiled classes, so it sees what the JVM sees : unlike our source-derived graph,
+  which matches text and cannot tell a dependency in a comment from a real one. The cycle
+  detection is Tarjan's, computed here, because parsing ArchUnit's human-readable failure
+  report would be fragile in a way the importer is not.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.dsarp</groupId>
+  <artifactId>dsarp-archunit</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit</artifactId>
+      <version>1.4.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.17.1</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.dsarp.archunit.Cycles</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <!-- Shading copies a signed jar's signatures and the JVM then rejects the
+                       uber-jar with "Invalid signature file digest". Same trap the Spoon
+                       driver hit. -->
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
