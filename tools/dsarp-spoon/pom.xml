@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DSARP Spoon driver: applies a validated edit plan to real Java source.
+
+  OpenRewrite is the other transformer in this project and stays the default. Spoon is here
+  for the edits OpenRewrite's declarative recipes cannot express, and because its sniper
+  printer rewrites ONLY the elements that changed - on a repo the size of log4j2 a printer
+  that reformats every file produces a diff nobody can review.
+
+  Build + publish to the local repository:
+      mvn -f tools/dsarp-spoon/pom.xml install
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.dsarp</groupId>
+  <artifactId>dsarp-spoon</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>DSARP Spoon edit driver</name>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Bump if this version is not in the repository; the build is the check. -->
+    <spoon.version>10.4.2</spoon.version>
+    <jackson.version>2.17.2</jackson.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>fr.inria.gforge.spoon</groupId>
+      <artifactId>spoon-core</artifactId>
+      <version>${spoon.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.3</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <!-- Spoon shades a signed dependency; copying its META-INF signature files
+                   into the uber-jar makes the JVM reject the whole jar with
+                   "Invalid signature file digest for Manifest main attributes". -->
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.dsarp.spoon.ApplyEdits</mainClass>
+                </transformer>
+              </transformers>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
