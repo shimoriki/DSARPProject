@@ -121,6 +121,9 @@ def refactor_transformer_agent(bb: Dict[str, Any]) -> Dict[str, Any]:
                     "refactoring": m.group(1) if m else top,
                     "confidence": float(m.group(2)) if m else None,
                     "severity": severity_of({"description": row.get("input_text")}),
+                    # Carried so the Spoon agent can ground its prompt in the same text the
+                    # severity was derived from, instead of re-reading the CSV itself.
+                    "evidence": row.get("input_text") or "",
                     "source": "transformer",
                     "executable": False,
                 })
@@ -229,8 +232,12 @@ def orchestrate(project_id: str, **kw) -> Dict[str, Any]:
 
     bb: Dict[str, Any] = {"project_id": project_id, **kw}
     pipeline = list(PIPELINE)
-    if bb.get("use_transformer"):
+    # The Spoon agent consumes transformer_plans, so asking for it implies the transformer.
+    if bb.get("use_transformer") or bb.get("use_spoon"):
         pipeline.insert(pipeline.index(validator_agent), refactor_transformer_agent)
+    if bb.get("use_spoon"):
+        from .agents.spoon_refactor import spoon_refactor_agent
+        pipeline.insert(pipeline.index(validator_agent), spoon_refactor_agent)
     for agent in pipeline:
         bb = agent(bb)
         print(f"[{agent.__name__}] ok", flush=True)
@@ -254,6 +261,8 @@ def orchestrate(project_id: str, **kw) -> Dict[str, Any]:
         "smell_types_kept": sorted({t for p in (rep.get("passes") or []) if p.get("accepted")
                                     for t in (p.get("smell_types_refactored") or [])}),
         "ai_trials": [t.get("verdict") for t in (bb.get("ai_trials") or [])],
+        "spoon_verdict": (bb.get("spoon_trials") or {}).get("verdict"),
+        "spoon_edits": len((bb.get("spoon_trials") or {}).get("edits") or []),
         "ledger_entries": len(build_ledger(bb["cfg"].data_dir / "outputs")),
     }
     write_json(bb["out"] / "orchestrator_memory.json", memory)

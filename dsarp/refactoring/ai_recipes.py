@@ -101,7 +101,12 @@ RULES — a proposal breaking any of these is discarded without being run:
  4. Never move a class listed as MUST NOT be moved.
  5. Never delete a class that has external references.
  6. IntroduceSupertype only works with an interface that ALREADY exists.
- 7. Options are strings. For several classes write "a.B,a.C" — never a JSON list.
+ 7. Options are strings, never JSON lists. ONLY `classNames` holds more than one class,
+    written "a.B,a.C". Every other option takes exactly ONE value — to move three classes,
+    emit three recipes.
+ 8. Target packages must ALREADY EXIST. `newPackageName` and the package part of
+    `newFullyQualifiedTypeName` must name a package this repository already has. Never
+    invent one, and never use a placeholder like "moved" or "newpkg".
 
 Reply with JSON only, no prose:
 {{"reasoning": "<one sentence>", "recipes": [{{"recipe": "<name>", "options": {{...}}}}]}}
@@ -280,12 +285,44 @@ def propose(model, facts, finding: Dict[str, Any]) -> Proposal:
                                "an interface that is already declared")
                 return p
 
+        # Only `classNames` takes several classes. Models generalise the comma convention to
+        # every option, and `fullyQualifiedClassName='a.B,a.C,a.D,a.E'` then fails the entity
+        # check as one nonsense name — that single mistake produced 17 rejections in a row
+        # and left nemotron-mini with zero valid recipes for a whole run.
+        for key in ("fullyQualifiedClassName", "classType", "oldFullyQualifiedTypeName",
+                    "newFullyQualifiedTypeName", "oldPackageName", "newPackageName"):
+            if "," in str(opts.get(key, "")):
+                n = len(str(opts[key]).split(","))
+                p.rejection = (f"{key} takes ONE value, got {n}. Only classNames accepts a "
+                               f"comma-separated list; emit one recipe per class instead")
+                return p
+
         # entity check: every type/package named must actually exist
         for key, value in opts.items():
-            if key.startswith("old") or key == "fullyQualifiedClassName" or key == "classType":
+            if key.startswith("old") or key in ("fullyQualifiedClassName", "classType"):
                 if not (facts.file_for(str(value)) or facts.classes_in(str(value))):
                     p.rejection = f"{key}={value!r} does not exist in this repository"
                     return p
+        for target in str(opts.get("classNames", "")).split(","):
+            if target.strip() and not facts.file_for(target.strip()):
+                p.rejection = f"classNames entry {target.strip()!r} does not exist"
+                return p
+
+        # The TARGET package must exist too, and nothing was checking it. phi4-mini proposed
+        # twenty ChangePackage recipes into invented names — `moved`, `moved2`, `moved3` —
+        # and OpenRewrite applied them compositionally, so the build died on
+        # `package ...status.moved5.moved4.moved3.moved2.moved.moved5.moved4... does not
+        # exist`. Relocating into an existing package is supported; inventing one is not.
+        known_pkgs = set(facts.packages())
+        for key in ("newPackageName", "newFullyQualifiedTypeName"):
+            value = str(opts.get(key, "")).strip()
+            if not value:
+                continue
+            pkg = value if key == "newPackageName" else value.rsplit(".", 1)[0]
+            if pkg not in known_pkgs:
+                p.rejection = (f"{key}={value!r} targets package {pkg!r}, which does not "
+                               f"exist; move into a package the repository already has")
+                return p
         # Safety pre-check: models will propose deleting a file whose own stated reasoning
         # says it is still used. Caught here rather than by the build gate, because a wrong
         # deletion is cheap to refuse and expensive to discover.

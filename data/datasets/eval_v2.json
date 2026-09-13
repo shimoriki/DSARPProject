@@ -1,0 +1,19 @@
+{
+ "classifier": {
+  "task": "classification (which method)",
+  "n": 224,
+  "classes": 16,
+  "accuracy": 0.2715,
+  "f1_weighted": 0.2584,
+  "folds": 4
+ },
+ "ranker": {
+  "task": "ranking (which destination)",
+  "groups": 66,
+  "precision_at_1": 0.4545,
+  "mrr": 0.6535,
+  "baseline_random_p@1": 0.1785,
+  "baseline_first_p@1": 0.1667,
+  "folds": 4
+ }
+}

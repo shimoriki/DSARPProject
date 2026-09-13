@@ -656,6 +656,18 @@ def cmd_refactor_sectioned(cfg: Config, args) -> int:
     return 0
 
 
+def _model_spec(cfg: Config, args) -> dict:
+    """CLI overrides on top of the config profile's model_provider block."""
+    spec = dict(cfg.model_provider)
+    if getattr(args, "model_name", None):
+        if spec.get("type") == "offline":
+            spec["type"] = "local"
+        spec["model"] = args.model_name
+    if getattr(args, "base_url", None):
+        spec["base_url"] = args.base_url
+    return spec
+
+
 def cmd_multiagent(cfg: Config, args) -> int:
     """Run the agent pipeline: ingestion -> graph -> two refactoring agents -> validator."""
     from .multiagent import orchestrate
@@ -667,7 +679,10 @@ def cmd_multiagent(cfg: Config, args) -> int:
                      label=getattr(args, "label", None),
                      by_smell=getattr(args, "by_smell", False),
                      max_passes=getattr(args, "max_passes", 5),
-                     use_ai_recipes=getattr(args, "use_ai_recipes", False))
+                     use_ai_recipes=getattr(args, "use_ai_recipes", False),
+                     use_spoon=getattr(args, "use_spoon", False),
+                     spoon_budget=getattr(args, "spoon_budget", 8),
+                     model=_model_spec(cfg, args))
     rep = bb.get("report") or {}
     rules = bb.get("rule_plans") or []
     tr = bb.get("transformer_plans") or []
@@ -862,6 +877,15 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     ma.add_argument("--ai-recipes", action="store_true", dest="use_ai_recipes",
                     help="second validator strategy: let the LLM propose for smells no rule "
                          "plan covered (same allowlist and same build+measure gate)")
+    ma.add_argument("--spoon", action="store_true", dest="use_spoon",
+                    help="Spoon agent: a local model turns transformer predictions into "
+                         "executable moves, Spoon applies them, the detector re-measures")
+    ma.add_argument("--model", dest="model_name",
+                    help="local model tag for --spoon/--ai-recipes (e.g. nemotron)")
+    ma.add_argument("--base-url", dest="base_url",
+                    help="local model server (default http://localhost:11434)")
+    ma.add_argument("--spoon-budget", type=int, default=8, dest="spoon_budget",
+                    help="how many predictions to ask the model about")
     ma.set_defaults(func=cmd_multiagent)
 
     sub.add_parser("ui").set_defaults(func=cmd_ui)
