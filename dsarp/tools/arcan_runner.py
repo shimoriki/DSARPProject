@@ -195,11 +195,51 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
     dirs = _class_dirs(repo_path)
     ok = proc.returncode == 0 and bool(dirs)
     return {"ok": ok,
-            "status": "compiled" if ok else ("compiled_no_classes" if proc.returncode == 0
-                                             else "compile_failed"),
+            "status": "compiled" if ok else _failure_kind(out, proc.returncode),
             "class_dirs": [str(d) for d in dirs], "returncode": proc.returncode,
-            "excluded_modules": excluded,
+            "excluded_modules": excluded, "javac_errors": _javac_errors(out)[:5],
             "command": " ".join(cmd), "tail": out[-2000:]}
+
+
+# Real compilation errors — the source does not compile.
+_JAVAC_ERR = re.compile(r"\[ERROR\].*\.java:\[\d+,\d+\]|cannot find symbol|"
+                        r"incompatible types|package \S+ does not exist", re.I)
+# The build never got as far as compiling anything.
+_QUALITY_GATE = re.compile(
+    r"maven-(?:checkstyle|pmd|spotbugs|enforcer|rat|spotless|forbiddenapis)-plugin",
+    re.I)
+_RESOLUTION_ERR = re.compile(r"Could not resolve dependencies|Could not find artifact|"
+                             r"Non-resolvable|Failed to collect dependencies", re.I)
+
+
+def _javac_errors(out: str) -> List[str]:
+    return [ln.strip() for ln in out.splitlines() if _JAVAC_ERR.search(ln)]
+
+
+def _failure_kind(out: str, returncode: int) -> str:
+    """Tell "our change broke the code" apart from "this build was already broken".
+
+    log4j2's reactor wants log4j-fuzz-test:2.27.0-SNAPSHOT, which is not in the local
+    repository (only 2.26.0 is). That failure is unrelated to any refactoring, produces ZERO
+    javac errors, and was being reported as `compile_failed` — so an entire model sweep came
+    back `rejected_build_broken` and looked like seven models writing bad code. A refactoring
+    gate that cannot make this distinction manufactures false negatives.
+    """
+    if returncode == 0:
+        return "compiled_no_classes"
+    # 0xC0000142 on Windows: the JVM could not initialise, usually out of memory. No output.
+    if returncode == 3221225794 or (not out.strip() and returncode != 0):
+        return "jvm_start_failed"
+    if _javac_errors(out):
+        return "compile_failed"
+    # A style gate is not a compilation failure. pdfbox's checkstyle rejected four
+    # RedundantImport warnings on code javac had already accepted, and reporting that as
+    # `compile_failed` blames the refactoring for breaking a build that in fact built.
+    if _QUALITY_GATE.search(out):
+        return "quality_gate_failed"
+    if _RESOLUTION_ERR.search(out):
+        return "dependency_unresolved"
+    return "compile_failed"
 
 
 def _reactor_root(module_path: Path) -> Optional[Path]:
@@ -401,6 +441,32 @@ def detect_with_arcan(repo_path: Path, out_dir: Path, compile_log: Optional[Path
             "modules": runs, "tool": "Arcan 1.2.1"}
 
 
+def _test_counts(line: str):
+    """The four numbers in a surefire summary line, or None if it is not one.
+
+    Hand-parsed rather than matched: building this pattern by interpolation is how an escape
+    got eaten elsewhere in this codebase and silently produced a pattern that matched
+    nothing. There is nothing to escape in a character scan.
+    """
+    if "Tests run:" not in line:
+        return None
+    out = []
+    for key in ("Tests run:", "Failures:", "Errors:", "Skipped:"):
+        i = line.find(key)
+        if i == -1:
+            return None
+        num = ""
+        for ch in line[i + len(key):].lstrip():
+            if ch.isdigit():
+                num += ch
+            else:
+                break
+        if not num:
+            return None
+        out.append(int(num))
+    return out
+
+
 def run_tests(repo_path: Path, timeout: int = 3600,
               log_path: Optional[Path] = None) -> Dict[str, Any]:
     """Run the project's OWN test suite against the refactored code.
@@ -422,7 +488,13 @@ def run_tests(repo_path: Path, timeout: int = 3600,
              "-Dspotless.check.skip=true", "-Dspotbugs.skip=true", "-Dpmd.skip=true",
              "-Danimal.sniffer.skip=true", "-Dlicense.skip=true", "-Djacoco.skip=true",
              "-Dmaven.javadoc.skip=true"]
-    cmd = [mvn, "-B", "-ntp", "-f", str(repo_path / "pom.xml"), "test", *skips]
+    # -fae (fail at end): without it the reactor stops at the first failing module and every
+    # later module is SKIPPED, so the failure count is a lower bound taken mid-run. tika
+    # reported "1 failure in 734 tests" having run 4 of its 123 modules, and log4j2 "35
+    # broken" having run 7 of 41. A number that can only be wrong in one direction is not
+    # evidence. Costs wall time on a repo that is failing; a timeout is reported as
+    # test_timeout and is honest, which a silently partial pass is not.
+    cmd = [mvn, "-B", "-ntp", "-fae", "-f", str(repo_path / "pom.xml"), "test", *skips]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -431,15 +503,31 @@ def run_tests(repo_path: Path, timeout: int = 3600,
     if log_path:
         Path(log_path).parent.mkdir(parents=True, exist_ok=True)
         Path(log_path).write_text(out, encoding="utf-8")
-    totals = None
-    for mm in re.finditer(r"Tests run:\s*(\d+), Failures:\s*(\d+), Errors:\s*(\d+), "
-                          r"Skipped:\s*(\d+)", out):
-        totals = mm                      # the LAST line is the reactor summary
+    # Every module in a Maven reactor prints its OWN surefire summary; there is no aggregate
+    # line to find. Taking the last match reported only the final module, so pdfbox came back
+    # as "38 tests" when its io module alone ran 122, and a failure in an early module showed
+    # up as status=failed with failures=0 -- the tika inconsistency that went untraced.
+    run = fails = errs = skipped = 0
+    failing_modules = []
+    for ln in out.splitlines():
+        # Lines carrying "Time elapsed" are single test CLASSES, already counted by the
+        # module summary they sit under; counting both would double every total.
+        if "Time elapsed" in ln:
+            continue
+        counts = _test_counts(ln)
+        if counts is None:
+            continue
+        run += counts[0]
+        fails += counts[1]
+        errs += counts[2]
+        skipped += counts[3]
+        if counts[1] or counts[2]:
+            failing_modules.append(ln.strip()[:160])
     ok = proc.returncode == 0
     result = {"ok": ok, "status": "passed" if ok else "failed",
               "returncode": proc.returncode, "command": " ".join(cmd),
               "tail": out[-2500:]}
-    if totals:
-        result.update(tests_run=int(totals.group(1)), failures=int(totals.group(2)),
-                      errors=int(totals.group(3)), skipped=int(totals.group(4)))
+    if run or fails or errs:
+        result.update(tests_run=run, failures=fails, errors=errs, skipped=skipped,
+                      failing_modules=failing_modules)
     return result
