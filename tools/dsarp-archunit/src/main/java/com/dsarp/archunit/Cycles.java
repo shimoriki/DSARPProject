@@ -93,6 +93,9 @@ public final class Cycles {
         // itself is not a cycle between packages, and keeping them would make every package a
         // trivial component.
         Map<String, Set<String>> edges = new HashMap<>();
+        // How many class-level dependencies create each package edge. An edge
+        // carried by one class can be inverted; one carried by forty cannot.
+        Map<String, Integer> weight = new HashMap<>();
         Set<String> pkgs = new TreeSet<>();
         for (JavaClass c : classes) {
             String from = c.getPackageName();
@@ -105,18 +108,31 @@ public final class Cycles {
                 // cycle we can refactor, and importPaths never loaded those classes anyway.
                 if (!classes.contain(d.getTargetClass().getName())) continue;
                 edges.computeIfAbsent(from, k -> new LinkedHashSet<>()).add(to);
+                weight.merge(from + " -> " + to, 1, Integer::sum);
                 pkgs.add(to);
             }
         }
 
         List<Set<String>> components = tarjan(pkgs, edges);
         ArrayNode arr = result.putArray("cycles");
+        ArrayNode cycleEdges = result.putArray("cycleEdges");
         int biggest = 0;
         for (Set<String> comp : components) {
             if (comp.size() < 2) continue;          // a single package is not a cycle
             biggest = Math.max(biggest, comp.size());
             ArrayNode c = arr.addArray();
             for (String p : new TreeSet<>(comp)) c.add(p);
+            // The internal edges of this component, with weights, so the caller can ask what
+            // it would actually take to break it rather than only that it exists.
+            ArrayNode ea = cycleEdges.addArray();
+            for (String from : new TreeSet<>(comp))
+                for (String to : edges.getOrDefault(from, Set.of()))
+                    if (comp.contains(to)) {
+                        ObjectNode en = ea.addObject();
+                        en.put("from", from);
+                        en.put("to", to);
+                        en.put("classes", weight.getOrDefault(from + " -> " + to, 1));
+                    }
         }
         result.put("ok", true);
         result.put("classFilesOnDisk", onDisk);

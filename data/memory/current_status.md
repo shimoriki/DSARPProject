@@ -1027,3 +1027,44 @@ VALUE IS WILDLY NON-UNIFORM, and this matters more than the rate:
 Build-failure guard confirmed working: PDMarkedContent and PDAnnotation both came back
 total_after=57 (the same shape as the fake -946) and both scored label=0 via
 quality_gate_failed. They are excluded, not celebrated.
+
+################################################################################
+THE METRIC WAS THE PROBLEM (2026-09-13) -- read this before trusting any rate above
+################################################################################
+Bytecode cycle detection (tools/dsarp-archunit, ArchUnit importer + Tarjan) on the same
+baselines Arcan measured:
+
+    repo       packages  CYCLES  sizes              Arcan "Cyclic Dependency"
+    pdfbox        103       5     51, 7, 4, 3, 2            802
+    log4j2        158       5     50, 15, 2, 2, 2           535
+    tika          271      11     18, 8, 8, 7, 3...         245
+
+pdfbox does not have 802 cyclic-dependency problems. It has FIVE cycles, one containing 51
+of its 103 packages. Arcan counts per-element participation in a handful of giant strongly
+connected components, not distinct defects.
+
+CAN ANYTHING DISSOLVE THEM? No. Greedy feedback arc set (cheapest edge on a cycle, repeatedly):
+    pdfbox  51 pkgs, 349 internal edges, density 0.137 -> cut 167 edges, abstract 1177 classes
+    log4j2  50 pkgs, 385 internal edges, density 0.157 -> cut 156 edges, abstract 1164 classes
+    tika    18 pkgs,  91 internal edges, density 0.297 -> cut  43 edges, abstract  255 classes
+Our best single invertEdge abstracted 4 classes. pdfbox would need ~800 successful inversions
+at the measured 36% rate and would gain 1177 new interfaces. The cure is worse than the disease.
+These components are uniformly interwoven -- ~14% of all possible directed edges exist and half
+must go -- so there is no cheap cut to find.
+
+WHAT THIS EXPLAINS RETROACTIVELY:
+  - MissingOperandException's -240 smells detached elements from the 51-package SCC; the cycle
+    survived. It was never "breaking a cycle".
+  - All three ranking failures (severity -0.127, leaf-first -0.115, learned regressor 0.689 but
+    -0.786 on tika) follow directly: the target was "how much did you peel off the blob", which
+    is dominated by whichever move detaches a big subtree. That metric GENERATES outliers.
+    No ranker could have generalised over it.
+  - invertEdge beating moveClass 36% vs 19% is still true and still the better operation. Both
+    were shaving a component neither could dissolve.
+
+WHERE THE VALUE ACTUALLY IS: cheap edges. pdfbox has 57 feedback-arc edges carried by <= 2
+classes, several by exactly one (contentstream -> blend, markedcontent -> text, state ->
+pdmodel, filter -> util). Each is one invertEdge from gone. They do not dissolve the SCC, but
+"this specific edge no longer exists" is verifiable by the ArchUnit oracle, reviewable by a
+human, and is what ArchUnit users already enforce. Stop claiming smell removal; claim edge
+elimination with a stated cost.
