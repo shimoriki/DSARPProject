@@ -205,11 +205,33 @@ def _ignore_build_output(directory, names):
     return ignored
 
 
+# Recorded beside every working copy (not inside it, so no build or licence check ever sees
+# it) so code that only holds the copy can find the original. The copy omits build output on
+# purpose -- a stale class at a moved type's old location would keep resolving -- but Spoon
+# still needs the original's compiled classes to model the module at all.
+COPY_MARKER = ".dsarp-copy-of"
+
+
 def _copy_repo(repo_path: Path, dest: Path) -> Path:
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
     shutil.copytree(repo_path, dest, ignore=_ignore_build_output)
+    dest.with_name(dest.name + COPY_MARKER).write_text(str(Path(repo_path).resolve()),
+                                                      encoding="utf-8")
     return dest
+
+
+def original_module(path: Path) -> Optional[Path]:
+    """The same directory in the repository a working copy was made from, or None."""
+    p = Path(path).resolve()
+    for root in (p, *p.parents):
+        if not root.name:
+            continue
+        marker = root.with_name(root.name + COPY_MARKER)
+        if marker.is_file():
+            orig = Path(marker.read_text(encoding="utf-8").strip()) / p.relative_to(root)
+            return orig if orig.exists() else None
+    return None
 
 
 def _class_importing(repo_path: Path, decl_pkg: str, other_pkg: str) -> Optional[str]:

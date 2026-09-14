@@ -99,12 +99,19 @@ def module_classpath(repo_path: Path, source_root: Path,
     raw = out.read_text(encoding="utf-8", errors="ignore").strip()
     entries = [e for e in raw.split(os.pathsep) if e]
     # The module's own compiled classes, when present, resolve its sibling types.
-    classes = module / "target" / "classes"
-    if classes.is_dir():
-        entries.append(str(classes))
-    test_classes = module / "target" / "test-classes"
-    if test_classes.is_dir():
-        entries.append(str(test_classes))
+    # Compiled classes resolve the module's own cross-file types. A working copy has none, so
+    # take them from the original it was copied from: the sources are identical before the edit,
+    # and Maven still compiles the copy without them. Missing this made precheck and apply
+    # disagree -- tika's precheck ran on the original (58 entries) and called six moves legal,
+    # apply ran on the copy (56) and died on "RTFTokenizer cannot be resolved to a type".
+    from ..verification.effect_checker import original_module
+    for tree in (module, original_module(module)):
+        if tree is None:
+            continue
+        for sub in ("classes", "test-classes"):
+            d = tree / "target" / sub
+            if d.is_dir() and str(d) not in entries:
+                entries.append(str(d))
     shutil.rmtree(out.parent, ignore_errors=True)
     return {"ok": bool(entries), "status": "resolved" if entries else "empty",
             "entries": entries, "module": str(module)}
@@ -191,8 +198,12 @@ def fix_references(repo_path: Path, moves: List[Dict[str, str]]) -> Dict[str, An
                 txt = txt.replace(_IMPORT.format(old_fqn), _IMPORT.format(new_fqn))
             txt = re.sub(rf"\b{re.escape(old_fqn)}\b", new_fqn, txt)
             # Left behind in the old package and still using the bare name.
+            # Searched in CODE, not text. pdfbox's CompoundCharacterTokenizer only named the moved
+            # class in a comment, gained an import it never used, and checkstyle failed the build:
+            # a refactoring scored as broken over a comment.
             if (this_pkg == old_pkg and _IMPORT.format(new_fqn) not in txt
-                    and re.search(rf"\b{re.escape(simple)}\b", txt)):
+                    and re.search(rf"\b{re.escape(simple)}\b",
+                                  re.sub(r"//[^\n]*|/\*.*?\*/", "", txt, flags=re.S))):
                 txt = re.sub(r"^(\s*package\s+[\w.]+\s*;\s*\n)",
                              rf"\1\n{_IMPORT.format(new_fqn)}\n", txt, count=1, flags=re.M)
                 added += 1
