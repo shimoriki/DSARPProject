@@ -1091,3 +1091,20 @@ THREE TARGETS NOW RULED OUT BY MEASUREMENT:
   3. eliminate cheap edges   cheap ones are structurally un-invertible (above)
 WHAT SURVIVES: invertEdge on behaviour-rich classes, 8/22 net across three repos, beating
 moveClass on every one. Those are MID-COST edges. Rank by invertibility, not by class count.
+
+LOOSENING LEGALITY DID NOT HELP OUTCOMES (2026-09-13). Type constraints replaced the checklist:
+  legality on the same 12 pdfbox candidates 1 -> 4, compile rate 50% -> 61%. But three-repo
+  invertEdge, same script and baselines:
+      checklist    n=22 compiled=11 net=5 (36%)
+      constraints  n=23 compiled=14 net=2  (9%)
+  More legal candidates pushed the top-8 cut down the ranking into marginal ones (tika 3/6 -> 0/7).
+  Outcomes were never bottlenecked on legality; they are bottlenecked on SELECTION. Constraints kept
+  on: they are more correct, and selection is the separate problem.
+
+SELECTION, FIFTH ATTEMPT, FIRST TO GENERALISE (dsarp/dataset/selection.py).
+  Screen features by direction consistency across repos BEFORE fitting, target binary label_net
+  (not smell delta). 9 of 22 features agree in every repo with both classes. Held out by repo:
+      precision@k  model 0.21   shipped ATDI 0.11   random 0.18
+  Beats both. Small: 14 wins / 80 candidates; tika 0/2 (ATDI 1). Claim the METHOD, not the number.
+  Correction: the first heuristic selected LOW fan_out_from off 8 pdfbox rows. Across 103 rows it is
+  consistently POSITIVE -- that heuristic selected against its own signal.
