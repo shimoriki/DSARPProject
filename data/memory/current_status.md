@@ -1108,3 +1108,18 @@ SELECTION, FIFTH ATTEMPT, FIRST TO GENERALISE (dsarp/dataset/selection.py).
   Beats both. Small: 14 wins / 80 candidates; tika 0/2 (ATDI 1). Claim the METHOD, not the number.
   Correction: the first heuristic selected LOW fan_out_from off 8 pdfbox rows. Across 103 rows it is
   consistently POSITIVE -- that heuristic selected against its own signal.
+
+SELECTION CONFIRMATION FAILED (2026-09-14). Read before quoting any selection result above.
+  Pre-registered: fresh candidates only, 8 a-priori features, k=3 per arm on pdfbox/log4j2/tika,
+  rule "model > shipped AND model >= random", selection frozen in preregistration.json before the
+  first candidate was applied.
+  First run was corrupted by two MEASUREMENT bugs, both since fixed (e519c67):
+    - working copies omit target/, so module_classpath on a copy lost the module's own compiled
+      classes: precheck on the original (58 entries) said legal, apply on the copy (56) refused.
+      6 of 9 tika picks never applied. Every labelling script had this shape.
+    - fix_references added an import for a name mentioned only in a comment; checkstyle failed.
+  Re-measured only the 7 invalidated candidates, selection unchanged:
+      model 1/9   shipped 0/9   random 2/9   ->  NOT CONFIRMED
+  The held-out 0.21 was noise. FIVE selection attempts, none survives fresh data.
+  The one consistent signal in every run: the shipped ATDI order is worst or tied worst.
+  Net-win base rate on fresh legal candidates: 3/27, about 11%.

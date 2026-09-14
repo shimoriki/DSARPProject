@@ -6,9 +6,13 @@ respectably in aggregate, and collapsed on a held-out repository -- the signatur
 that separate WITHIN a project and point different ways BETWEEN projects.
 
 So screen first, fit second. A feature is kept only if winners and losers differ in the same
-direction in every repository that has both outcomes. Fitted on the nine that pass, it roughly
-doubles the shipped ATDI order held out (precision@k 0.21 vs 0.11, random 0.18). Small sample:
-14 net wins across 80 candidates. The method is the defensible claim, not the number.
+direction in every repository that has both outcomes. Fitted on the nine that pass, it looked
+like it doubled the shipped ATDI order held out (precision@k 0.21 vs 0.11, random 0.18).
+
+That did NOT survive a pre-registered confirmation on fresh candidates, with the selection frozen
+before any outcome existed: model 1/9, shipped 0/9, random 2/9. The held-out number was noise.
+The screen is kept because rejecting features that flip sign between repositories is still the
+right filter against the failure it targets, but it is not a validated selector.
 """
 from __future__ import annotations
 
