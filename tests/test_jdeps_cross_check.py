@@ -55,3 +55,13 @@ def test_nested_classes_move_with_their_outer_class():
     from dsarp.tools.jdeps_runner import move_effect
     graph = {"ok": True, "edges": [("a.Mover$Inner", "b.Target"), ("a.Mover", "b.Target")]}
     assert move_effect(graph, "a.Mover", "b")["removed"] == [("a", "b")]
+
+
+def test_classes_can_move_together():
+    from dsarp.tools.jdeps_runner import move_effect
+    graph = {"ok": True, "edges": [("a.One", "b.T"), ("a.Two", "b.T"), ("a.One", "a.Two")]}
+    # One alone leaves Two behind, so a -> b survives and One still needs Two: no gain.
+    assert move_effect(graph, "a.One", "b")["net"] >= 0
+    # Both together take the edge with them and stop paying for each other.
+    both = move_effect(graph, ["a.One", "a.Two"], "b")
+    assert both["removed"] == [("a", "b")] and both["added"] == []

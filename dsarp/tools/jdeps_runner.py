@@ -99,7 +99,7 @@ def class_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
     return {"ok": True, "edges": sorted(edges)}
 
 
-def move_effect(graph: Dict[str, Any], cls: str, to_package: str) -> Dict[str, Any]:
+def move_effect(graph: Dict[str, Any], cls, to_package: str) -> Dict[str, Any]:
     """Exactly which package edges appear and disappear if `cls` moves to `to_package`.
 
     Relabel one class and re-derive the package graph: no heuristic, no build, and it accounts
@@ -107,12 +107,16 @@ def move_effect(graph: Dict[str, Any], cls: str, to_package: str) -> Dict[str, A
     package it is leaving. Those usually dominate -- a class with five neighbours at home
     trades one edge for five.
 
-    Nested classes move with their outer class, which is what moving the file does.
+    Nested classes move with their outer class, which is what moving the file does. `cls` may
+    be one class or several moving together -- an edge carried by three classes needs all
+    three to move before it goes, and the three then stop paying for each other's ties.
     """
     if not graph.get("ok"):
         return {"ok": False, "why": graph.get("why")}
+    group = [cls] if isinstance(cls, str) else list(cls)
     pkg = lambda c: c.rsplit(".", 1)[0]
-    moved = lambda c: to_package if c == cls or c.startswith(cls + "$") else pkg(c)
+    moved = lambda c: (to_package if any(c == m or c.startswith(m + "$") for m in group)
+                       else pkg(c))
     before, after = set(), set()
     for a, b in graph["edges"]:
         if pkg(a) != pkg(b):
