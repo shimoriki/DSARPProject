@@ -81,6 +81,9 @@ def plan_moves(snapshot: Dict[str, Any], class_graph: Dict[str, Any],
                         "edge": "%s -> %s" % pair,
                         "from_package": e["from"], "to_package": e["to"],
                         "classes_carrying_edge": e.get("classes", 1),
+                        # Both sides of the edge, so a caller comparing operations can aim a
+                        # dependency inversion at the same edge without re-deriving them.
+                        "consumers": consumers, "targets": targets,
                         "predicted_removed": len(eff["removed"]),
                         "predicted_added": len(eff["added"]),
                         "predicted_net": eff["net"],
