@@ -69,6 +69,60 @@ def package_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
     return {"ok": True, "edges": sorted(edges), "returncode": p.returncode}
 
 
+def class_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
+    """The class-level dependency graph, same-package edges included.
+
+    `-verbose:package` and `-verbose:class` both hide dependencies inside a package, and those
+    are exactly the ones that decide what a move costs: a class leaving its package turns every
+    tie to its former neighbours into a new package edge. ArchUnit drops them too, for the good
+    reason that a package cannot be in a cycle with itself.
+    """
+    dirs = [d for d in class_dirs if Path(d).is_dir()]
+    if not dirs:
+        return {"ok": False, "why": "no class directories"}
+    try:
+        p = subprocess.run([jdeps_exe(), "-verbose", *dirs],
+                           capture_output=True, text=True, timeout=timeout)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ok": False, "why": f"jdeps unavailable: {exc}"}
+    out = (p.stdout or "") + "\n" + (p.stderr or "")
+    pairs = []
+    for line in out.splitlines():
+        m = _EDGE.match(line)
+        if m:
+            pairs.append((m.group(1), m.group(2)))
+    ours = {a.rsplit(".", 1)[0] for a, _ in pairs}
+    edges = {(a, b) for a, b in pairs if b.rsplit(".", 1)[0] in ours and a != b}
+    if not edges:
+        return {"ok": False, "why": "jdeps reported no internal class edges",
+                "tail": out[-500:]}
+    return {"ok": True, "edges": sorted(edges)}
+
+
+def move_effect(graph: Dict[str, Any], cls: str, to_package: str) -> Dict[str, Any]:
+    """Exactly which package edges appear and disappear if `cls` moves to `to_package`.
+
+    Relabel one class and re-derive the package graph: no heuristic, no build, and it accounts
+    for the term a package-level view cannot see, which is the moved class's ties to the
+    package it is leaving. Those usually dominate -- a class with five neighbours at home
+    trades one edge for five.
+
+    Nested classes move with their outer class, which is what moving the file does.
+    """
+    if not graph.get("ok"):
+        return {"ok": False, "why": graph.get("why")}
+    pkg = lambda c: c.rsplit(".", 1)[0]
+    moved = lambda c: to_package if c == cls or c.startswith(cls + "$") else pkg(c)
+    before, after = set(), set()
+    for a, b in graph["edges"]:
+        if pkg(a) != pkg(b):
+            before.add((pkg(a), pkg(b)))
+        if moved(a) != moved(b):
+            after.add((moved(a), moved(b)))
+    return {"ok": True, "removed": sorted(before - after), "added": sorted(after - before),
+            "net": len(after - before) - len(before - after)}
+
+
 def cross_check(oracle: Dict[str, Any], class_dirs: List[str]) -> Dict[str, Any]:
     """Compare the oracle's edge set against jdeps'. Disagreement is reported, not smoothed.
 
