@@ -67,3 +67,22 @@ def name_references(repo_path: Path, fqn: str) -> Dict[str, Any]:
             "count": len(resources) + len(literals),
             # Not "unsafe" -- "the compiler will not fix these for you".
             "needs_manual_fixup": bool(resources or literals)}
+
+
+def declared_public(repo_path: Path, fqn: str) -> bool:
+    """Is this type public? Moving one renames it for every downstream build.
+
+    Nothing in a dependency graph can see this cost. pdfbox's Loader and COSObjectable are
+    public API, so the two cleanest moves measured here are also major-version changes for
+    everyone who depends on the library -- which a maintainer weighs, and a tool should say
+    out loud rather than count as a win.
+    """
+    rel = fqn.replace(".", "/") + ".java"
+    simple = fqn.rsplit(".", 1)[-1]
+    for p in Path(repo_path).rglob(simple + ".java"):
+        if p.as_posix().endswith(rel) and "target" not in p.parts:
+            head = p.read_text(encoding="utf-8", errors="ignore")
+            return re.search(r"\bpublic\s+(?:final\s+|abstract\s+|sealed\s+)*"
+                             r"(?:class|interface|enum|record|@interface)\s+" + simple,
+                             head) is not None
+    return False

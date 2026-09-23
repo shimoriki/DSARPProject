@@ -505,7 +505,8 @@ def modules_for(repo_path: Path, changed: Iterable[Path]) -> List[str]:
 
 def run_tests(repo_path: Path, timeout: int = 3600,
               log_path: Optional[Path] = None,
-              modules: Optional[List[str]] = None) -> Dict[str, Any]:
+              modules: Optional[List[str]] = None,
+              fail_fast: bool = False) -> Dict[str, Any]:
     """Run the project's OWN test suite against the refactored code.
 
     `modules` restricts the reactor to those paths and what they depend on (`-pl ... -am`).
@@ -537,13 +538,20 @@ def run_tests(repo_path: Path, timeout: int = 3600,
     # broken" having run 7 of 41. A number that can only be wrong in one direction is not
     # evidence. Costs wall time on a repo that is failing; a timeout is reported as
     # test_timeout and is honest, which a silently partial pass is not.
-    cmd = [mvn, "-B", "-ntp", "-fae", "-f", str(repo_path / "pom.xml"), "test", *skips]
+    # -ff stops at the first failing module. That is worthless for accepting a candidate --
+    # the counts are a lower bound taken mid-run -- and it is exactly right for rejecting one,
+    # because a single genuine failure is enough. tika spends 2186 seconds proving a broken
+    # candidate broken with -fae. The result is marked partial so nothing can accept on it.
+    cmd = [mvn, "-B", "-ntp", "-ff" if fail_fast else "-fae",
+           "-f", str(repo_path / "pom.xml"), "test", *skips]
     scoped = [m for m in (modules or []) if m and m != "."]
     if scoped:
-        # -am builds (and tests) what these modules depend on. Their dependencies cannot be
-        # affected by a change downstream of them, so those runs are waste -- but they are
-        # what makes the scoped reactor resolvable without installing anything.
-        cmd += ["-pl", ",".join(scoped), "-am"]
+        # -am makes the scoped reactor resolvable without installing anything; -amd is the
+        # part that makes it CORRECT. Projects routinely keep a module's tests in a separate
+        # module -- log4j-core's tests live in log4j-core-test, tika's detector tests in
+        # tika-parsers-standard-integration-tests -- and neither is in the changed set. Scoped
+        # to the changed modules alone, log4j2 ran zero tests and reported success.
+        cmd += ["-pl", ",".join(scoped), "-am", "-amd"]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -579,6 +587,9 @@ def run_tests(repo_path: Path, timeout: int = 3600,
     if run or fails or errs:
         result.update(tests_run=run, failures=fails, errors=errs, skipped=skipped,
                       failing_modules=failing_modules)
+    # A fail-fast run, or one restricted to part of the reactor, has not seen the whole suite.
+    # Callers may reject on it; tests_no_worse refuses to accept on it.
+    result["partial"] = bool(fail_fast or [m for m in (modules or []) if m and m != "."])
     return result
 
 
@@ -594,6 +605,12 @@ def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str,
     fewer = max(0, (baseline.get("tests_run") or 0) - (after.get("tests_run") or 0))
     worse_f = (after.get("failures") or 0) - (baseline.get("failures") or 0)
     worse_e = (after.get("errors") or 0) - (baseline.get("errors") or 0)
+    if after.get("partial"):
+        # A fail-fast or module-scoped run can reject, never accept: its counts are a lower
+        # bound. Scoped to the changed modules alone, log4j2 ran zero tests and "passed".
+        return {"ok": False, "partial": True,
+                "why": "a partial run cannot accept a candidate",
+                "extra_failures": max(0, worse_f), "extra_errors": max(0, worse_e)}
     return {"ok": not fewer and worse_f <= 0 and worse_e <= 0,
             "tests_not_run": fewer, "extra_failures": max(0, worse_f),
             "extra_errors": max(0, worse_e),

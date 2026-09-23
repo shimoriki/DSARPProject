@@ -69,3 +69,14 @@ def test_a_red_baseline_is_the_bar_not_zero():
     v = tests_no_worse(base, {"tests_run": 969, "failures": 6, "errors": 29})
     assert v["ok"] and v["baseline_was_red"]
     assert not tests_no_worse(base, {"tests_run": 969, "failures": 7, "errors": 29})["ok"]
+
+
+def test_a_partial_run_can_reject_but_never_accept():
+    from dsarp.tools.arcan_runner import tests_no_worse
+    base = {"tests_run": 969, "failures": 0, "errors": 0}
+    # identical numbers, but the run stopped at the first failing module or saw two modules
+    v = tests_no_worse(base, {"tests_run": 969, "failures": 0, "errors": 0, "partial": True})
+    assert not v["ok"] and v["partial"]
+    # and it still reports the regression it did see, which is enough to reject on
+    v2 = tests_no_worse(base, {"tests_run": 40, "failures": 3, "errors": 0, "partial": True})
+    assert not v2["ok"] and v2["extra_failures"] == 3

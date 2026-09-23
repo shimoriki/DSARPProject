@@ -48,3 +48,14 @@ def test_a_file_owned_by_the_root_pom_cannot_be_scoped(tmp_path):
     f = r / "src/main/java/Root.java"
     f.write_text("class Root {}", encoding="utf-8")
     assert modules_for(r, [f]) == ["."]
+
+
+def test_a_public_type_is_reported_because_moving_it_breaks_downstream(tmp_path):
+    from dsarp.refactoring.name_refs import declared_public
+    r = _repo(tmp_path)
+    (r / "mod-a/src/main/java/com/app/Api.java").write_text(
+        "package com.app;\npublic final class Api {}\n", encoding="utf-8")
+    (r / "mod-a/src/main/java/com/app/Hidden.java").write_text(
+        "package com.app;\nclass Hidden {}\n", encoding="utf-8")
+    assert declared_public(r, "com.app.Api")
+    assert not declared_public(r, "com.app.Hidden")
