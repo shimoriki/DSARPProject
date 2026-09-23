@@ -56,3 +56,12 @@ def test_carriers_name_the_types_an_inversion_must_abstract():
                          "a.Consumer -> b.Outer$Inner", "a.Consumer -> b.Generated"]}
     # deduplicated, nested types reduced to their file, and Generated has no source here
     assert bytecode_types(_Facts({"b.Target", "b.Outer"}), edge) == ["b.Target", "b.Outer"]
+
+
+def test_an_edge_made_only_of_calls_has_nothing_to_retarget():
+    from dsarp.agents.edge_elimination import declares_target
+    assert declares_target({"kinds": {"Method calls method": 16}}) is False
+    assert declares_target({"kinds": {"Method calls method": 9,
+                                      "Field has type": 1}}) is True
+    # snapshots taken before kinds were recorded must not read as "no declarations"
+    assert declares_target({"carriers": ["a.A -> b.B"]}) is None

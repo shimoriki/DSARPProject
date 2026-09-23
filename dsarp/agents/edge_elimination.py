@@ -86,6 +86,28 @@ def crossing_types(facts: SourceFacts, from_pkg: str, to_pkg: str,
     return out
 
 
+# Dependency shapes an interface can be substituted into. A field, parameter or return type
+# is a declaration the solver can retarget; a bare method call is not -- the consumer was
+# handed the object by someone else and declares nothing.
+_DECLARATION_KINDS = ("has type", "has parameter of type", "has return type",
+                      "has generic", "has raw type", "declares")
+
+
+def declares_target(edge: Dict[str, Any]) -> Optional[bool]:
+    """Does the consumer declare anything of the target's type? None when unrecorded.
+
+    pdfbox's contentstream.operator.color depends on PDGraphicsState sixteen times and
+    declares it zero times: every dependency is a call on an object obtained from elsewhere.
+    Spoon reaches the same conclusion, but only after building a model for seventy seconds;
+    this is in the snapshot that was taken anyway. Bytecode cannot see local variables, so a
+    False here is a strong hint and not a verdict -- the precheck still decides.
+    """
+    kinds = edge.get("kinds")
+    if not kinds:
+        return None
+    return any(any(k in kind for k in _DECLARATION_KINDS) for kind in kinds)
+
+
 def bytecode_types(facts: SourceFacts, edge: Dict[str, Any],
                    limit: int = 8) -> List[str]:
     """The types on the far side of the edge, as the compiled classes report them.
@@ -143,7 +165,16 @@ def candidates_for_edge(facts: SourceFacts, edge: Dict[str, Any]) -> Optional[Di
         "classes_carrying_edge": edge.get("classes", 1),
         "types_to_abstract": types,
         "constructed_types": constructed,
-        "dip_removable": not (set(types) & set(constructed)),
+        "declares_target": declares_target(edge),
+        # Two mechanical blockers, both read off the snapshot: nothing to retarget, or a
+        # construction site that survives the retargeting.
+        "dip_removable": (not (set(types) & set(constructed))
+                          and declares_target(edge) is not False),
+        # The other side of the same edge. When one class in `src` accounts for the whole
+        # dependency, moving THAT class into `dst` removes the edge without abstracting
+        # anything -- no interface, no indirection, and construction does not block it.
+        "consumer_classes": sorted({p.split(" -> ")[0].split("$")[0]
+                                    for p in (edge.get("carriers") or []) if " -> " in p}),
         # What success means here, stated before the run rather than inferred after it.
         "success_criterion": f"the bytecode edge {src} -> {dst} no longer exists",
     }

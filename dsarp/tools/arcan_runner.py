@@ -97,8 +97,15 @@ def _unbuildable_module(out: str):
 
 
 def compile_repo(repo_path: Path, timeout: int = 2400,
-                 log_path: Optional[Path] = None) -> Dict[str, Any]:
-    """`mvn compile` so Arcan has bytecode. Returns status + the class dirs produced."""
+                 log_path: Optional[Path] = None, goal: str = "compile") -> Dict[str, Any]:
+    """`mvn compile` so Arcan has bytecode. Returns status + the class dirs produced.
+
+    `goal="test-compile"` also builds the test sources without running them. Detection only
+    needs main classes, but a VERDICT needs more: `compile` skips test compilation, so a move
+    that leaves forty test files importing a class that is no longer there still reports
+    `compiled`, and the break only surfaces if the candidate got far enough to run tests --
+    which only the candidates that already looked good ever did.
+    """
     repo_path = Path(repo_path)
     existing = _class_dirs(repo_path)
     mvn = find_mvn()
@@ -121,8 +128,11 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
         return {"ok": False, "status": "no_pom",
                 "class_dirs": [],
                 "note": "No pom.xml or Gradle build, cannot compile for Arcan."}
+    # `maven.test.skip` skips COMPILING the tests, which is the point for detection and
+    # exactly wrong for a verdict; `skipTests` compiles them and does not run them.
     skips = ["-Drat.skip=true", "-Dcheckstyle.skip=true", "-Denforcer.skip=true",
-             "-Dmaven.test.skip=true", "-Dspotless.check.skip=true", "-Dspotbugs.skip=true",
+             "-Dmaven.test.skip=true" if goal == "compile" else "-DskipTests=true",
+             "-Dspotless.check.skip=true", "-Dspotbugs.skip=true",
              "-Dpmd.skip=true", "-Danimal.sniffer.skip=true", "-Dlicense.skip=true",
              "-Djacoco.skip=true", "-Dmaven.javadoc.skip=true"]
     # A submodule of a multi-module build cannot compile standalone — its siblings are not
@@ -132,9 +142,9 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
     if reactor is not None:
         rel = repo_path.resolve().relative_to(reactor.resolve()).as_posix()
         cmd = [mvn, "-B", "-ntp", "-f", str(reactor / "pom.xml"),
-               "-pl", rel, "-am", "compile", *skips]
+               "-pl", rel, "-am", goal, *skips]
     else:
-        cmd = [mvn, "-B", "-ntp", "-f", str(pom), "compile", *skips]
+        cmd = [mvn, "-B", "-ntp", "-f", str(pom), goal, *skips]
     excluded: list = []
 
     def _run(c):
@@ -155,7 +165,7 @@ def compile_repo(repo_path: Path, timeout: int = 2400,
             # the default. When the reactor demands real jars, the only correct answer is to
             # produce them - skipping the offending goal is not enough, because a self-hosted
             # plugin still has no descriptor. Escalate once, to `package`.
-            cmd = [c if c != "compile" else "package" for c in cmd] + ["-DskipTests"]
+            cmd = [c if c != goal else "package" for c in cmd] + ["-DskipTests"]
             if _TEST_JAR_RE.search(out):
                 # a sibling's test-jar cannot be built from test sources that were skipped
                 cmd = [c for c in cmd if c != "-Dmaven.test.skip=true"]
