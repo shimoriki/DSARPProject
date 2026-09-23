@@ -1123,3 +1123,46 @@ SELECTION CONFIRMATION FAILED (2026-09-14). Read before quoting any selection re
   The held-out 0.21 was noise. FIVE selection attempts, none survives fresh data.
   The one consistent signal in every run: the shipped ATDI order is worst or tied worst.
   Net-win base rate on fresh legal candidates: 3/27, about 11%.
+
+################################################################################
+THE VALIDATOR NOW ANSWERS PER EDGE, AND TWO TOOLS AGREE ON THE ANSWER (2026-09-23)
+################################################################################
+What changed, all in tools/dsarp-archunit + dsarp/tools/{archunit_runner,jdeps_runner}.py:
+  * each package edge carries the CLASS PAIRS that create it, the pairs where the consumer
+    CONSTRUCTS the target, and the dependency KINDS ("Method calls method", "Field has type").
+  * edge_verdict(before, after, from, to): is that edge gone, what did it cost in new edges,
+    were new cycles introduced, and what still carries it.
+  * jdeps (-verbose:package) re-reads the same class files and cross-checks the edge set.
+    commons-validator: 7 edges, 7 agreed. ArchUnit has silently imported zero classes before;
+    a blind oracle makes "the edge is gone" vacuously true.
+  * compile_repo(goal="test-compile") for verdicts: `mvn compile` skips test compilation, so a
+    move that stranded the test sources still reported `compiled`.
+
+CANDIDATE GENERATION NOW ASKS THE COMPILER, NOT A REGEX. The text scan named 2 types for a
+commons-validator edge the bytecode says is carried by 6 dependencies; inverting both left the
+edge standing.
+
+TWO MECHANICAL BLOCKERS ON DEPENDENCY INVERSION, both readable from the snapshot:
+  1. the consumer CONSTRUCTS the target -- retargeting the declaration leaves `new Impl(...)`,
+     and that reference holds the edge up alone. commons-validator checkdigit -> routines:
+     6 dependencies -> 2, edge survives, the 2 being `new CodeValidator(...)`.
+  2. the consumer DECLARES NOTHING of that type -- pdfbox operator.color depends on
+     PDGraphicsState 16 times, all "Method calls method". Spoon refuses it after 70s of model
+     building; the snapshot says so for free.
+
+REACH, every in-cycle edge on pdfbox (380 edges, was sampling 5):
+    inversion not blocked      70 (18%)
+    no declaration to retarget 111 (29%)
+    some target constructed   256 (67%)
+    carried by one class      175 (46%)
+    nothing we have applies   142 (37%)
+The pipeline has been aiming its main operation at 18% of the problem.
+
+MOVES ARE NOW ARITHMETIC, NOT A RANKING (dsarp/tools/jdeps_runner.move_effect).
+jdeps -verbose gives the class-level graph INCLUDING same-package edges -- which ArchUnit
+drops and which decide what a move costs, because a class leaving its package turns every tie
+to its old neighbours into a package edge. Relabel one class, re-derive the package graph,
+diff. pdfbox: of 342 single-carrier in-cycle moves, 109 remove the targeted edge and 77 leave
+the graph strictly smaller (best: Loader -> pdmodel, -18 edges +2).
+Checked against a measured case: moving PDGraphicsState into operator.color was predicted to
+leave the edge and add 12; measured, it left the edge and added 11. Seconds, not 208.
