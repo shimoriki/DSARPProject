@@ -541,3 +541,22 @@ def run_tests(repo_path: Path, timeout: int = 3600,
         result.update(tests_run=run, failures=fails, errors=errs, skipped=skipped,
                       failing_modules=failing_modules)
     return result
+
+
+def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:
+    """Is this test run at least as good as the baseline one?
+
+    Not just "are there fewer failures". Moving PDFDebugger left pdfbox reporting zero
+    failures and zero errors -- on 1994 tests against a baseline of 2050. Fifty-six tests had
+    stopped running, and a comparison of failure counts alone reads that as a pass. Several of
+    these repositories are red before anything is changed (log4j2: 6 failures, 29 errors), so
+    the comparison has to be against the baseline rather than against zero.
+    """
+    fewer = max(0, (baseline.get("tests_run") or 0) - (after.get("tests_run") or 0))
+    worse_f = (after.get("failures") or 0) - (baseline.get("failures") or 0)
+    worse_e = (after.get("errors") or 0) - (baseline.get("errors") or 0)
+    return {"ok": not fewer and worse_f <= 0 and worse_e <= 0,
+            "tests_not_run": fewer, "extra_failures": max(0, worse_f),
+            "extra_errors": max(0, worse_e),
+            "baseline_was_red": bool((baseline.get("failures") or 0)
+                                     or (baseline.get("errors") or 0))}

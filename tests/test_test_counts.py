@@ -53,3 +53,19 @@ def test_non_summary_lines_are_ignored():
     assert _test_counts("[INFO] Building Apache FontBox") is None
     assert _test_counts("Tests run: oops") is None
     assert _test_counts("") is None
+
+
+def test_a_run_with_fewer_tests_is_not_an_improvement():
+    from dsarp.tools.arcan_runner import tests_no_worse
+    base = {"tests_run": 2050, "failures": 0, "errors": 0}
+    # zero failures, but fifty-six tests never ran: pdfbox after moving PDFDebugger
+    v = tests_no_worse(base, {"tests_run": 1994, "failures": 0, "errors": 0})
+    assert not v["ok"] and v["tests_not_run"] == 56
+
+
+def test_a_red_baseline_is_the_bar_not_zero():
+    from dsarp.tools.arcan_runner import tests_no_worse
+    base = {"tests_run": 969, "failures": 6, "errors": 29}
+    v = tests_no_worse(base, {"tests_run": 969, "failures": 6, "errors": 29})
+    assert v["ok"] and v["baseline_was_red"]
+    assert not tests_no_worse(base, {"tests_run": 969, "failures": 7, "errors": 29})["ok"]
