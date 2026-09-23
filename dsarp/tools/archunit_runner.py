@@ -107,11 +107,23 @@ def verdict(before: Dict[str, Any], after: Dict[str, Any],
         "targeted_cycle_removed": bool(tb) and not ta,
         "total_before": len(b),
         "total_after": len(a),
-        "cycles_introduced": sorted(sorted(c) for c in (a - b)),
+        "cycles_introduced": novel_cycles(b, a),
         "cycles_removed": sorted(sorted(c) for c in (b - a)),
         # The honest headline: the targeted cycle is gone AND nothing new appeared.
-        "clean_removal": bool(tb) and not ta and not (a - b),
+        "clean_removal": bool(tb) and not ta and not novel_cycles(b, a),
     }
+
+
+def novel_cycles(before: Set[frozenset], after: Set[frozenset]) -> List[List[str]]:
+    """Cycles that are genuinely new, not survivors of an old one that lost a package.
+
+    Set difference is the wrong test. Moving Loader out of org.apache.pdfbox took that package
+    out of pdfbox's 51-package component, leaving a 50-package component -- a different set,
+    so `after - before` called it a newly introduced cycle and the candidate was marked unclean
+    for having improved. A component contained in one that existed before is what remains of
+    it; a component that pulled in packages which were not cycling together is new.
+    """
+    return sorted(sorted(c) for c in after if not any(c <= b for b in before))
 
 
 def edge_map(result: Dict[str, Any]) -> Dict[tuple, int]:
@@ -164,7 +176,7 @@ def edge_verdict(before: Dict[str, Any], after: Dict[str, Any],
     eb, ea = edge_map(before), edge_map(after)
     bc, ac = cycle_set(before), cycle_set(after)
     added = sorted(set(ea) - set(eb))
-    introduced = sorted(sorted(c) for c in (ac - bc))
+    introduced = novel_cycles(bc, ac)
     removed = (frm, to) in eb and (frm, to) not in ea
     return {
         "answerable": True,

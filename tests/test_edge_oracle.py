@@ -77,3 +77,19 @@ def test_the_component_join_carries_every_detail_the_predictors_need():
                        "kinds": {"Method calls method": 3}}]}
     e = feedback_edges(snap)[0]
     assert e["carriers"] and e["kinds"] == {"Method calls method": 3}
+
+
+def test_a_cycle_that_lost_a_package_is_not_a_new_cycle():
+    # Moving Loader out of org.apache.pdfbox left the 51-package component with 50 packages.
+    # Set difference called that a newly introduced cycle, so the candidate was marked unclean
+    # for having improved, and its tests were never run.
+    before = _run([("a", "b", 1), ("b", "a", 1)], cycles=[("a", "b", "c")])
+    after = _run([("a", "b", 1)], cycles=[("a", "b")])
+    v = edge_verdict(before, after, "b", "a")
+    assert v["cycles_introduced"] == [] and v["clean"]
+
+
+def test_a_cycle_that_pulled_in_a_new_package_is_new():
+    before = _run([("a", "b", 1), ("b", "a", 1)], cycles=[("a", "b")])
+    after = _run([("a", "b", 1)], cycles=[("a", "b", "d")])
+    assert edge_verdict(before, after, "b", "a")["cycles_introduced"] == [["a", "b", "d"]]
