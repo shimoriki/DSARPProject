@@ -47,7 +47,14 @@ def feedback_edges(cycle_data: Dict[str, Any], component_index: Optional[int] = 
            else max(range(len(cycles)), key=lambda i: len(cycles[i])))
     if idx >= len(edge_sets):
         return []
-    return sorted(edge_sets[idx], key=lambda e: (e.get("classes", 1), e["from"], e["to"]))
+    # cycleEdges carries only weights; the flat `edges` array carries the class pairs behind
+    # each weight. Join them so a candidate can be aimed at what the compiler sees rather than
+    # at what a simple-name search in the consumer's text happens to match.
+    detail = {(e["from"], e["to"]): e for e in (cycle_data.get("edges") or [])}
+    out = [dict(e, carriers=detail.get((e["from"], e["to"]), {}).get("carriers") or [],
+                constructs=detail.get((e["from"], e["to"]), {}).get("constructs") or [])
+           for e in edge_sets[idx]]
+    return sorted(out, key=lambda e: (e.get("classes", 1), e["from"], e["to"]))
 
 
 def cheap_edges(cycle_data: Dict[str, Any], max_classes: int = 3,
@@ -79,6 +86,27 @@ def crossing_types(facts: SourceFacts, from_pkg: str, to_pkg: str,
     return out
 
 
+def bytecode_types(facts: SourceFacts, edge: Dict[str, Any],
+                   limit: int = 8) -> List[str]:
+    """The types on the far side of the edge, as the compiled classes report them.
+
+    Nested types are reduced to their top-level declaration: `Outer$Inner` lives in Outer.java
+    and is not separately extractable. Types with no source in this repository are dropped --
+    a generated or shaded class cannot be refactored here.
+    """
+    out: List[str] = []
+    for pair in edge.get("carriers") or []:
+        if " -> " not in pair:
+            continue
+        target = pair.split(" -> ")[1].split("$")[0]
+        if target in out or not facts.file_for(target):
+            continue
+        out.append(target)
+        if len(out) >= limit:
+            break
+    return out
+
+
 def candidates_for_edge(facts: SourceFacts, edge: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """One invertEdge plan aimed at removing a single named edge, with its cost attached.
 
@@ -87,7 +115,7 @@ def candidates_for_edge(facts: SourceFacts, edge: Dict[str, Any]) -> Optional[Di
     `from -> to` edge rather than relocating it.
     """
     src, dst = edge["from"], edge["to"]
-    types = crossing_types(facts, src, dst)
+    types = bytecode_types(facts, edge) or crossing_types(facts, src, dst)
     if not types:
         return None
     root_src = spoon_plan.package_root(facts, src)
@@ -100,6 +128,13 @@ def candidates_for_edge(facts: SourceFacts, edge: Dict[str, Any]) -> Optional[Di
     if any(spoon_plan._why_not(spoon_plan.Edit("extractInterface", t, src), facts)
            for t in types):
         return None
+    # Types the consumer builds with `new`. Inversion retargets declarations, so a
+    # construction site survives it and holds the package edge up by itself. Measured:
+    # commons-validator checkdigit -> routines went from 6 dependencies to 2 and stayed,
+    # the 2 being `new CodeValidator(...)`. The flag is attached, not enforced -- whether it
+    # predicts removal is the question the runs answer.
+    constructed = sorted({p.split(" -> ")[1].split("$")[0]
+                          for p in (edge.get("constructs") or []) if " -> " in p})
     return {
         "edit": edit.as_dict(),
         "edge": f"{src} -> {dst}",
@@ -107,6 +142,8 @@ def candidates_for_edge(facts: SourceFacts, edge: Dict[str, Any]) -> Optional[Di
         "to_package": dst,
         "classes_carrying_edge": edge.get("classes", 1),
         "types_to_abstract": types,
+        "constructed_types": constructed,
+        "dip_removable": not (set(types) & set(constructed)),
         # What success means here, stated before the run rather than inferred after it.
         "success_criterion": f"the bytecode edge {src} -> {dst} no longer exists",
     }

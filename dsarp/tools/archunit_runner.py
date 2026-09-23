@@ -112,3 +112,74 @@ def verdict(before: Dict[str, Any], after: Dict[str, Any],
         # The honest headline: the targeted cycle is gone AND nothing new appeared.
         "clean_removal": bool(tb) and not ta and not (a - b),
     }
+
+
+def edge_map(result: Dict[str, Any]) -> Dict[tuple, int]:
+    """Every package edge in the run, mapped to how many classes carry it.
+
+    Empty for an unsuccessful run; callers must check `ok` first, exactly as with cycle_set.
+    """
+    if not result.get("ok"):
+        return {}
+    return {(e["from"], e["to"]): e.get("classes", 1) for e in (result.get("edges") or [])}
+
+
+def edge_carriers(result: Dict[str, Any], frm: str, to: str) -> List[str]:
+    """The class pairs that actually create `frm -> to`, as "Consumer -> Target" FQNs.
+
+    Candidate generation matched the target's simple name in the consumer's source text, which
+    cannot see a dependency the compiler introduced and does see one written in a comment. On
+    commons-validator that scan named two types for an edge carried by six dependencies, so
+    abstracting everything it could see still left the edge standing. This is the compiler's
+    own answer, capped on the Java side at thirty pairs per edge.
+    """
+    if not result.get("ok"):
+        return []
+    for e in result.get("edges") or []:
+        if e.get("from") == frm and e.get("to") == to:
+            return list(e.get("carriers") or [])
+    return []
+
+
+def edge_targets(result: Dict[str, Any], frm: str, to: str) -> List[str]:
+    """The types in `to` that `frm` depends on — what an inversion would have to abstract."""
+    return sorted({p.split(" -> ")[1] for p in edge_carriers(result, frm, to)
+                   if " -> " in p})
+
+
+def edge_verdict(before: Dict[str, Any], after: Dict[str, Any],
+                 frm: str, to: str) -> Dict[str, Any]:
+    """Did the package edge `frm -> to` disappear, and what did that cost?
+
+    This is the check the project can actually stand behind. Smell counts measure
+    participation in a handful of giant components, so a move that detaches a subtree scores
+    hundreds while the cycle survives; "this edge is gone" is binary, per candidate, and is
+    the property ArchUnit users already write rules about. The cost side is reported next to
+    it -- a dependency inversion removes one edge and adds its own -- because an edge count
+    that only ever goes down is measuring the wrong direction.
+    """
+    if not before.get("ok") or not after.get("ok"):
+        return {"answerable": False,
+                "why": before.get("why") or after.get("why") or "cycle detection failed"}
+    eb, ea = edge_map(before), edge_map(after)
+    bc, ac = cycle_set(before), cycle_set(after)
+    added = sorted(set(ea) - set(eb))
+    introduced = sorted(sorted(c) for c in (ac - bc))
+    removed = (frm, to) in eb and (frm, to) not in ea
+    return {
+        "answerable": True,
+        "edge": f"{frm} -> {to}",
+        "edge_existed": (frm, to) in eb,
+        "edge_removed": removed,
+        "classes_before": eb.get((frm, to)),
+        "classes_after": ea.get((frm, to)),
+        "edges_added": ["%s -> %s" % p for p in added],
+        "edges_removed": len(set(eb) - set(ea)),
+        "cycles_before": len(bc), "cycles_after": len(ac),
+        "cycles_introduced": introduced,
+        # What is still holding the edge up, so the next attempt aims at it rather than at
+        # whatever the text index happened to match.
+        "carriers_after": edge_carriers(after, frm, to),
+        # The honest headline: the edge is gone and no new cycle appeared in its place.
+        "clean": bool(removed and not introduced),
+    }

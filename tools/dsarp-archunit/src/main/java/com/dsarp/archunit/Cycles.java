@@ -96,6 +96,15 @@ public final class Cycles {
         // How many class-level dependencies create each package edge. An edge
         // carried by one class can be inverted; one carried by forty cannot.
         Map<String, Integer> weight = new HashMap<>();
+        // WHICH class pairs carry each package edge. Candidate generation used to find these
+        // by matching the target's simple name in the consumer's source text, which misses
+        // every dependency the compiler introduces -- a supertype's parameter, a generic
+        // bound, an annotation -- and invents ones that appear only in a comment. On
+        // commons-validator the text scan named 2 types for an edge the bytecode says is
+        // carried by 6 dependencies, so inverting all it could see still left the edge in
+        // place. The compiler already knows the answer; ask it.
+        Map<String, Set<String>> carriers = new HashMap<>();
+        Map<String, Set<String>> constructs = new HashMap<>();
         Set<String> pkgs = new TreeSet<>();
         for (JavaClass c : classes) {
             String from = c.getPackageName();
@@ -109,9 +118,49 @@ public final class Cycles {
                 if (!classes.contain(d.getTargetClass().getName())) continue;
                 edges.computeIfAbsent(from, k -> new LinkedHashSet<>()).add(to);
                 weight.merge(from + " -> " + to, 1, Integer::sum);
+                String pair = c.getName() + " -> " + d.getTargetClass().getName();
+                carriers.computeIfAbsent(from + " -> " + to, k -> new TreeSet<>()).add(pair);
+                // Construction is what defeats dependency inversion. Retargeting a
+                // declaration to an interface leaves `new Impl(...)` behind, and that one
+                // reference holds the package edge up on its own: commons-validator's
+                // checkdigit -> routines edge fell from 6 dependencies to 2 and survived,
+                // the 2 being `new CodeValidator(...)` in two check-digit classes. Knowing
+                // this BEFORE a candidate is applied costs nothing; finding out afterwards
+                // costs a Spoon run, a full compile and a cycle detection.
+                String desc = d.getDescription();
+                if (desc != null && (desc.contains("calls constructor") || desc.contains("<init>")))
+                    constructs.computeIfAbsent(from + " -> " + to, k -> new TreeSet<>()).add(pair);
                 pkgs.add(to);
             }
         }
+
+        // Every package edge, not only the ones inside a cycle. The surviving claim this
+        // project can make is "this specific edge no longer exists", and a cycleEdges-only
+        // output cannot answer it: when a component breaks up the edge vanishes from that
+        // array whether or not the dependency is actually gone. It also shows the edges a
+        // dependency inversion ADDS, which is the cost side of the same change.
+        ArrayNode allEdges = result.putArray("edges");
+        for (String from : new TreeSet<>(edges.keySet()))
+            for (String to : new TreeSet<>(edges.get(from))) {
+                ObjectNode en = allEdges.addObject();
+                en.put("from", from);
+                en.put("to", to);
+                en.put("classes", weight.getOrDefault(from + " -> " + to, 1));
+                // Capped: an edge carried by forty class pairs is not a refactoring
+                // candidate, and the whole map would dwarf the rest of the file.
+                ArrayNode ca = en.putArray("carriers");
+                int n = 0;
+                for (String pair : carriers.getOrDefault(from + " -> " + to, Set.of())) {
+                    if (n++ >= 30) break;
+                    ca.add(pair);
+                }
+                ArrayNode co = en.putArray("constructs");
+                n = 0;
+                for (String pair : constructs.getOrDefault(from + " -> " + to, Set.of())) {
+                    if (n++ >= 30) break;
+                    co.add(pair);
+                }
+            }
 
         List<Set<String>> components = tarjan(pkgs, edges);
         ArrayNode arr = result.putArray("cycles");
