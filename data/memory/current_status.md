@@ -1166,3 +1166,21 @@ diff. pdfbox: of 342 single-carrier in-cycle moves, 109 remove the targeted edge
 the graph strictly smaller (best: Loader -> pdmodel, -18 edges +2).
 Checked against a measured case: moving PDGraphicsState into operator.color was predicted to
 leave the edge and add 12; measured, it left the edge and added 11. Seconds, not 208.
+
+PLANNED MOVES, MEASURED (2026-09-23). Six per repo, chosen by predicted net edges, applied with
+Spoon, built with test sources, judged by the bytecode oracle and cross-read by jdeps, tests run
+against the baseline:
+    apache-pdfbox   moveClass  6/6 applied  6/6 built  6/6 edge removed  6/6 tests pass
+                    invertEdge 6 candidates, 2 applied, 0 built, 0 edges removed
+    predicted new edges vs measured: 2/2, 15/15, 1/1, 10/10, 0/0, 2/2 -- exact on all six
+    log4j2 so far:  StatusConfiguration -> core.util (removes 9, adds 0), ScriptArbiter ->
+                    core.config (removes 6, adds 0), Required -> core.config (removes 13,
+                    adds 4 where 3 were predicted); all tests pass.
+Inversion failed six distinct ways: no instance method on the movable declaration; the consumer
+declares nothing of that type; the target is already an interface; the target is an annotation;
+and twice it applied and broke compilation. Four of the six are visible in the snapshot before
+any Spoon run.
+
+CAVEAT THE GRAPH CANNOT SEE: moving a public type renames it for every downstream user. Loader
+and COSObjectable are public pdfbox API, so those two are major-version changes however clean
+the edge arithmetic is. Reported per candidate, not silently counted as a win.
