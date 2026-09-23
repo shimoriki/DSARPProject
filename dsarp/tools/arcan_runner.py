@@ -24,7 +24,7 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from .arcan import ArcanAdapter
 
@@ -477,9 +477,42 @@ def _test_counts(line: str):
     return out
 
 
+def modules_for(repo_path: Path, changed: Iterable[Path]) -> List[str]:
+    """The Maven modules that own these files, as reactor-relative paths.
+
+    A refactoring's blast radius is not the whole reactor. Spoon rewrites every reference it
+    changes, so the set of files it touched already includes the downstream modules that used
+    the moved type: on log4j2, ScriptArbiter touched one module of thirty-seven, and on pdfbox
+    COSObjectable touched one of nine. Testing those instead of everything is the difference
+    between a four-minute rejection and a thirty-six minute one.
+    """
+    repo_path = Path(repo_path).resolve()
+    mods = set()
+    for f in changed:
+        p = Path(f)
+        p = p if p.is_absolute() else repo_path / p
+        for parent in p.resolve().parents:
+            if (parent / "pom.xml").exists():
+                if parent == repo_path:
+                    return ["."]          # the root module owns it; no scoping is possible
+                try:
+                    mods.add(parent.relative_to(repo_path).as_posix())
+                except ValueError:
+                    pass
+                break
+    return sorted(mods)
+
+
 def run_tests(repo_path: Path, timeout: int = 3600,
-              log_path: Optional[Path] = None) -> Dict[str, Any]:
+              log_path: Optional[Path] = None,
+              modules: Optional[List[str]] = None) -> Dict[str, Any]:
     """Run the project's OWN test suite against the refactored code.
+
+    `modules` restricts the reactor to those paths and what they depend on (`-pl ... -am`).
+    That is a FILTER, not a verdict: a module that uses the moved type reflectively is not in
+    the changed set and will not be tested, which is how tika's ParseContext moves passed
+    every structural check and broke thirty-seven tests. Use it to reject candidates cheaply,
+    then run unscoped before believing one.
 
     "It compiles" is a weak guarantee: a refactoring can compile perfectly and still change
     behaviour. The project's tests are the strongest behavioural evidence available without
@@ -505,6 +538,12 @@ def run_tests(repo_path: Path, timeout: int = 3600,
     # evidence. Costs wall time on a repo that is failing; a timeout is reported as
     # test_timeout and is honest, which a silently partial pass is not.
     cmd = [mvn, "-B", "-ntp", "-fae", "-f", str(repo_path / "pom.xml"), "test", *skips]
+    scoped = [m for m in (modules or []) if m and m != "."]
+    if scoped:
+        # -am builds (and tests) what these modules depend on. Their dependencies cannot be
+        # affected by a change downstream of them, so those runs are waste -- but they are
+        # what makes the scoped reactor resolvable without installing anything.
+        cmd += ["-pl", ",".join(scoped), "-am"]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:

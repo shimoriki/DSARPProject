@@ -1,0 +1,69 @@
+"""Places a type is named as TEXT, where moving it changes nothing that the compiler checks.
+
+A move renames the type. Every reference the compiler can see is rewritten with it, which is
+why eighteen moves compiled and eighteen removed their edge. What the compiler cannot see is a
+name written as a string: a service file listing an implementation, a class named in XML, a
+`Class.forName("...")`, a resource looked up beside a package. Those keep pointing at the old
+name and fail at run time, if anything exercises them.
+
+This is the cheap end of that check -- a text scan of the repository, seconds, before anything
+is applied. It cannot prove a move is safe: tika's ParseContext moves broke thirty-seven tests
+and are not caught here, because nothing names that class as a string. It catches the cases it
+can name, and the test run remains the verdict.
+"""
+from __future__ import annotations
+
+import re
+from pathlib import Path
+from typing import Any, Dict, List
+
+# Files that carry class names the compiler never reads.
+_TEXT_SUFFIXES = (".xml", ".properties", ".json", ".yaml", ".yml", ".cfg", ".conf",
+                  ".txt", ".MF", ".factories", ".handlers", ".schemas", ".tld")
+_SKIP_DIRS = {"target", "build", ".git", "node_modules"}
+_MAX_BYTES = 2_000_000
+
+
+def _candidate_files(repo_path: Path):
+    for p in Path(repo_path).rglob("*"):
+        if not p.is_file():
+            continue
+        if _SKIP_DIRS & set(p.parts):
+            continue
+        if p.suffix in _TEXT_SUFFIXES or "META-INF/services" in p.as_posix() \
+                or p.suffix == ".java":
+            try:
+                if p.stat().st_size <= _MAX_BYTES:
+                    yield p
+            except OSError:
+                continue
+
+
+def name_references(repo_path: Path, fqn: str) -> Dict[str, Any]:
+    """Where `fqn` is written as text rather than as a resolved reference.
+
+    Java hits count only inside string literals: an import or a normal use is exactly what the
+    refactoring rewrites, and flagging those would flag every candidate.
+    """
+    repo_path = Path(repo_path)
+    in_string = re.compile(r'"[^"\n]*' + re.escape(fqn) + r'[^"\n]*"')
+    resources: List[str] = []
+    literals: List[str] = []
+    for p in _candidate_files(repo_path):
+        try:
+            text = p.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if fqn not in text:
+            continue
+        rel = p.relative_to(repo_path).as_posix()
+        if p.suffix == ".java":
+            if in_string.search(text):
+                literals.append(rel)
+        else:
+            resources.append(rel)
+    return {"fqn": fqn, "resources": sorted(resources)[:20],
+            "string_literals": sorted(literals)[:20],
+            "count": len(resources) + len(literals),
+            # Not "unsafe" -- "the compiler will not fix these for you".
+            "needs_manual_fixup": bool(resources or literals)}
