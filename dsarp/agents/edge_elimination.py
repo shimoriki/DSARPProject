@@ -51,8 +51,8 @@ def feedback_edges(cycle_data: Dict[str, Any], component_index: Optional[int] = 
     # each weight. Join them so a candidate can be aimed at what the compiler sees rather than
     # at what a simple-name search in the consumer's text happens to match.
     detail = {(e["from"], e["to"]): e for e in (cycle_data.get("edges") or [])}
-    out = [dict(e, carriers=detail.get((e["from"], e["to"]), {}).get("carriers") or [],
-                constructs=detail.get((e["from"], e["to"]), {}).get("constructs") or [])
+    out = [dict(e, **{k: detail.get((e["from"], e["to"]), {}).get(k) or ([] if k != "kinds" else {})
+                      for k in ("carriers", "constructs", "kinds")})
            for e in edge_sets[idx]]
     return sorted(out, key=lambda e: (e.get("classes", 1), e["from"], e["to"]))
 

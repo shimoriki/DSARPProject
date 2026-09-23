@@ -65,3 +65,15 @@ def test_an_edge_made_only_of_calls_has_nothing_to_retarget():
                                       "Field has type": 1}}) is True
     # snapshots taken before kinds were recorded must not read as "no declarations"
     assert declares_target({"carriers": ["a.A -> b.B"]}) is None
+
+
+def test_the_component_join_carries_every_detail_the_predictors_need():
+    # cycleEdges holds weights only; the detail lives in the flat edges array, and a join
+    # that drops `kinds` makes "no declarations" read as "unknown" -- which passes.
+    from dsarp.agents.edge_elimination import feedback_edges
+    snap = {"cycles": [["a", "b"]], "cycleEdges": [[{"from": "a", "to": "b", "classes": 3}]],
+            "edges": [{"from": "a", "to": "b", "classes": 3,
+                       "carriers": ["a.C -> b.T"], "constructs": [],
+                       "kinds": {"Method calls method": 3}}]}
+    e = feedback_edges(snap)[0]
+    assert e["carriers"] and e["kinds"] == {"Method calls method": 3}
