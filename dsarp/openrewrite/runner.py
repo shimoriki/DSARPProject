@@ -17,7 +17,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # rewrite-maven-plugin version (5.x). Overridable via config.
-DEFAULT_PLUGIN = "org.openrewrite.maven:rewrite-maven-plugin:5.42.1"
+# 5.42.1 applied ChangeType to the class definition and to most references, and left
+# two pdfbox TEST files importing the old name -- so the move compiled everywhere
+# except where it did not, and the build failed. 6.46.1 rewrites them. Isolated by
+# running the identical recipe, repo, heap and flags under each version.
+DEFAULT_PLUGIN = "org.openrewrite.maven:rewrite-maven-plugin:6.46.1"
 RECIPE_NAME = "com.dsarp.ArchitecturalRefactoring"
 
 # DSARP's own recipe module (tools/dsarp-recipes). Supplies the transformations stock
