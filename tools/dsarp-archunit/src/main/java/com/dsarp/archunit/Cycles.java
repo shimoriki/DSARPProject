@@ -105,6 +105,7 @@ public final class Cycles {
         // place. The compiler already knows the answer; ask it.
         Map<String, Set<String>> carriers = new HashMap<>();
         Map<String, Set<String>> constructs = new HashMap<>();
+        Map<String, Map<String, Integer>> kinds = new HashMap<>();
         Set<String> pkgs = new TreeSet<>();
         for (JavaClass c : classes) {
             String from = c.getPackageName();
@@ -130,6 +131,20 @@ public final class Cycles {
                 String desc = d.getDescription();
                 if (desc != null && (desc.contains("calls constructor") || desc.contains("<init>")))
                     constructs.computeIfAbsent(from + " -> " + to, k -> new TreeSet<>()).add(pair);
+                // HOW the dependency is expressed, which decides whether inversion has
+                // anything to work with. "has type" / "has parameter of type" / "has return
+                // type" are declarations an interface can be substituted into; "calls method"
+                // alone means the consumer got the object from somewhere else and declares
+                // nothing to retarget -- pdfbox's operator.color package depends on
+                // PDGraphicsState sixteen times and declares it zero times, and Spoon refuses
+                // the inversion for exactly that reason after a 70-second model build.
+                if (desc != null) {
+                    String kind = desc.replaceAll("<[^>]*>", "")
+                                      .replaceAll("\\s+in \\(.*\\)$", "")
+                                      .replaceAll("\\s+", " ").trim();
+                    kinds.computeIfAbsent(from + " -> " + to, k -> new java.util.TreeMap<>())
+                         .merge(kind, 1, Integer::sum);
+                }
                 pkgs.add(to);
             }
         }
@@ -160,6 +175,8 @@ public final class Cycles {
                     if (n++ >= 30) break;
                     co.add(pair);
                 }
+                ObjectNode ki = en.putObject("kinds");
+                kinds.getOrDefault(from + " -> " + to, Map.of()).forEach(ki::put);
             }
 
         List<Set<String>> components = tarjan(pkgs, edges);
