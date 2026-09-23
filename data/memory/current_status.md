@@ -1184,3 +1184,46 @@ any Spoon run.
 CAVEAT THE GRAPH CANNOT SEE: moving a public type renames it for every downstream user. Loader
 and COSObjectable are public pdfbox API, so those two are major-version changes however clean
 the edge arithmetic is. Reported per candidate, not silently counted as a win.
+
+################################################################################
+THREE-REPO RESULT: PLANNED MOVES WORK, INVERSION ALMOST NEVER DOES (2026-09-23)
+################################################################################
+Six planned moves per repo, each paired with an inversion aimed at the SAME edge. Applied with
+Spoon, built with test sources, judged by the ArchUnit edge oracle, cross-read by jdeps, tests
+compared against the repository's own baseline:
+
+    repo        op          n  built  edge removed  clean  ACCEPTED
+    pdfbox      moveClass   6    6         6          6       5
+                invertEdge  6    0         0          0       0
+    log4j2      moveClass   6    6         6          6       6
+                invertEdge  6    0         0          0       0
+    tika        moveClass   6    6         6          6       3
+                invertEdge  6    1         1          1       1
+    TOTAL       moveClass  18   18        18         18      14
+                invertEdge 18    1         1          1       1
+
+PLANNER ACCURACY (predicted before applying, measured after):
+    edges ADDED    exact 14/18, within 2: 18/18
+    edges REMOVED  exact  7/12, within 2: 12/12   (only recorded from the log4j2 run onwards)
+    jdeps agreed with the oracle on 13 of 13 verdicts it could read.
+
+WHY THE FOUR MOVES WERE REJECTED -- all by tests, none by the structure:
+    tika ParseContext x2, tika StringUtils: 24 failures / 17 errors against a baseline of 1/3.
+      ParseContext -> metadata was structurally the best candidate this project has produced
+      (71 edges removed, 7 added, jdeps agreeing) and it breaks 37 tests. Under the old
+      smell-count validator it would have been recorded as a large win. Cause not diagnosed;
+      the driver now keeps the test log for rejections.
+    pdfbox PDFDebugger: 0 failures on 1994 tests against a baseline of 2050. Fifty-six tests
+      stopped running. See tests_no_worse() -- a failure count alone reads that as a pass.
+
+INVERSION'S SIX REFUSAL MODES (17 of 18 never reached a build):
+    declares nothing of that type (6) | already an interface (4) | applied then failed to
+    compile (4) | no instance method called on the movable declaration (1) | the target is an
+    annotation (1) | not a class (1). Four of the six are visible in the snapshot for free.
+    The one that worked -- tika ParseContext -> ParseContextApi in metadata -- removed the
+    edge, added nothing, and passed, on the SAME edge where the move broke 37 tests. Inversion
+    is narrow but safer: it leaves the class where it is, so nothing resolved by name moves.
+
+RULE THIS SUPPORTS: try inversion where the snapshot says it is unblocked, fall back to a
+planned move, and let the test run decide. Patches for every accepted change are under
+data/outputs/edge_impl/<repo>/patches/.
