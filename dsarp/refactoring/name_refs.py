@@ -86,3 +86,26 @@ def declared_public(repo_path: Path, fqn: str) -> bool:
                              r"(?:class|interface|enum|record|@interface)\s+" + simple,
                              head) is not None
     return False
+
+
+def residual(repo_path: Path, fqn: str) -> Dict[str, Any]:
+    """Files that still mention `fqn` after it was supposed to have moved away.
+
+    A post-condition no applier should fail and two did. OpenRewrite 5.42.1 relocated
+    org.apache.pdfbox.Loader and left two test files importing the old name; 6.46.1 relocated
+    log4j2's @Required and left RegexFilter.java importing and using it. Both produced a
+    "changed" status, both broke the build, and both cost a full compile to discover -- this
+    costs seconds and is the same answer.
+
+    Unlike name_references, ordinary Java references count here: once the type has moved,
+    nothing should name the old one.
+    """
+    repo_path = Path(repo_path)
+    hits: List[str] = []
+    for p in _candidate_files(repo_path):
+        try:
+            if fqn in p.read_text(encoding="utf-8", errors="ignore"):
+                hits.append(p.relative_to(repo_path).as_posix())
+        except OSError:
+            continue
+    return {"fqn": fqn, "ok": not hits, "files": sorted(hits)[:20], "count": len(hits)}

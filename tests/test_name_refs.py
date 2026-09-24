@@ -59,3 +59,15 @@ def test_a_public_type_is_reported_because_moving_it_breaks_downstream(tmp_path)
         "package com.app;\nclass Hidden {}\n", encoding="utf-8")
     assert declared_public(r, "com.app.Api")
     assert not declared_public(r, "com.app.Hidden")
+
+
+def test_a_move_that_leaves_the_old_name_behind_is_caught_before_compiling(tmp_path):
+    from dsarp.refactoring.name_refs import residual
+    r = _repo(tmp_path)
+    src = r / "mod-a/src/main/java/com/app"
+    (src / "User.java").write_text(
+        "package com.app;\nimport com.app.Thing;\nclass User { Thing t; }\n", encoding="utf-8")
+    assert residual(r, "com.app.Thing")["count"] == 1
+    (src / "User.java").write_text(
+        "package com.app;\nimport com.core.Thing;\nclass User { Thing t; }\n", encoding="utf-8")
+    assert residual(r, "com.app.Thing")["ok"]
