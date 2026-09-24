@@ -80,3 +80,34 @@ def test_a_partial_run_can_reject_but_never_accept():
     # and it still reports the regression it did see, which is enough to reject on
     v2 = tests_no_worse(base, {"tests_run": 40, "failures": 3, "errors": 0, "partial": True})
     assert not v2["ok"] and v2["extra_failures"] == 3
+
+
+def test_the_same_totals_with_different_tests_failing_is_a_regression():
+    from dsarp.tools.arcan_runner import tests_no_worse
+    # log4j2 is red before anything is touched; six failures before and six after says
+    # nothing about whether they are the SAME six.
+    base = {"tests_run": 969, "failures": 2, "errors": 0,
+            "failing_tests": ["FlakyTest.a", "FlakyTest.b"]}
+    same = tests_no_worse(base, dict(base))
+    assert same["ok"] and not same["newly_failing"]
+    swapped = tests_no_worse(base, {"tests_run": 969, "failures": 2, "errors": 0,
+                                    "failing_tests": ["FlakyTest.a", "BrokenByUs.c"]})
+    assert not swapped["ok"] and swapped["newly_failing"] == ["BrokenByUs.c"]
+    assert "now fail" in swapped["why"]
+
+
+def test_a_test_that_starts_passing_is_not_held_against_the_change():
+    from dsarp.tools.arcan_runner import tests_no_worse
+    base = {"tests_run": 10, "failures": 1, "errors": 0, "failing_tests": ["T.a"]}
+    assert tests_no_worse(base, {"tests_run": 10, "failures": 0, "errors": 0,
+                                 "failing_tests": []})["ok"]
+
+
+def test_surefire_lines_parse_to_identities():
+    from dsarp.tools.arcan_runner import failing_tests
+    out = ("[ERROR] Failures: \n"
+           "[ERROR]   ParameterFormatterTest.format_should_warn:92 \n"
+           "[ERROR]   LogManagerTest.testGetLogger:53 > UnsupportedOperation No class\n"
+           "[ERROR]   at org.junit.Assert.fail(Assert.java:88)\n")
+    assert failing_tests(out) == ["LogManagerTest.testGetLogger",
+                                  "ParameterFormatterTest.format_should_warn"]

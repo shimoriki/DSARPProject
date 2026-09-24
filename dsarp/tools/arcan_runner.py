@@ -477,6 +477,23 @@ def _test_counts(line: str):
     return out
 
 
+# Surefire names each failing test on its own line: "[ERROR]   ClassName.method:53 ...".
+# Counts alone cannot tell "the same six tests still fail" from "six different ones now fail",
+# and log4j2 starts red with 6 failures and 29 errors, so that distinction is the whole
+# comparison on that repository.
+_FAILING_TEST = re.compile(r"^\[ERROR\]\s{2,}([A-Z][A-Za-z0-9_$]*\.[A-Za-z_][A-Za-z0-9_$]*)[:\s]")
+
+
+def failing_tests(out: str) -> List[str]:
+    """Identities of the tests that failed, as Class.method."""
+    found = []
+    for line in out.splitlines():
+        m = _FAILING_TEST.match(line.rstrip())
+        if m and m.group(1) not in found:
+            found.append(m.group(1))
+    return sorted(found)
+
+
 def modules_for(repo_path: Path, changed: Iterable[Path]) -> List[str]:
     """The Maven modules that own these files, as reactor-relative paths.
 
@@ -586,7 +603,7 @@ def run_tests(repo_path: Path, timeout: int = 3600,
               "tail": out[-2500:]}
     if run or fails or errs:
         result.update(tests_run=run, failures=fails, errors=errs, skipped=skipped,
-                      failing_modules=failing_modules)
+                      failing_modules=failing_modules, failing_tests=failing_tests(out)[:200])
     # A fail-fast run, or one restricted to part of the reactor, has not seen the whole suite.
     # Callers may reject on it; tests_no_worse refuses to accept on it.
     result["partial"] = bool(fail_fast or [m for m in (modules or []) if m and m != "."])
@@ -611,8 +628,18 @@ def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str,
         return {"ok": False, "partial": True,
                 "why": "a partial run cannot accept a candidate",
                 "extra_failures": max(0, worse_f), "extra_errors": max(0, worse_e)}
-    return {"ok": not fewer and worse_f <= 0 and worse_e <= 0,
+    # Counts cannot tell "the same six tests still fail" from "six different ones now fail",
+    # and log4j2 starts red with 6 failures and 29 errors. Identities can, when surefire
+    # printed them: a test that was not failing before and is failing now is a regression
+    # however the totals move.
+    before_set = set(baseline.get("failing_tests") or [])
+    after_set = set(after.get("failing_tests") or [])
+    newly = sorted(after_set - before_set) if (before_set or after_set) else []
+    return {"ok": not fewer and worse_f <= 0 and worse_e <= 0 and not newly,
             "tests_not_run": fewer, "extra_failures": max(0, worse_f),
             "extra_errors": max(0, worse_e),
+            "newly_failing": newly[:20],
+            "why": ("%d tests that passed before now fail: %s"
+                    % (len(newly), ", ".join(newly[:3]))) if newly else None,
             "baseline_was_red": bool((baseline.get("failures") or 0)
                                      or (baseline.get("errors") or 0))}
