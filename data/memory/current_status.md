@@ -1227,3 +1227,42 @@ INVERSION'S SIX REFUSAL MODES (17 of 18 never reached a build):
 RULE THIS SUPPORTS: try inversion where the snapshot says it is unblocked, fall back to a
 planned move, and let the test run decide. Patches for every accepted change are under
 data/outputs/edge_impl/<repo>/patches/.
+
+################################################################################
+SPOON AND OPENREWRITE AGREE, WHERE OPENREWRITE CAN RUN (2026-09-24)
+################################################################################
+The 14 accepted Spoon moves re-applied as OpenRewrite ChangeType recipes, judged by the same
+oracle (cycles + jdeps), tests not re-run:
+    pdfbox   6/6 agree   same edge removed, same edges added (2,15,1,10,0,2)
+    log4j2   5/6 agree
+    tika     0/3         the recipe never ran at all
+    Where both appliers ran: 11 of 12 identical. The verification is applier-independent.
+
+THE THREE TIKA FAILURES ARE OUR INTEGRATION, NOT THE TOOL. rewrite:run forks a Maven
+lifecycle, which executes tika's own maven-dependency-plugin:copy-dependencies, which needs
+sibling artifacts packaged. compile_repo already escalates to `package` for exactly this
+shape; run_recipe does not. Fix: a package/install -DskipTests pre-step. NOT DONE.
+
+THE ONE REAL DISAGREEMENT: log4j2's @Required (an annotation). ChangeType left
+RegexFilter.java importing it and annotating a field `@Required(message = "...")` at the old
+FQN, so the build failed. Spoon rewrote it. Whether that is a ChangeType gap on annotation
+uses or a file the plugin silently skipped is NOT determined.
+
+NEARLY PUBLISHED A FALSE FINDING ABOUT A THIRD-PARTY TOOL. The first comparison showed
+OpenRewrite breaking the build on pdfbox's Loader: it moved the class, rewrote most
+references, and left two TEST files importing the old name. That was our pinned plugin
+version. Two controlled runs (identical recipe, repo, heap, flags; one variable each):
+    -Dmaven.test.skip on/off   no difference, both rewrite test sources
+    5.42.1 vs latest           5.42.1 leaves them, 6.46.1 rewrites them
+DEFAULT_PLUGIN is now 6.46.1. Every number above is from that version.
+
+WHAT THE RESEARCH ADDED (docs.openrewrite.org, and implemented):
+  * residual(repo, fqn) -- after a move NO file should still name the old FQN. Both appliers'
+    misses fail this in seconds instead of after a six-minute compile.
+  * write_move_recipe() -- ChangeType, then ChangeTypeInStringLiteral, then FindAndReplace
+    over poms/XML/properties/META-INF services, then RemoveUnusedImports. Covers the two
+    defects NEITHER applier handled: pdfbox debugger-app/pom.xml's <mainClass> and tika's
+    tests asserting a moved class's FQN as a string.
+  * write_migration_recipe() -- the same move as a recipe for DOWNSTREAM projects, which is
+    how the OpenRewrite ecosystem handles a breaking change. Turns "moving Loader breaks
+    every dependent" into "and here is the recipe that fixes it".
