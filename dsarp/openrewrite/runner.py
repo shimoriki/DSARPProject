@@ -401,7 +401,16 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
     skips = ["-Drat.skip=true", "-Dcheckstyle.skip=true", "-Denforcer.skip=true",
              "-Dmaven.test.skip=true", "-Dspotless.check.skip=true", "-Dspotbugs.skip=true",
              "-Dpmd.skip=true", "-Danimal.sniffer.skip=true", "-Dlicense.skip=true",
-             "-Djacoco.skip=true", "-Dmaven.javadoc.skip=true"]
+             "-Djacoco.skip=true", "-Dmaven.javadoc.skip=true",
+             # The rewrite goal forks a lifecycle so the LST gets type attribution, and that
+             # fork runs the project's OWN bound plugins. tika binds
+             # maven-dependency-plugin:copy-dependencies, which wants its siblings as
+             # installed artifacts, so every tika candidate died at 120 seconds with
+             # "Artifact org.apache.tika:tika-httpclient-commons has not been packaged yet".
+             # Skipping that goal is the cheap fix; the expensive one would be to `install`
+             # the modified copy, which would put refactored jars in the shared local
+             # repository and quietly corrupt every later build of the original.
+             "-Dmdep.skip=true"]
     config = (Path(repo_path) / "rewrite.yml").resolve()
     cmd = [mvn, "-B", "-ntp", "-f", str(pom), f"{plugin}:{goal}",
            f"-Drewrite.activeRecipes={recipe_name}",

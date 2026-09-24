@@ -49,3 +49,21 @@ def test_text_references_warn_but_do_not_refuse():
 def test_a_skipped_test_run_cannot_accept():
     assert not decide(structural={"ok": True}, behavioural=behavioural(BASE_TESTS, None))[
         "accepted"]
+
+
+def test_an_edge_that_vanished_with_its_module_is_not_a_removal():
+    # compile_repo drops modules whose dependencies cannot be obtained. The edge is "gone"
+    # because nothing compiled it, which reads identically to a successful refactoring.
+    from dsarp.verification.gates import comparable
+    before = dict(_run([("a", "b", 3)]), classDirs=90, classes=2131)
+    after = dict(_run([]), classDirs=74, classes=1700)
+    assert not comparable(before, after)["ok"]
+    assert not structural(before, after, "a", "b")["ok"]
+    assert "failed to build" in structural(before, after, "a", "b")["why"]
+
+
+def test_losing_the_moved_class_itself_is_within_tolerance():
+    from dsarp.verification.gates import comparable
+    before = dict(_run([("a", "b", 3)]), classDirs=9, classes=1288)
+    after = dict(_run([]), classDirs=9, classes=1287)
+    assert comparable(before, after)["ok"]

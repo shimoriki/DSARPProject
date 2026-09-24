@@ -55,12 +55,40 @@ def after_apply(work_copy: Path, old_fqn: str) -> Dict[str, Any]:
                    "%d files still name %s after the move" % (r["count"], old_fqn)}
 
 
+def comparable(before: Dict[str, Any], after: Dict[str, Any],
+               tolerance: float = 0.02) -> Dict[str, Any]:
+    """Were the two snapshots taken over the same code?
+
+    An edge disappears when the classes carrying it are refactored away, and equally when they
+    were never compiled. compile_repo deliberately drops modules whose third-party
+    dependencies cannot be obtained, so an after-run that lost a module reports fewer
+    packages, fewer edges, and a targeted edge that is "gone". Arcan's importer has already
+    been caught making "no classes" and "no cycles" the same answer once; this is the same
+    failure with a different cause, so it is checked rather than assumed.
+
+    A small drop is expected and allowed: the moved class itself changes the counts, and a
+    refactoring can legitimately empty a package.
+    """
+    for key in ("classDirs", "classes"):
+        b, a = before.get(key), after.get(key)
+        if not b or a is None:
+            continue
+        if a < b * (1 - tolerance):
+            return {"ok": False,
+                    "why": "the after snapshot covers %s %s against %s before; a module "
+                           "probably failed to build" % (a, key, b)}
+    return {"ok": True}
+
+
 def structural(before: Dict[str, Any], after: Dict[str, Any],
                frm: str, to: str) -> Dict[str, Any]:
     """Did the targeted package edge go, and what did it cost? Delegates to the oracle."""
     v = edge_verdict(before, after, frm, to)
     if not v.get("answerable"):
         return {"ok": False, "why": v.get("why"), **v}
+    cov = comparable(before, after)
+    if not cov["ok"]:
+        return {"ok": False, "why": cov["why"], **v}
     return {"ok": bool(v["clean"]),
             "why": None if v["clean"] else
                    ("the edge is still there" if not v["edge_removed"]
