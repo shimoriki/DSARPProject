@@ -376,7 +376,7 @@ def run_recipe_gradle(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: 
         from ..refactoring.java_text import tidy_tree
         tidy = tidy_tree(repo_path, only=files or None,
                          moves=recipe_moves(repo_path))
-    return {"ok": ok, "tidy": tidy, "excluded_modules": excluded,
+    return {"ok": ok, "tidy": tidy,
             "status": _classify(out, proc.returncode, changed),
             "returncode": proc.returncode, "changed_files": files[:50],
             "recipe": recipe_name, "goal": task, "build_tool": "gradle",
@@ -475,7 +475,8 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
         from ..refactoring.java_text import tidy_tree
         tidy = tidy_tree(repo_path, only=files or None,
                          moves=recipe_moves(repo_path))
-    return {"ok": ok, "tidy": tidy, "status": _classify(out, proc.returncode, changed),
+    return {"ok": ok, "tidy": tidy, "excluded_modules": excluded,
+            "status": _classify(out, proc.returncode, changed),
             "returncode": proc.returncode, "changed_files": files[:50],
             "recipe": recipe_name, "goal": goal, "errors": _first_errors(out),
             "tail": out[-2500:], "mvn": mvn}
