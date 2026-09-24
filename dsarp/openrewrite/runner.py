@@ -16,13 +16,17 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-# rewrite-maven-plugin version (5.x). Overridable via config.
+# rewrite-maven-plugin version. Overridable via config.
 # 5.42.1 applied ChangeType to the class definition and to most references, and left
 # two pdfbox TEST files importing the old name -- so the move compiled everywhere
 # except where it did not, and the build failed. 6.46.1 rewrites them. Isolated by
 # running the identical recipe, repo, heap and flags under each version.
 DEFAULT_PLUGIN = "org.openrewrite.maven:rewrite-maven-plugin:6.46.1"
 RECIPE_NAME = "com.dsarp.ArchitecturalRefactoring"
+
+# "Failed to execute goal ... on project tika-pipes-http: ..." -- the module whose own bound
+# plugin cannot run inside the lifecycle the rewrite goal forks.
+_FAILED_PROJECT = re.compile(r"on project ([\w.\-]+):")
 
 # DSARP's own recipe module (tools/dsarp-recipes). Supplies the transformations stock
 # rewrite-java exposes only as visitors, plus field-visibility narrowing which it lacks
@@ -372,7 +376,8 @@ def run_recipe_gradle(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: 
         from ..refactoring.java_text import tidy_tree
         tidy = tidy_tree(repo_path, only=files or None,
                          moves=recipe_moves(repo_path))
-    return {"ok": ok, "tidy": tidy, "status": _classify(out, proc.returncode, changed),
+    return {"ok": ok, "tidy": tidy, "excluded_modules": excluded,
+            "status": _classify(out, proc.returncode, changed),
             "returncode": proc.returncode, "changed_files": files[:50],
             "recipe": recipe_name, "goal": task, "build_tool": "gradle",
             "errors": _first_errors(out), "tail": out[-2500:], "gradle": gw}
@@ -420,12 +425,42 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
     # classpath so rewrite.yml can name them alongside the stock ones.
     if custom_recipes_installed():
         cmd.append(f"-Drewrite.recipeArtifactCoordinates={CUSTOM_RECIPE_GAV}")
+    excluded: List[str] = []
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
                               env=_build_env())
+        out = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        # The rewrite goal forks a lifecycle so the LST gets type attribution, and the fork
+        # runs the project's own bound plugins. tika binds copy-dependencies, which wants its
+        # siblings as packaged jars (MDEP-187), so every tika candidate died at two minutes
+        # having rewritten nothing. -Dmdep.skip is not honoured; the module's plugin runs
+        # regardless. Drop the module that cannot run and retry, exactly as compile_repo
+        # already does for the same shape -- and record it, because the before and after
+        # snapshots are only comparable when they cover the same code. gates.comparable()
+        # is what notices if they do not.
+        from ..tools.arcan_runner import _NEEDS_PACKAGING_RE, _unbuildable_module
+        for _ in range(6):
+            if proc.returncode == 0:
+                break
+            art = _unbuildable_module(out) or (
+                _FAILED_PROJECT.search(out).group(1)
+                if _NEEDS_PACKAGING_RE.search(out) and _FAILED_PROJECT.search(out) else None)
+            if not art or art in excluded:
+                break
+            excluded.append(art)
+            # Maven honours only the LAST -pl, so the selector is rebuilt whole each round.
+            sel = ",".join("!:" + a for a in excluded)
+            if "-pl" in cmd:
+                k = cmd.index("-pl")
+                keep = [x for x in cmd[k + 1].split(",") if not x.startswith("!:")]
+                cmd[k + 1] = ",".join([*keep, sel]) if keep else sel
+            else:
+                cmd += ["-pl", sel, "-am"]
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
+                                  env=_build_env())
+            out = (proc.stdout or "") + "\n" + (proc.stderr or "")
     except subprocess.TimeoutExpired:
         return {"ok": False, "status": "timeout", "note": f"exceeded {timeout}s"}
-    out = (proc.stdout or "") + "\n" + (proc.stderr or "")
     if log_path:
         Path(log_path).parent.mkdir(parents=True, exist_ok=True)
         Path(log_path).write_text(out, encoding="utf-8")
