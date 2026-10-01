@@ -43,8 +43,8 @@ def _sides(edge: Dict[str, Any]) -> Tuple[List[str], List[str]]:
 
 def plan_moves(snapshot: Dict[str, Any], class_graph: Dict[str, Any],
                accept: Optional[Callable[[str, str, str], bool]] = None,
-               limit: int = 20) -> List[Dict[str, Any]]:
-    """Moves that remove an in-cycle edge and leave fewer package edges, best net first.
+               limit: int = 20, objective: str = "participation") -> List[Dict[str, Any]]:
+    """Moves worth making, best first, judged on how many packages stay inside a cycle.
 
     Only edges carried by a single class on one side are considered: with two carriers the
     move is a package merge in disguise, and the caller has no operation for it.
@@ -52,7 +52,22 @@ def plan_moves(snapshot: Dict[str, Any], class_graph: Dict[str, Any],
     `accept(class_fqn, from_package, to_package)` rejects what this repository cannot apply --
     a class with no source here, or a destination in a different Maven module, where the file
     would land where the build cannot see it.
+
+    `objective` decides what "worth making" means, and the default changed on evidence:
+
+      "participation" -- accept a move that takes packages out of a cycle, even if the edge
+          count rises. This is what the experts did. Arcelli Fontana's hand-refactored
+          noDependency tree for Commons Compress ADDED a package edge (108 -> 109) and lifted
+          ten packages out of the big cycle (28 -> 18, and the surviving cycle is a strict
+          subset of the old one). Ranking on edge count refused that change outright.
+      "edges" -- the original rule, net package edges only. Kept because every verified result
+          in this repository so far was produced under it, so it has to stay reproducible.
+
+    Neither objective is a proxy for "the smell is gone". No cycle has ever been dissolved here,
+    nor in either of the two hand-refactored trees, so both measure improvement rather than cure.
     """
+    before_edges = package_edges_after(class_graph, [], "__none__")
+    before_part = participation(before_edges) if before_edges is not None else None
     edges = snapshot.get("edges") or []
     cyclic = in_cycle_edges(snapshot)
     seen: Set[Tuple[str, str]] = set()
@@ -74,7 +89,20 @@ def plan_moves(snapshot: Dict[str, Any], class_graph: Dict[str, Any],
             eff = move_effect(class_graph, cls, dst)
             if not eff.get("ok"):
                 continue
-            if pair not in {tuple(x) for x in eff["removed"]} or eff["net"] >= 0:
+            if pair not in {tuple(x) for x in eff["removed"]}:
+                continue
+            d_part = None
+            if before_part is not None:
+                after = package_edges_after(class_graph, cls, dst)
+                d_part = participation(after)["participation"] - before_part["participation"]
+            if objective == "participation" and d_part is not None:
+                # Fewer packages in cycles, or the same number for fewer edges. A move that
+                # pushes another package into a cycle is refused however many edges it removes:
+                # across 130 plans from the three package-level planners, 118 raised
+                # participation, and splitting raised it while never once lowering it.
+                if not (d_part < 0 or (d_part == 0 and eff["net"] < 0)):
+                    continue
+            elif eff["net"] >= 0:
                 continue
             seen.add((cls, dst))
             out.append({"op": "moveClass", "type": cls, "toPackage": dst,
@@ -87,12 +115,19 @@ def plan_moves(snapshot: Dict[str, Any], class_graph: Dict[str, Any],
                         "predicted_removed": len(eff["removed"]),
                         "predicted_added": len(eff["added"]),
                         "predicted_net": eff["net"],
+                        "predicted_participation_delta": d_part,
+                        "objective": objective,
                         "predicted_added_edges": ["%s -> %s" % tuple(x) for x in eff["added"]],
                         # Stated before the run, so the check afterwards is a check.
                         "success_criterion":
                             "the bytecode edge %s -> %s no longer exists and at most %d new "
                             "package edges appear" % (pair[0], pair[1], len(eff["added"]))})
-    out.sort(key=lambda c: (c["predicted_net"], c["predicted_added"]))
+    if objective == "participation":
+        out.sort(key=lambda c: (c.get("predicted_participation_delta") if
+                                c.get("predicted_participation_delta") is not None else 0,
+                                c["predicted_net"], c["predicted_added"]))
+    else:
+        out.sort(key=lambda c: (c["predicted_net"], c["predicted_added"]))
     return out[:limit]
 
 
