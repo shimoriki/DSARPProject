@@ -50,9 +50,17 @@ def designite_jar() -> Optional[Path]:
 def measure_smells(repo: Path, out_dir: Path, timeout: int = 2400) -> Dict[str, Any]:
     """Designite's own counts, by category and by smell type.
 
-    Test smells are excluded from the headline: they describe test code, which no refactoring of
-    production source is trying to improve, and counting them would let a change look good by
-    touching nothing that matters.
+    Test code is excluded from the headline twice over, because Designite reports it twice over:
+
+      * the TestabilitySmells category, which is only about test code;
+      * findings in the other three categories that are *located in* a test source file. These
+        are easy to miss and there are 25 of them in commons-validator, a ninth of the total.
+        Counting them would let a change look good by touching nothing that ships, and
+        Unutilized Abstraction turns out to be 14 test classes to 3 production ones.
+
+    A finding is test code when its file sits under `/src/test/`, the Maven and Gradle
+    convention; all 25 in commons-validator do. `test_code` is reported rather than discarded,
+    so a reduction cannot quietly come from there.
     """
     jar = designite_jar()
     if not jar:
@@ -70,20 +78,38 @@ def measure_smells(repo: Path, out_dir: Path, timeout: int = 2400) -> Dict[str, 
         return {"ok": False, "why": "designite failed: %s" % str(exc)[:160]}
     by_type: Dict[str, int] = collections.Counter()
     by_cat: Dict[str, int] = {}
+    test_code = 0
     for name in CATEGORIES:
         f = out_dir / (name + ".csv")
         if not f.exists():
             continue
         rows = list(csv.DictReader(f.open(encoding="utf-8-sig")))
         by_cat[name] = len(rows)
-        if name != "TestabilitySmells":
-            by_type.update(r["Smell"] for r in rows if r.get("Smell"))
+        if name == "TestabilitySmells":
+            continue
+        for r in rows:
+            if not r.get("Smell"):
+                continue
+            if is_test_code(r.get("File")):
+                test_code += 1
+                continue
+            by_type[r["Smell"]] += 1
     if not by_cat:
         return {"ok": False, "why": "designite produced no CSVs",
                 "tail": (proc.stdout or "")[-500:]}
-    production = sum(v for k, v in by_cat.items() if k != "TestabilitySmells")
-    return {"ok": True, "production_smells": production, "by_category": by_cat,
+    return {"ok": True, "production_smells": sum(by_type.values()),
+            "test_code_smells": test_code, "by_category": by_cat,
             "by_type": dict(by_type)}
+
+
+def is_test_code(path: Optional[str]) -> bool:
+    """A finding in a test source root. `/src/test/` is the Maven and Gradle convention.
+
+    Deliberately not a match on `/test/` anywhere in the path: a production package genuinely
+    named `test` would be excluded by that, and the smell would vanish from the denominator
+    without anyone noticing.
+    """
+    return bool(path) and "/src/test/" in Path(path).as_posix()
 
 
 def deltas(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:

@@ -412,3 +412,74 @@ def retarget_type(text: str, old_fqn: str, new_fqn: str) -> str:
     if new_simple in names:
         text = _ensure_import(text, new_fqn)
     return text
+
+
+def code_only(lines: List[str]) -> List[str]:
+    """Each line with string literals, char literals and comments blanked out.
+
+    The returned list is the same length as the input, so an index into it still names the same
+    line of the file. Scanned character by character, like everything else here, which also means
+    an escaped quote inside a string cannot end the string early.
+
+    Written because brace-counting over raw Java is wrong in a way that is easy to miss: javadoc
+    carries `{@code}` and `{@link}` braces. Designite reports a method's start line as the line
+    its javadoc opens on, so balancing braces from there closes the method before its body is
+    read. That silently misreported a dozen literals as absent from code they sat in plainly.
+    """
+    out: List[str] = []
+    in_block = False
+    for raw in lines:
+        kept: List[str] = []
+        i, n = 0, len(raw)
+        in_string = in_char = False
+        while i < n:
+            c = raw[i]
+            nxt = raw[i + 1] if i + 1 < n else ""
+            if in_block:
+                if c == "*" and nxt == "/":
+                    in_block, i = False, i + 2
+                else:
+                    i += 1
+                continue
+            if in_string or in_char:
+                if c == "\\":
+                    i += 2            # an escape consumes the next character, whatever it is
+                    continue
+                if (in_string and c == '"') or (in_char and c == "'"):
+                    in_string = in_char = False
+                i += 1
+                continue
+            if c == "/" and nxt == "*":
+                in_block, i = True, i + 2
+                continue
+            if c == "/" and nxt == "/":
+                break                 # line comment: nothing after it is code
+            if c == '"':
+                in_string, i = True, i + 1
+                continue
+            if c == "'":
+                in_char, i = True, i + 1
+                continue
+            kept.append(c)
+            i += 1
+        out.append("".join(kept))
+    return out
+
+
+def body_range(lines: List[str], start: int, window: int = 200) -> Optional[Tuple[int, int]]:
+    """The 0-based line span of the member declared at 1-based `start`, by brace balance.
+
+    `start` may point at the member's javadoc rather than its signature -- Designite's
+    "Method start line no" does -- so the first brace at or after it is taken as the opening one.
+    Returns None when no brace is found within `window` lines.
+    """
+    code = code_only(lines[start - 1:start - 1 + window])
+    first = next((i for i, c in enumerate(code) if "{" in c), None)
+    if first is None:
+        return None
+    depth = 0
+    for i in range(first, len(code)):
+        depth += code[i].count("{") - code[i].count("}")
+        if depth <= 0:
+            return start - 1 + first, start - 1 + i
+    return start - 1 + first, start - 1 + len(code) - 1
