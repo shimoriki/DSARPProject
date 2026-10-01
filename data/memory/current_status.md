@@ -1307,3 +1307,49 @@ WHERE SWE-REFACTOR IS STILL USEFUL: standalone, as a method-level refactoring be
 compile/test/purity ground truth -- and as prior art for the validator, since its authors
 independently arrived at compile + test + purity, which is this project's gate order minus the
 structural oracle.
+
+################################################################################
+EXPERT MANUAL ARCHITECTURAL REFACTORING DOES NOT MINIMISE EDGE COUNT (2026-10-01)
+################################################################################
+Zenodo 18754704, Arcelli Fontana / Milanese / Refolli / Trubiani, "Impact of Refactoring
+Architectural Smells on Quality, Security, and Performance Metrics" (674 MB). Each of its
+projects ships THREE source trees: Init (upstream), noModularity and noDependency (both
+manually refactored by the authors to remove architectural smells). That is architecture-level
+ground truth with source on both sides -- the thing SWE-Refactor does not contain.
+
+Commons Compress ships precompiled classes for all three, so our own oracle measures them
+directly with no build:
+    version        packages classes  cycles      participation  package edges
+    Init              36      589    [3, 25]          28             108
+    noDependency      37      595    [3, 15]          18             109
+    noModularity      56      585    [9, 29]          38             162
+
+Init -> noDependency: 10 edges removed, 11 added => NET +1 EDGE. Cycles 2 -> 2, neither
+dissolved. But the 25-package cycle became a 15-package cycle, and the 15 is a strict SUBSET of
+the 25: ten packages were lifted out of it (archivers, .ar, .arj, .cpio, .dump, .jar, .sevenz,
+.tar, .zip, .utils). The experts extracted an `archivers.factory` package and inverted the
+dependencies through it.
+Init -> noModularity: 13 removed, 67 added, net +54; participation 28 -> 38. Worse by every
+measure our oracle has -- splitting packages adds edges by construction.
+
+WHAT THIS MEANS FOR OUR PLANNER, AND IT IS NOT SMALL:
+  * move_planner only proposes candidates with predicted_net < 0. The expert dependency
+    refactoring is net +1, so OUR PLANNER WOULD NEVER HAVE PROPOSED IT, and the gates would
+    not have accepted it.
+  * the objective experts pursue is CYCLE PARTICIPATION (28 -> 18, -36%), not edge count. Our
+    ranking minimises the wrong quantity.
+  * participation is computable from move_effect's after-graph by running Tarjan on it -- no
+    build, no new tool. The planner can be re-aimed at the measure experts demonstrably
+    optimise.
+  * their operation was "extract a NEW package and invert through it". DSARP has no operation
+    that creates a package.
+
+A PARTIAL REHABILITATION OF THE SMELL COUNT: participation is what Arcan's per-element counting
+approximates, and it tracked the experts' intent here. The earlier finding stands as stated --
+participation is a poor PREDICTION TARGET, dominated by outliers, and a fall in it is not
+evidence a cycle broke -- but as a DESCRIPTION of what an architectural refactoring achieved it
+is better than the edge count this project replaced it with.
+
+Sample: one project measured directly (compress); jeromq building for a second. Do not
+generalise from n=1 -- the mechanism (extract a package, invert through it, accept more edges to
+shrink a cycle) is what to carry forward, not the exact numbers.
