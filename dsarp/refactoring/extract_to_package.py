@@ -64,10 +64,15 @@ def methods_reaching(facts: SourceFacts, fqn: str, target_pkg: str,
         if not bodies:
             continue
         body = bodies[0]
-        if any(re.search(r"\b%s\b" % re.escape(n), body) for n in names):
-            out.append(m)
-            if len(out) >= limit:
-                break
+        if not any(re.search(r"\b%s\b" % re.escape(n), body) for n in names):
+            continue
+        if references_own_members(text, bodies, [m]):
+            # Something its own class declares, used unqualified. Fine in the same package,
+            # "cannot find symbol" from a new one.
+            continue
+        out.append(m)
+        if len(out) >= limit:
+            break
     return out
 
 
@@ -203,3 +208,43 @@ def _overloaded(text: str, method: str) -> bool:
     """
     pat = r"^[ \t]{1,8}public\s+static\b[^;{\n]*\b%s\s*\(" % re.escape(method)
     return len(re.findall(pat, text, re.M)) > 1
+
+
+# Member declarations at class-body indentation. At least one modifier keyword is REQUIRED:
+# without it the pattern matched statements, so `return new Engine(name);` registered "Engine"
+# as a declared member and every candidate was refused. The cost is that a package-private
+# member carries no modifier and is not guarded here; the compile gate still catches those.
+_MODS = (r"(?:(?:public|protected|private|static|final|synchronized|abstract|native"
+         r"|transient|volatile|default)\s+)+")
+_FIELD = re.compile(r"^[ \t]{1,8}" + _MODS + r"[\w<>\[\],.\s]+?"
+                    r"\b([A-Za-z_]\w*)\s*(?:=[^=]|;)", re.M)
+_METHOD = re.compile(r"^[ \t]{1,8}" + _MODS + r"[\w<>\[\],.\s]+?"
+                     r"\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*(?:throws [\w.,\s]+)?[{;]", re.M)
+
+
+def references_own_members(text: str, bodies: List[str], extracted: List[str]) -> List[str]:
+    """Names declared by the source class that the extracted bodies still use unqualified.
+
+    extract_class guards only PRIVATE and PROTECTED members, which is right for its own
+    destination: a helper in the same package keeps package-private and protected access, and
+    an unqualified reference to the class's own public constant still resolves.
+
+    Across a package boundary none of that holds. log4j2's LogManager extraction compiled its
+    call sites and failed inside the new file with "cannot find symbol", because the moved body
+    named something its own class declared and the new package cannot see unqualified.
+
+    Conservative on purpose: a local variable sharing a field's name is reported too, which
+    costs reach and never costs a broken build.
+    """
+    body = "\n".join(bodies)
+    declared = set(_FIELD.findall(text)) | set(_METHOD.findall(text))
+    declared -= set(extracted)
+    declared -= {"if", "for", "while", "switch", "catch", "return", "new", "this", "super",
+                 "try", "synchronized", "assert", "throw", "else", "do", "class"}
+    used = []
+    for name in sorted(declared):
+        if len(name) < 2:
+            continue
+        if re.search(r"(?<![.\w])%s\b" % re.escape(name), body):
+            used.append(name)
+    return used

@@ -194,3 +194,43 @@ def test_an_overloaded_method_is_not_extracted(tmp_path):
     m = methods_reaching(SourceFacts(repo), "com.app.web.Multi", "com.app.core")
     assert "make" not in m, "overloaded method selected; its sibling declaration will break"
     assert m == ["label"]
+
+
+OWN_MEMBER = """package com.app.web;
+
+import com.app.core.Engine;
+
+public class Uses {
+
+    public static final String PREFIX = "p:";
+
+    private static int tally;
+
+    public static Engine named(String n) {
+        tally++;
+        return new Engine(PREFIX + n);
+    }
+
+    public static Engine plain(String n) {
+        return new Engine(n);
+    }
+}
+"""
+
+
+def test_a_body_using_its_own_class_members_is_not_extracted(tmp_path):
+    """Fine in the same package, "cannot find symbol" from a new one.
+
+    log4j2's LogManager extraction compiled every call site and failed inside the new file,
+    because the moved body named something its own class declared.
+    """
+    from dsarp.refactoring.extract_to_package import references_own_members
+    repo = _repo(tmp_path)
+    (repo / "src/main/java/com/app/web/Uses.java").write_text(OWN_MEMBER, encoding="utf-8")
+    facts = SourceFacts(repo)
+    m = methods_reaching(facts, "com.app.web.Uses", "com.app.core")
+    # `named` touches PREFIX and tally; `plain` touches neither
+    assert m == ["plain"], m
+    hits = references_own_members(OWN_MEMBER, [OWN_MEMBER.split("public static Engine named")[1]
+                                               .split("public static Engine plain")[0]], ["named"])
+    assert "PREFIX" in hits and "tally" in hits

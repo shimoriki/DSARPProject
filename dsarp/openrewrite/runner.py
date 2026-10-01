@@ -385,8 +385,20 @@ def run_recipe_gradle(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: 
 
 def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = False,
                plugin: str = DEFAULT_PLUGIN, timeout: int = 2400,
-               log_path: Optional[Path] = None) -> Dict[str, Any]:
-    """Run the OpenRewrite recipe already written to <repo>/rewrite.yml."""
+               log_path: Optional[Path] = None,
+               modules: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Run the OpenRewrite recipe already written to <repo>/rewrite.yml.
+
+    `modules` restricts the reactor to those paths, which is the only way a large repository can
+    be rewritten on an ordinary machine: the plugin holds the LST for everything it parses in
+    memory at once, and tika's 127 modules exhausted a 3 GB heap after 564 seconds having
+    changed nothing. Rewriting a section at a time keeps the heap proportional to the section.
+
+    The cost is real and must not be hidden: references that live OUTSIDE the selected modules
+    are not rewritten, so a type moved in one section can leave the rest of the repository
+    naming the old one. That is what `residual()` exists to catch, and why a sectioned rewrite
+    is reported as partial.
+    """
     mvn = find_mvn()
     if not mvn:
         return {"ok": False, "status": "maven_not_found",
@@ -421,6 +433,12 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
            f"-Drewrite.activeRecipes={recipe_name}",
            f"-Drewrite.configLocation={config}",
            "-Drewrite.exportDatatables=false", *skips]
+    scoped = [m for m in (modules or []) if m and m != "."]
+    if scoped:
+        # -am brings the modules these depend on, so types they reference still resolve and the
+        # LST carries attribution. Without attribution every type-based recipe matches nothing
+        # and the build exits 0, which _classify reports as clean_no_types rather than success.
+        cmd += ["-pl", ",".join(scoped), "-am"]
     # Put DSARP's custom recipes (field visibility, extract interface) on the plugin's
     # classpath so rewrite.yml can name them alongside the stock ones.
     if custom_recipes_installed():
@@ -476,6 +494,7 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
         tidy = tidy_tree(repo_path, only=files or None,
                          moves=recipe_moves(repo_path))
     return {"ok": ok, "tidy": tidy, "excluded_modules": excluded,
+            "modules": scoped or None, "partial": bool(scoped),
             "status": _classify(out, proc.returncode, changed),
             "returncode": proc.returncode, "changed_files": files[:50],
             "recipe": recipe_name, "goal": goal, "errors": _first_errors(out),
