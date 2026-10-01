@@ -1384,3 +1384,43 @@ dependencies ... to this new class." Compress's archivers.factory is the same sh
 COMPOSITE: create package, create class, move the dependency-causing members, let references
 invert. Method movement is step three of four, which is why moving methods alone removed 0 of 5
 package edges in the SWE-Refactor experiment.
+
+################################################################################
+THE COMPOSITE EXTRACTION: APPLIES ALWAYS, COMPILES HALF, ACCEPTED NONE (2026-10-01)
+################################################################################
+dsarp/refactoring/extract_to_package.py implements the operation both expert refactorings in the
+Arcelli Fontana package perform: create a package, create a class in it, move the members that
+reach across the edge, let the references invert. Run on four repositories through the same gates
+as a planned move.
+
+THREE PRECONDITION DEFECTS FOUND BY RUNNING IT, ALL FIXED:
+  1. overloaded methods -- _cut_methods takes one declaration per name, so the sibling stayed and
+     the call-qualifying pass rewrote it: `public static boolean GenericValidatorSupport.isDate(`.
+     commons-validator isDate has 2 overloads, pdfbox Loader.loadPDF has 16.
+  2. own-class members used unqualified -- fine in the same package, "cannot find symbol" from a
+     new one (log4j2 LogManager). extract_class guards only private/protected, which is correct
+     for ITS destination and insufficient for this one.
+  3. my own guard refused locals -- `final FastHashMap results = ...` at eight spaces read as a
+     field, which took commons-validator from one candidate to none. Fields are matched at
+     class-body indentation now.
+
+FINAL RUN, ALL GUARDS ON, 4 CANDIDATES:
+    validator ValidatorUtils   compiled, EDGE REMOVED (1 removed, 2 added) -- but a NEW CYCLE
+                               appeared: [validator, routines, routines.checkdigit, util.support]
+    tika EmbeddedDocumentUtil  compiled, edge NOT removed, 2 removed and 20 ADDED
+    log4j2 AsyncLoggerConfig   compile failed (cause not yet diagnosed)
+    tika DetectHelper          compile failed (cause not yet diagnosed)
+    ACCEPTED: 0 of 4.
+
+WHAT THE TWO COMPILING RESULTS SAY, AND IT IS SPECIFIC:
+  * PLACEMENT is a decision we are not making. `<consumer>.support` sits inside the consumer's
+    subtree and therefore inherits its position in the cycle, which is how removing one edge
+    introduced a four-package cycle. Compress's archivers.factory worked because the root
+    depended on the factory and the factory on the leaves -- acyclic by placement.
+  * COST is a prediction we are not making. EmbeddedDocumentUtil's two extracted methods dragged
+    twenty new package edges with them. The bodies' type references are readable before
+    applying, so that candidate could have been refused for free instead of after a compile.
+
+Both are computable before anything is applied, in the same style as move_effect. Until they
+are, this operation is implemented and not yet useful: it applies 4/4, compiles 2/4, and is
+accepted 0/4.
