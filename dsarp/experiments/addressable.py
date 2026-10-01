@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ..refactoring.java_text import body_range
-from .smell_reduction import is_test_code
+from .smell_reduction import is_test_code, trial_limit_hit
 
 # Buckets, worst-to-best, so a sort puts what is actually actionable first.
 READY = "operation_validated"          # an operation here has removed this type, measured
@@ -51,13 +51,20 @@ NO_OPERATION = "no_operation"          # nothing in the toolkit touches it
 SUPPRESSIONS = ("checkstyle ignore", "checkstyle:off", "nopmd", "nosonar", "suppresswarnings",
                 "squid:", "@formatter:off")
 
-#: Smell types the stock catalogue measurably removed, with the measured yield -- not the number
-#: of findings of that type. The catalogue ran over every finding in the repository, so a finding
-#: of a type it only partly cleared is one it saw and did not fire on: the remainder is counted as
-#: having no working operation, not as reachable. Which individual rows were the lucky ones is not
-#: recoverable from the counts, so the budget below is spent in row order; the totals are the
-#: measurement, the row-level assignment within a type is arbitrary.
-MEASURED = {"Complex Conditional": 6, "Long Statement": 1}
+#: What the stock catalogue measurably removed, PER REPOSITORY. These are measurements, not rates:
+#: the yield for one repository says nothing about another, and an earlier version of this module
+#: applied commons-validator's numbers to every repository in the corpus, which made `ready` read
+#: as exactly 7 everywhere -- a constant that should have been the giveaway.
+#:
+#: The value is the measured yield, not the number of findings of that type. The catalogue ran over
+#: every finding in the repository, so one of a type it only partly cleared is one it saw and did
+#: not fire on: the remainder counts as having no working operation, not as reachable. Which
+#: individual rows were the lucky ones is not recoverable from the counts, so the budget is spent
+#: in row order; the totals are the measurement, the assignment within a type is arbitrary.
+MEASURED_BY_REPO: Dict[str, Dict[str, int]] = {
+    # CommonStaticAnalysis, 6 files changed, compiles, 1147 tests green, nothing introduced.
+    "apache-commons-validator": {"Complex Conditional": 6, "Long Statement": 1},
+}
 
 #: Cycle-shaped smells. Moves are validated -- 18 of 18 planned moves applied, built and removed
 #: their target edge -- but no cycle has ever been dissolved, so the smell improves, not clears.
@@ -169,16 +176,14 @@ def classify(row: Dict[str, str], src: str,
                 "why": "extraction is mechanical; a meaningful name for %s is not"
                        % (value or "the literal")}
 
-    if smell in MEASURED:
-        left = MEASURED[smell] if budget is None else budget.get(smell, 0)
+    if budget and smell in budget:
+        left = budget[smell]
         if left > 0:
-            if budget is not None:
-                budget[smell] = left - 1
-            return {"bucket": READY, "why": "stock static analysis removed %d of these, measured"
-                                            % MEASURED[smell]}
+            budget[smell] = left - 1
+            return {"bucket": READY,
+                    "why": "stock static analysis removed this type here, measured"}
         return {"bucket": NO_OPERATION,
-                "why": "the stock catalogue ran over this one and did not change it; only %d of "
-                       "this type were removed" % MEASURED[smell]}
+                "why": "the stock catalogue ran over this one and did not change it"}
     if smell in IMPROVABLE_NOT_CURABLE:
         return {"bucket": NEEDS_MEANING,
                 "why": "moves are validated but no cycle has ever been dissolved here, so this "
@@ -186,9 +191,23 @@ def classify(row: Dict[str, str], src: str,
     return {"bucket": NO_OPERATION, "why": "no operation in the toolkit targets this type"}
 
 
-def analyse(designite_dir: Path) -> Dict[str, Any]:
-    """Bucket every production finding in a Designite output directory."""
+def analyse(designite_dir: Path, repo: Optional[str] = None) -> Dict[str, Any]:
+    """Bucket every production finding in a Designite output directory.
+
+    `repo` names the repository so its own measured recipe yield is used. Without it no finding is
+    called `operation_validated`, because nothing has been measured here: a yield from another
+    repository is not evidence about this one.
+
+    Refuses a directory the trial edition of Designite declined to report on. Those CSVs hold
+    their header row and nothing else, so every count reads as a clean zero.
+    """
     designite_dir = Path(designite_dir)
+    capped = trial_limit_hit(designite_dir)
+    if capped:
+        return {"ok": False, "trial_limited": True, "production_smells": 0,
+                "why": "DesigniteJava trial limit: %s" % capped,
+                "buckets": {}, "by_type": {}, "reasons": {},
+                "reachable": 0, "reachable_pct": None, "test_code_smells": 0}
     rows: List[Dict[str, str]] = []
     for name in ("ImplementationSmells", "DesignSmells", "ArchitectureSmells"):
         f = designite_dir / (name + ".csv")
@@ -196,7 +215,7 @@ def analyse(designite_dir: Path) -> Dict[str, Any]:
             rows += list(csv.DictReader(f.open(encoding="utf-8-sig")))
 
     cache: Dict[str, str] = {}
-    budget = dict(MEASURED)
+    budget = dict(MEASURED_BY_REPO.get(repo or "", {}))
     buckets: Dict[str, int] = collections.Counter()
     per_type: Dict[str, Dict[str, int]] = collections.defaultdict(collections.Counter)
     reasons: Dict[str, Dict[str, int]] = collections.defaultdict(collections.Counter)
@@ -215,7 +234,7 @@ def analyse(designite_dir: Path) -> Dict[str, Any]:
         per_type[r["Smell"]][verdict["bucket"]] += 1
         reasons[r["Smell"]][verdict["why"]] += 1
     production = sum(buckets.values())
-    return {"production_smells": production, "test_code_smells": test_code,
+    return {"ok": True, "production_smells": production, "test_code_smells": test_code,
             "buckets": dict(buckets), "by_type": {k: dict(v) for k, v in per_type.items()},
             "reasons": {k: dict(v) for k, v in reasons.items()},
             "adjudicated": buckets[ADJUDICATED],
@@ -224,8 +243,10 @@ def analyse(designite_dir: Path) -> Dict[str, Any]:
                                    / production, 1) if production else None}
 
 
-def report(designite_dir: Path) -> str:
-    a = analyse(designite_dir)
+def report(designite_dir: Path, repo: Optional[str] = None) -> str:
+    a = analyse(designite_dir, repo)
+    if not a.get("ok"):
+        return "no measurement: %s" % a.get("why")
     lines = ["%d production findings (%d more sit in test source and are excluded)"
              % (a["production_smells"], a["test_code_smells"]), "",
              "%-36s %5s %5s %5s %5s %5s"
@@ -252,4 +273,4 @@ def report(designite_dir: Path) -> str:
 
 if __name__ == "__main__":
     import sys
-    print(report(Path(sys.argv[1])))
+    print(report(Path(sys.argv[1]), sys.argv[2] if len(sys.argv) > 2 else None))

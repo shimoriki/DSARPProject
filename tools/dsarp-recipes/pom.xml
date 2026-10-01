@@ -48,6 +48,15 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.13.0</version>
+        <configuration>
+          <!-- OpenRewrite matches a declarative recipe's options to CONSTRUCTOR PARAMETER NAMES.
+               javac discards those by default, so the reflected names are arg0, arg1, arg2, every
+               option binds to nothing, and the plugin reports each one as "is required" while the
+               recipe's own descriptor still lists them correctly - which makes it look like a YAML
+               problem. Without this flag none of the recipes in this module has ever received an
+               option, including the three the AI catalogue advertises. -->
+          <parameters>true</parameters>
+        </configuration>
       </plugin>
     </plugins>
   </build>
