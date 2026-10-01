@@ -1266,3 +1266,44 @@ WHAT THE RESEARCH ADDED (docs.openrewrite.org, and implemented):
   * write_migration_recipe() -- the same move as a recipe for DOWNSTREAM projects, which is
     how the OpenRewrite ecosystem handles a breaking change. Turns "moving Loader breaks
     every dependent" into "and here is the recipe that fixes it".
+
+################################################################################
+SWE-REFACTOR CANNOT EVALUATE THIS PROJECT'S PLANNER (2026-10-01)
+################################################################################
+Zenodo 22001546, extracted (216 zip entries carry ':' in model names like
+deepseek-coder-v2:16b, which Windows refuses -- sanitise the names, skip the 81 bundled jars).
+
+WHAT IT CONTAINS: 703 records over 10 Java projects (checkstyle, commons-io, commons-lang,
+hibernate-orm, hibernate-search, javaparser, junit4, junit5, mockito, pmd), every one verified
+by compiling, running tests and checking purity. Entirely METHOD-level:
+    Extract Method 359 | Move Method 146 | Extract And Move Method 133
+    Inline Method 35 | Move And Rename Method 16 | Move And Inline Method 14
+    Move Class: 0.  Extract Interface: 0.  Package-level: 0.
+(The Zenodo record says 1,099; 703 is what the per-project pure_refactoring_data files hold.)
+
+131 of the move records cross a package boundary: checkstyle 50, pmd 32, hibernate-search 22,
+commons-io 11, javaparser 9, hibernate-orm 7. All 131 compiled, passed tests, flagged pure.
+
+THE EXPERIMENT (dsarp experiments + git worktrees off the deepened commons-io clone; the shared
+clone's working tree was never touched): build the parent and the commit of each benchmark
+commit, snapshot package edges with ArchUnit at both, diff.
+    commits judged               5 of 5
+    targeted edge existed before 5
+    targeted edge REMOVED        0
+    weights: filefilter->file 10->17, output->root 12->16, input->root 54->54,
+             input->root 81->81, root->function 36->36 (that last one moved SEVEN methods)
+
+WHY, AND IT IS STRUCTURAL: developers move methods across edges carrying 36 to 81 dependencies.
+This project's planner deliberately targets edges carried by ONE class. The two populations are
+close to disjoint, so SWE-Refactor is not ground truth for edge elimination -- not even for
+Move Method, and not because the benchmark is weak.
+
+CORRECTION TO THE EARLIER PLAN: "implement Move Method because it is the commonest developer
+refactoring" does not follow. It is the commonest, and in this evidence it does not remove
+package edges. Move Method would widen reach over a population where the success criterion
+does not apply. Decide what Move Method is FOR before building it.
+
+WHERE SWE-REFACTOR IS STILL USEFUL: standalone, as a method-level refactoring benchmark with
+compile/test/purity ground truth -- and as prior art for the validator, since its authors
+independently arrived at compile + test + purity, which is this project's gate order minus the
+structural oracle.
