@@ -401,6 +401,38 @@ def cmd_demo(cfg: Config, args) -> int:
     return 1
 
 
+def cmd_measure_edges(cfg: Config, args) -> int:
+    """Plan edge-eliminating moves, apply them, and judge them with the bytecode oracle.
+
+    The experiment behind the project's only verified refactoring numbers. It was a script in a
+    temporary directory until now, which meant the central result could not be reproduced by
+    anyone -- including on this machine, once the directory was cleared.
+    """
+    from .experiments import edge_measure
+    from .repositories.manager import RepositoryManager
+    repo_path = Path(args.path) if args.path else RepositoryManager(cfg.data_dir).path_for(args.repo)
+    if not repo_path.exists():
+        print(f"[measure-edges] repo not found at {repo_path}; clone or --path it.",
+              file=sys.stderr)
+        return 1
+    out_dir = Path(args.out) if args.out else cfg.data_dir / "outputs" / "edge_measure" / args.repo
+    # Several of these repositories fail tests before anything is changed (log4j2: 6 failures,
+    # 29 errors), so "no worse than this baseline" is the only statement that can be made.
+    base_tests_file = cfg.data_dir / "outputs" / "outcomes" / args.repo / "_baseline" / "tests.json"
+    baseline_tests = read_json(base_tests_file, default={}) or {}
+    if args.tests and not baseline_tests:
+        print(f"[measure-edges] no test baseline at {base_tests_file}; a suite can only be "
+              f"compared against one. Re-run with --no-tests or record a baseline first.",
+              file=sys.stderr)
+        return 1
+    rows = edge_measure.run(repo_path, out_dir, limit=args.limit,
+                            run_the_tests=args.tests, baseline_tests=baseline_tests)
+    accepted = [r for r in rows if (r.get("verdict") or {}).get("accepted")]
+    print(f"[measure-edges] {len(rows)} candidates, {len(accepted)} accepted; rows in "
+          f"{out_dir / 'rows.jsonl'}")
+    return 0
+
+
 def cmd_verify_effect(cfg: Config, args) -> int:
     """Closed loop: for each suggestion, apply the refactoring on a copy and re-measure smells."""
     from .verification.effect_checker import verify_suggestion, snapshot_smells
@@ -807,6 +839,15 @@ def build_parser(default_profile: str) -> argparse.ArgumentParser:
     dms.add_parser("full").set_defaults(func=cmd_demo)
     dms.add_parser("plan").set_defaults(func=cmd_demo)
     dsub = dms.add_parser("submit"); dsub.add_argument("--yes", action="store_true"); dsub.set_defaults(func=cmd_demo)
+
+    me = sub.add_parser("measure-edges")
+    me.add_argument("--repo", required=True); me.add_argument("--path")
+    me.add_argument("--out")
+    me.add_argument("--limit", type=int, default=6,
+                    help="how many planned moves to apply and judge")
+    me.add_argument("--no-tests", dest="tests", action="store_false",
+                    help="skip the test run; structural gates only, so nothing can be accepted")
+    me.set_defaults(func=cmd_measure_edges, tests=True)
 
     ve = sub.add_parser("verify-effect")
     ve.add_argument("--repo", required=True); ve.add_argument("--path")
