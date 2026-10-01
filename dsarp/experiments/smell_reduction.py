@@ -70,12 +70,25 @@ def measure_smells(repo: Path, out_dir: Path, timeout: int = 2400) -> Dict[str, 
         return {"ok": False, "why": "Designite needs a JDK 22 or newer; none installed"}
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    # Clear the previous run's output first. Designite writes a timestamped log per run, so a
+    # stale one would trip the trial-limit guard for a repository that is actually fine; and a
+    # stale CSV would be read as this run's result if the jar wrote nothing.
+    for old in list(out_dir.glob("DesigniteLog*.txt")) + list(out_dir.glob("*.csv")):
+        old.unlink(missing_ok=True)
+    cmd = [str(Path(jdk) / "bin" / "java"), "-jar", str(jar), "-i", str(repo), "-o", str(out_dir)]
+    key = designite_key()
+    if key:
+        cmd += ["-k", key]
     try:
-        proc = subprocess.run([str(Path(jdk) / "bin" / "java"), "-jar", str(jar),
-                               "-i", str(repo), "-o", str(out_dir)],
-                              capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except (subprocess.TimeoutExpired, OSError) as exc:
         return {"ok": False, "why": "designite failed: %s" % str(exc)[:160]}
+    capped = trial_limit_hit(out_dir)
+    if capped:
+        # Loud, because the failure mode is silent: the CSVs are written with their headers and
+        # no rows, so every count reads as a clean zero and a "reduction" to zero looks like a win.
+        return {"ok": False, "why": "DesigniteJava trial limit: %s" % capped,
+                "trial_limited": True}
     by_type: Dict[str, int] = collections.Counter()
     by_cat: Dict[str, int] = {}
     test_code = 0
@@ -102,6 +115,51 @@ def measure_smells(repo: Path, out_dir: Path, timeout: int = 2400) -> Dict[str, 
             "by_type": dict(by_type)}
 
 
+def designite_key() -> Optional[str]:
+    """The DesigniteJava licence key, if one is available to this machine.
+
+    Read from `DESIGNITE_KEY` or from a `designite.key` file beside the jar. Deliberately not
+    stored in the repository: it is a licence credential, and `tools/` is not tracked.
+
+    Without a key the jar runs as the trial edition, which analyses at most 50,000 lines and above
+    that writes empty CSVs while exiting zero -- see `trial_limit_hit`. Nothing is registered on
+    this machine: `-r/--Register` leaves no entry under HKCU\\Software\\JavaSoft\\Prefs here, and
+    every run from `tools/DesigniteJava.jar` has logged the trial message.
+    """
+    import os
+    env = os.environ.get("DESIGNITE_KEY")
+    if env and env.strip():
+        return env.strip()
+    jar = designite_jar()
+    if jar:
+        f = jar.parent / "designite.key"
+        if f.exists():
+            text = f.read_text(encoding="utf-8").strip()
+            if text:
+                return text.splitlines()[0].strip()
+    return None
+
+
+def trial_limit_hit(out_dir: Path) -> Optional[str]:
+    """The trial-edition message, if DesigniteJava refused to report on this repository.
+
+    The jar here is the trial edition, which analyses at most 50,000 lines and above that writes
+    every CSV with its header row and nothing else. Nothing fails, no exit code changes: the
+    repository simply appears to have no smells at all. apache-commons-io came back as a clean
+    zero that way, and so would any of the larger repositories in the corpus.
+
+    Only repositories under the cap can be measured with this jar. That is most of Apache Commons
+    and none of pdfbox, log4j2, maven, tika, struts or spring.
+    """
+    for log in sorted(Path(out_dir).glob("DesigniteLog*.txt")):
+        text = log.read_text(encoding="utf-8", errors="ignore")
+        for line in text.splitlines():
+            low = line.lower()
+            if "trial version" in low or "crossed the threshold" in low:
+                return line.split(": ", 1)[-1].strip()[:200]
+    return None
+
+
 def is_test_code(path: Optional[str]) -> bool:
     """A finding in a test source root. `/src/test/` is the Maven and Gradle convention.
 
@@ -126,10 +184,11 @@ def deltas(before: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:
             "introduced": sum(v for v in per.values() if v > 0)}
 
 
-def apply_recipes(repo: Path, recipe_names: List[str], out_dir: Path,
+def apply_recipes(repo: Path, recipe_names: List[Any], out_dir: Path,
                   before: Optional[Dict[str, Any]] = None,
                   baseline_tests: Optional[Dict[str, Any]] = None,
-                  run_the_tests: bool = True) -> Dict[str, Any]:
+                  run_the_tests: bool = True,
+                  recipe_artifacts: Optional[List[str]] = None) -> Dict[str, Any]:
     """Run OpenRewrite recipes on a copy and report what Designite says afterwards.
 
     Stock recipes are named directly rather than wrapped in a generated rewrite.yml: the plugin
@@ -145,11 +204,12 @@ def apply_recipes(repo: Path, recipe_names: List[str], out_dir: Path,
     work = out_dir / "work"
     shutil.rmtree(work, ignore_errors=True)
     copy = _copy_repo(repo, work / "copy")
-    row: Dict[str, Any] = {"recipes": recipe_names,
+    row: Dict[str, Any] = {"recipes": [r if isinstance(r, str) else list(r)
+                                   for r in recipe_names],
                            "before_production_smells": before["production_smells"]}
     t0 = time.time()
     try:
-        res = _run_stock(copy, recipe_names, work / "rewrite.log")
+        res = _run_stock(copy, recipe_names, work / "rewrite.log", recipe_artifacts)
         row["rewrite_status"] = res.get("status")
         row["files_changed"] = len(res.get("changed_files") or [])
         if res.get("status") != "changed":
@@ -183,15 +243,37 @@ def apply_recipes(repo: Path, recipe_names: List[str], out_dir: Path,
         shutil.rmtree(work / "copy", ignore_errors=True)
 
 
-def _run_stock(copy: Path, recipe_names: List[str], log_path: Path) -> Dict[str, Any]:
-    """rewrite:run with stock recipes, no generated configuration."""
-    (copy / "rewrite.yml").write_text(
-        "---\ntype: specs.openrewrite.org/v1beta/recipe\n"
-        "name: com.dsarp.SmellReduction\ndisplayName: DSARP smell reduction\n"
-        "description: Stock static-analysis recipes selected by measured Designite smell type.\n"
-        "recipeList:\n" + "".join("  - %s\n" % r for r in recipe_names), encoding="utf-8")
+def _run_stock(copy: Path, recipes: List[Any], log_path: Path,
+               artifacts: Optional[List[str]] = None) -> Dict[str, Any]:
+    """rewrite:run over a generated recipe list.
+
+    An entry is either a bare recipe name, or `(name, {option: value})` for one that takes options
+    -- which every useful custom recipe does, since it has to be told what to act on.
+    """
+    lines = ["---", "type: specs.openrewrite.org/v1beta/recipe",
+             "name: com.dsarp.SmellReduction", "displayName: DSARP smell reduction",
+             "description: Recipes selected by measured Designite smell type.", "recipeList:"]
+    for entry in recipes:
+        if isinstance(entry, str):
+            lines.append("  - %s" % entry)
+            continue
+        name, options = entry
+        lines.append("  - %s:" % name)
+        for k, v in options.items():
+            lines.append("      %s: %s" % (k, _yaml_scalar(v)))
+    (copy / "rewrite.yml").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return run_recipe(copy, recipe_name="com.dsarp.SmellReduction", log_path=log_path,
-                      recipe_artifacts=[STATIC_ANALYSIS])
+                      recipe_artifacts=artifacts or [STATIC_ANALYSIS])
+
+
+def _yaml_scalar(v: Any) -> str:
+    """Quote a value when YAML would otherwise read it as something other than a string.
+
+    A literal option carries values like `13` and `0x7F`; unquoted, the first becomes an int and
+    the second may become one too, and the recipe compares them as source text.
+    """
+    s = str(v)
+    return s if (s and s[0].isalpha() and all(c.isalnum() or c in "._$" for c in s)) else '"%s"' % s
 
 
 def _write_patch(original: Path, copy: Path, out_dir: Path, recipes: List[str]) -> Path:
@@ -208,6 +290,7 @@ def _write_patch(original: Path, copy: Path, out_dir: Path, recipes: List[str]) 
             chunks.append("".join(difflib.unified_diff(old, new, fromfile="a/" + rel,
                                                        tofile="b/" + rel, n=3)))
     out_dir.mkdir(parents=True, exist_ok=True)
-    p = out_dir / ("smells__%s.patch" % "_".join(r.rsplit(".", 1)[-1] for r in recipes)[:80])
+    names = [(r if isinstance(r, str) else r[0]) for r in recipes]
+    p = out_dir / ("smells__%s.patch" % "_".join(n.rsplit(".", 1)[-1] for n in names)[:80])
     p.write_text("# recipes: %s\n" % ", ".join(recipes) + "".join(chunks), encoding="utf-8")
     return p

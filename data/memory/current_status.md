@@ -1460,3 +1460,86 @@ God Component -- while making the dependency graph worse. Both metrics are real 
 disagree, which is the same conflict the compress noModularity tree shows. Until that is
 resolved, "we address God Component" and "we improve the architecture" cannot both be claimed of
 this operation, and the 46% of findings it covers are not evidence of improvement.
+
+## Designite smell reduction: the measured ceiling, and a measurement that was void
+
+GOAL. "Most smells Designite reports, refactored." Pursued, measured, and the honest answer is
+that the majority is not reachable on the repositories here. The reasons are measurable, so the
+target is now a number rather than an aspiration.
+
+### DesigniteJava was running UNLICENSED, and failed silently
+
+`tools/DesigniteJava.jar` logs: "The trial version allows you to analyze an application lesser
+than 50000 lines of code in size ... detailed results are disabled." Above the cap it writes every
+CSV with its header row and **no rows**, and exits zero. apache-commons-io came back as a clean
+zero that way, as did commons-lang, commons-collections and opennlp.
+
+Every Designite number for a repository over 50k lines is therefore void, and the harness would
+have reported those zeros as fact. `measure_smells` now refuses such a run (`trial_limit_hit`),
+clears stale output first so an old log cannot trip the guard, and passes `-k` when a key is
+available via `DESIGNITE_KEY` or `tools/designite.key`. Nothing is registered on this machine --
+no entry under `HKCU\Software\JavaSoft\Prefs` -- and there is only one Designite jar on disk.
+
+The unrestricted outputs in `~/Downloads/dsarp repos/Designite` (log4j2 21652 implementation
+smells, struts 5630, tika 8175) were produced on a DIFFERENT machine: their File column reads
+`/Users/surabhilone/Desktop/Thesis/...`. They are provided third-party evidence, not evidence that
+this machine's jar is licensed, and their paths do not resolve here, so the source-dependent
+analysis below cannot be run on them.
+
+MEASURABLE SET with the current licence: commons-validator, -cli, -csv, -email, -codec, -text.
+Not pdfbox, log4j2, maven, tika, struts, spring, lucene, solr, collections, io, lang, opennlp.
+
+### Two counting errors in the harness, both inflating the target
+
+  * 25 of the 226 "production" findings sat in **test source**. Designite reports test code in the
+    Implementation and Design categories, not only in TestabilitySmells. Unutilized Abstraction is
+    14 test classes to 3 production ones. The real production figure for commons-validator is 201.
+  * Designite reports a method as starting on its **javadoc** line, and javadoc carries `{@code}`
+    braces, so balancing braces from there closes the method before its body is read. That made 12
+    literals look absent from code they sat in plainly. Fixed with `java_text.code_only` and
+    `java_text.body_range`, scanned character by character; tests in
+    `tests/test_java_text_code_only.py`.
+
+### What is reachable: 17% of commons-validator, 0.3% validated across six repositories
+
+`dsarp/experiments/addressable.py` sorts every production finding into one of five buckets, each
+verdict citing a measured result or a property computed from the source.
+
+commons-validator, 201 production findings: 7 validated, 27 need a name or a design decision,
+27 blocked by the published API, 49 the maintainers kept on purpose, 91 no operation. 34 = 17%.
+
+Six measurable repositories, 2085 production findings:
+  validated by a measured run        7   0.3%
+  mechanical, needs a name/design 1020  48.9%   <- 853 of these are commons-codec
+  blocked: published API           119   5.7%
+  maintainers kept on purpose       88   4.2%
+  no operation in the toolkit      851  40.8%
+
+### Why the biggest target was not a target
+
+Magic Number is 68 of 201, the largest single type. Of those, **49 sit in methods the maintainers
+marked `// CHECKSTYLE IGNORE MagicNumber`** -- they considered those literals and decided to keep
+them, in writing, in the code. 14 more are 0, 1 or 2, where the digit is plainer than any name.
+Seven were genuinely open. A recipe that emitted `CONST_13` would clear the detector's count while
+leaving every site it touched worse, so `ReplaceMagicNumberWithConstant` takes the name as a
+required option and will not derive one from the value.
+
+Deficient Encapsulation is 20 production findings and **none** are reachable: 64 of the 86 exposed
+fields are `public static final` constants, the published API, and exactly one of 23 flagged
+classes exposes nothing but mutable state. "Unutilized" public types are used by consumers, not
+unused; Designite's own description hedges with "please ignore".
+
+### The stock catalogue is exhausted at 3%
+
+`CommonStaticAnalysis`, all 216 recipe classes in rewrite-static-analysis 2.41.1, on
+commons-validator: 6 files changed, compiles, **201 -> 194**, Complex Conditional -6, Long
+Statement -1, nothing introduced, 1147 tests green. Three hand-picked recipes got 6 of those 7.
+Since the catalogue ran over every finding, a finding of a type it only partly cleared is one it
+saw and did not fire on -- the remainder is counted as having no operation, not as reachable.
+
+### Package splitting: 0 of 4, final
+
+log4j2, God Component splits, both metrics: appender compiled but Arcan +1, edges +2, tests FAILED;
+selector and manager failed to compile; formatter compiled but edges +4, participation +1, tests
+FAILED. None accepted. With the earlier prediction over all findings (0 better, 77 worse) and the
+first measured split, package splitting is closed.
