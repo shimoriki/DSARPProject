@@ -1646,3 +1646,17 @@ unrestricted outputs in ~/Downloads/dsarp repos/Designite were produced on anoth
 (`/Users/surabhilone/...`). `measure_smells` passes `-k` when `DESIGNITE_KEY` or
 `tools/designite.key` supplies one; until then pdfbox, log4j2, maven, tika, struts, spring,
 collections, io, lang and opennlp cannot be measured at all.
+
+### Combined run, and the arithmetic of why it was worth measuring
+
+Both arms in one tree on commons-validator: **201 -> 190, -11**, compiles, 1147 tests green,
+nothing introduced. By type: Complex Conditional -6, Magic Number -5, Long Statement net 0.
+
+That net 0 is the point. Stock alone was Complex Conditional -6 and Long Statement -1; the constants
+alone were Magic Number -5 and Long Statement +1. The two Long Statement effects cancelled, so the
+total happens to equal the sum -- but only by coincidence, and the run that assumed it would have
+been right for the wrong reason.
+
+Of the 11, five are the withdrawn magic numbers in the blanket-suppressed deprecated class. The
+legitimate validated reduction on commons-validator is therefore **7 of 201 = 3.5%**, from the stock
+catalogue alone (201 -> 194).
