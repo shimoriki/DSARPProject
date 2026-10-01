@@ -1424,3 +1424,39 @@ WHAT THE TWO COMPILING RESULTS SAY, AND IT IS SPECIFIC:
 Both are computable before anything is applied, in the same style as move_effect. Until they
 are, this operation is implemented and not yet useful: it applies 4/4, compiles 2/4, and is
 accepted 0/4.
+
+################################################################################
+PACKAGE SPLITTING IS COUNTERPRODUCTIVE: 77 OF 78 PREDICTED WORSE (2026-10-02)
+################################################################################
+Coverage audit first, from the code rather than the docs. STRATEGIES maps 17 smell types: 8 have
+a planner, 7 are declared not automatable, cyclic is handled by the loop. Across 20 repositories
+the normalized findings are 2,275 and ALL of them are architecture smells:
+    Cyclic Dependency 1120 (49%) | Hub-Like 628 (28%) | God Component 329 (14%)
+    Feature Concentration 80 | Scattered Functionality 62 | Unstable Dependency 54
+So nominal coverage is ~99.8%. The gap is not coverage, it is VERIFIED EFFECTIVENESS: only
+Cyclic has ever been measured against the bytecode oracle.
+
+Hub-Like + God Component + Feature Concentration = 1,037 findings (46%) all dispatch to
+plan_god_component, which SPLITS a package: classes sharing a name stem move to a new
+sub-package. That is the operation Arcelli Fontana's noModularity trees perform by hand, and
+Commons Compress's measured 108 -> 162 package edges and 28 -> 38 participation.
+
+PREDICTED FOR EVERY APPLICABLE SPLIT (no builds; a split is a group move, so move_effect's
+relabelling gives the exact result, and that arithmetic was validated at exact-on-14-of-18 and
+within-one-on-18-of-18 for added edges):
+    78 applicable, 99 refused by the planner's own preconditions
+    edges:         77 of 78 INCREASE, median +13, max +34; one tika case -89
+    participation: 61 increase, 17 unchanged, ZERO decrease
+    verdict:       0 better, 77 worse, 1 neutral
+No split is predicted to reduce cycle participation anywhere, in any repository.
+
+METHOD NOTE: the first run took `before` from the ArchUnit snapshot and `after` from the jdeps
+graph, which charges any disagreement between the importers to the refactoring. Fixed to one
+source; the direction did not change (78 worse -> 77 worse + 1 neutral). By-product: jdeps and
+ArchUnit agree on 97% of pdfbox's package edges, 91% of log4j2's, 93% of tika's.
+
+WHAT THIS MEANS. The operation reduces the smell it targets -- a smaller package is no longer a
+God Component -- while making the dependency graph worse. Both metrics are real and they
+disagree, which is the same conflict the compress noModularity tree shows. Until that is
+resolved, "we address God Component" and "we improve the architecture" cannot both be claimed of
+this operation, and the 46% of findings it covers are not evidence of improvement.

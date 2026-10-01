@@ -94,3 +94,41 @@ def plan_moves(snapshot: Dict[str, Any], class_graph: Dict[str, Any],
                             "package edges appear" % (pair[0], pair[1], len(eff["added"]))})
     out.sort(key=lambda c: (c["predicted_net"], c["predicted_added"]))
     return out[:limit]
+
+
+def package_edges_after(class_graph: Dict[str, Any], group, to_package: str):
+    """The package edge set that results from relabelling `group` into `to_package`.
+
+    The same relabelling move_effect uses, returned whole rather than as a diff, so a caller can
+    ask structural questions of the result -- which cycles survive, how many packages still
+    participate in one -- without compiling anything.
+    """
+    if not class_graph.get("ok"):
+        return None
+    members = {group} if isinstance(group, str) else set(group)
+    pkg = lambda c: c.rsplit(".", 1)[0]
+    moved = lambda c: (to_package if any(c == m or c.startswith(m + "$") for m in members)
+                       else pkg(c))
+    out = set()
+    for a, b in class_graph["edges"]:
+        if moved(a) != moved(b):
+            out.add((moved(a), moved(b)))
+    return out
+
+
+def participation(edges) -> Dict[str, Any]:
+    """Packages that sit in a cycle, and the size of each cycle.
+
+    This is the quantity Arcan's Cyclic Dependency count approximates and the one the expert
+    refactoring of Commons Compress actually moved: 28 packages in cycles before, 18 after, while
+    the edge count went UP by one. A planner that ranks on edge count alone cannot see that, and
+    would have refused the change.
+    """
+    import networkx as nx
+    g = nx.DiGraph()
+    g.add_edges_from(edges or [])
+    comps = [c for c in nx.strongly_connected_components(g) if len(c) > 1]
+    sizes = sorted((len(c) for c in comps), reverse=True)
+    return {"cycles": len(comps), "participation": sum(sizes), "sizes": sizes,
+            "largest": sizes[0] if sizes else 0,
+            "components": [sorted(c) for c in comps]}
