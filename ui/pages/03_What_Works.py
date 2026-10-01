@@ -32,6 +32,15 @@ st.caption(f"Net effect is the summed smell delta; negative is good. A verdict n
            f"{MIN_RUNS} verified runs — below that, absence of measured benefit is just "
            "absence of evidence.")
 
+st.warning(
+    "Measured August 2026, under a metric this project later replaced. These are real tool "
+    "runs, but Arcan's Cyclic Dependency count measures how many elements sit in a few giant "
+    "strongly-connected components, so it can fall a long way without a cycle being broken — "
+    "and across pdfbox, log4j2 and tika none ever was. The current criterion is elimination "
+    "of a named package edge, verified in bytecode by two independent readers "
+    "(`dsarp measure-edges`).",
+    icon="🕓")
+
 bad = [r for r in rows if r["verdict"] == "counterproductive"]
 flat = [r for r in rows if r["verdict"] == "no measured benefit"]
 if bad or flat:

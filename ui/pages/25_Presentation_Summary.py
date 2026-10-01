@@ -47,6 +47,15 @@ st.divider()
 st.subheader("From scratch on a repository nobody had tuned against")
 st.caption("apache/pdfbox was cloned, detected, refactored and re-detected in a single "
            "session with no prior exposure. 1782 -> 1743 architectural smells (2.2%).")
+
+st.warning(
+    "Measured August 2026, under a metric this project later replaced. These are real tool "
+    "runs, but Arcan's Cyclic Dependency count measures how many elements sit in a few giant "
+    "strongly-connected components, so it can fall a long way without a cycle being broken — "
+    "and across pdfbox, log4j2 and tika none ever was. The current criterion is elimination "
+    "of a named package edge, verified in bytecode by two independent readers "
+    "(`dsarp measure-edges`).",
+    icon="🕓")
 st.dataframe([
     {"pass": "1-2", "smell type": "Cyclic Dependency", "score": "—",
      "outcome": "build broke, rolled back"},

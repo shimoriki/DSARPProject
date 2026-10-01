@@ -1,5 +1,16 @@
 # DSARP MVP — scope and measured results
 
+
+> **Measured August 2026, under a metric this project later replaced.**
+> The numbers below are real tool runs. What they mean is narrower than "architectural smells
+> removed" suggests: in September 2026 a bytecode cycle oracle showed that Arcan's Cyclic
+> Dependency count measures how many elements participate in a few giant strongly-connected
+> components, so the count can fall a long way without a cycle being broken — and across
+> pdfbox, log4j2 and tika no cycle ever was. Three rankings fitted to that target failed on a
+> held-out repository. The current criterion is elimination of a *named* package edge, verified
+> in compiled bytecode by two independent readers: see `data/memory/current_status.md` and
+> `dsarp measure-edges`.
+
 DSARP detects architectural smells with real tools, executes refactorings with OpenRewrite,
 then re-runs the same tools on the refactored source to verify what was actually removed.
 

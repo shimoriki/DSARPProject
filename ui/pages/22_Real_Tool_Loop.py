@@ -15,6 +15,15 @@ st.caption("The closed loop with REAL tools on both ends: detect architectural s
            "OpenRewrite recipes, run `mvn rewrite:run` to actually rewrite the source, then run the "
            "SAME tools again on the refactored code and compare.")
 
+st.warning(
+    "Measured August 2026, under a metric this project later replaced. These are real tool "
+    "runs, but Arcan's Cyclic Dependency count measures how many elements sit in a few giant "
+    "strongly-connected components, so it can fall a long way without a cycle being broken — "
+    "and across pdfbox, log4j2 and tika none ever was. The current criterion is elimination "
+    "of a named package edge, verified in bytecode by two independent readers "
+    "(`dsarp measure-edges`).",
+    icon="🕓")
+
 out = data_dir() / "outputs"
 projects = sorted([p.name for p in out.iterdir()
                    if p.is_dir() and (p / "openrewrite_loop_report.json").exists()]) \

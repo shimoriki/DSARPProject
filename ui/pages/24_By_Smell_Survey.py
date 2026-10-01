@@ -18,6 +18,15 @@ st.caption("Each pass targets a single smell type and is kept only if it measura
            "(God Component, Insufficient/Broken Modularization) get a consecutive second "
            "pass to consolidate.")
 
+st.warning(
+    "Measured August 2026, under a metric this project later replaced. These are real tool "
+    "runs, but Arcan's Cyclic Dependency count measures how many elements sit in a few giant "
+    "strongly-connected components, so it can fall a long way without a cycle being broken — "
+    "and across pdfbox, log4j2 and tika none ever was. The current criterion is elimination "
+    "of a named package edge, verified in bytecode by two independent readers "
+    "(`dsarp measure-edges`).",
+    icon="🕓")
+
 reports = sorted(glob.glob(str(data_dir() / "outputs" / "*__bysmell*" /
                                "iterative_loop_report.json")))
 if not reports:
