@@ -75,9 +75,25 @@ def measure(repo: Path, candidate: Dict[str, Any], snapshot: Dict[str, Any], wor
         row["compile"] = build.get("status")
         if not build.get("ok"):
             # The honest headline for this operation: generated Java that does not build.
+            # Keep the file that failed. Two failures went undiagnosed because the copy was
+            # deleted on the way out and the error named a line in a file that no longer
+            # existed -- the same mistake as discarding a rejected candidate's test log.
             row.update(why=(build.get("javac_errors") or [""])[0][:300],
+                       javac_errors=[e.split("copy/")[-1] for e in
+                                     (build.get("javac_errors") or [])][:5],
                        verdict={"accepted": False, "failed_gate": "build"},
                        secs=round(time.time() - t0))
+            keep = work.parent / "failed" / candidate["target_class"]
+            keep.mkdir(parents=True, exist_ok=True)
+            # The class sits under some module's source root, not at the repository root.
+            rel = candidate["target_class"].replace(".", "/") + ".java"
+            generated = next((p for p in copy.rglob(Path(rel).name)
+                              if p.as_posix().endswith(rel)), None)
+            if generated is not None:
+                shutil.copy2(generated, keep / "generated.java")
+            if (work / "compile.log").exists():
+                shutil.copy2(work / "compile.log", keep / "compile.log")
+            row["kept"] = str(keep)
             return row
 
         after = au.cycles(copy, log_path=work / "cycles.log")
