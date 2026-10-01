@@ -540,11 +540,17 @@ def run_tests(repo_path: Path, timeout: int = 3600,
     tests failed" honestly, rather than collapsing both into one verdict.
     """
     repo_path = Path(repo_path)
+    if not (repo_path / "pom.xml").exists():
+        # A Gradle project is not an unverifiable project. Three of the cloned repositories
+        # build this way, and returning no_pom here meant their refactorings could compile but
+        # never be accepted, because the behavioural gate is the only gate that accepts.
+        if gradle_wrapper(repo_path):
+            return run_tests_gradle(repo_path, timeout=timeout, log_path=log_path,
+                                    fail_fast=fail_fast)
+        return {"ok": False, "status": "no_pom"}
     mvn = find_mvn()
     if not mvn:
         return {"ok": False, "status": "maven_not_found"}
-    if not (repo_path / "pom.xml").exists():
-        return {"ok": False, "status": "no_pom"}
     skips = ["-Drat.skip=true", "-Dcheckstyle.skip=true", "-Denforcer.skip=true",
              "-Dspotless.check.skip=true", "-Dspotbugs.skip=true", "-Dpmd.skip=true",
              "-Danimal.sniffer.skip=true", "-Dlicense.skip=true", "-Djacoco.skip=true",
@@ -643,3 +649,90 @@ def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str,
                     % (len(newly), ", ".join(newly[:3]))) if newly else None,
             "baseline_was_red": bool((baseline.get("failures") or 0)
                                      or (baseline.get("errors") or 0))}
+
+
+def _junit_xml_totals(repo_path: Path) -> Dict[str, Any]:
+    """Test totals and failing-test identities from Gradle's JUnit XML reports.
+
+    Gradle writes <module>/build/test-results/test/TEST-*.xml, which is structured data rather
+    than console text. That makes it a better source than the surefire output parsed above:
+    the identities come out exactly, so the identity comparison in tests_no_worse works on
+    Gradle projects without a second parser for a second console format.
+    """
+    import xml.etree.ElementTree as ET
+    run = fails = errs = skipped = 0
+    failing: List[str] = []
+    seen_any = False
+    for xml in Path(repo_path).rglob("build/test-results/test/TEST-*.xml"):
+        try:
+            root = ET.parse(xml).getroot()
+        except ET.ParseError:
+            continue
+        seen_any = True
+        suites = [root] if root.tag == "testsuite" else root.findall("testsuite")
+        for s in suites:
+            run += int(s.get("tests") or 0)
+            fails += int(s.get("failures") or 0)
+            errs += int(s.get("errors") or 0)
+            skipped += int(s.get("skipped") or 0)
+            for case in s.findall("testcase"):
+                if case.find("failure") is not None or case.find("error") is not None:
+                    name = "%s.%s" % ((case.get("classname") or "").rsplit(".", 1)[-1],
+                                      case.get("name") or "")
+                    if name not in failing:
+                        failing.append(name)
+    return {"found": seen_any, "tests_run": run, "failures": fails, "errors": errs,
+            "skipped": skipped, "failing_tests": sorted(failing)[:200]}
+
+
+def run_tests_gradle(repo_path: Path, timeout: int = 5400,
+                     log_path: Optional[Path] = None,
+                     fail_fast: bool = False) -> Dict[str, Any]:
+    """Run a Gradle project's own test suite, so its refactorings can have a verdict.
+
+    Three of the twenty-two cloned repositories build with Gradle -- lucene, solr and
+    spring-framework -- and spring-framework alone holds 215 of the 457 structural refactorings
+    mined from history. Until now `run_tests` returned `no_pom` for all three, so a Gradle
+    refactoring could be applied and compiled but never accepted: the behavioural gate, which
+    is the only gate that can accept, could not run at all.
+
+    `--continue` is Gradle's `-fae`: without it the build stops at the first failing module and
+    the totals are a lower bound taken mid-run, which is the same trap the Maven path documents.
+    """
+    repo_path = Path(repo_path)
+    gw = gradle_wrapper(repo_path)
+    if not gw:
+        return {"ok": False, "status": "gradle_not_found",
+                "note": "No gradlew wrapper and no gradle on PATH."}
+    cmd = [gw, "test", "--console=plain", "--no-daemon"]
+    if not fail_fast:
+        cmd.append("--continue")
+    env = dict(os.environ)
+    jdk = jdk_home_for("21", "17")
+    if jdk:
+        env["JAVA_HOME"] = str(jdk)
+        cmd.append(f"-Dorg.gradle.java.home={jdk}")
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
+                              cwd=str(repo_path), env=env)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "status": "test_timeout", "note": f"exceeded {timeout}s",
+                "build_tool": "gradle"}
+    except OSError as exc:
+        return {"ok": False, "status": "gradle_failed", "note": str(exc)[:200]}
+    out = (proc.stdout or "") + "\n" + (proc.stderr or "")
+    if log_path:
+        Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(log_path).write_text(out, encoding="utf-8")
+    totals = _junit_xml_totals(repo_path)
+    if not totals["found"]:
+        # No reports at all means the suite never ran. Reporting zero failures here would be
+        # the Gradle spelling of "zero failures on fewer tests is not a pass".
+        return {"ok": False, "status": "no_test_reports", "build_tool": "gradle",
+                "returncode": proc.returncode, "tail": out[-2000:]}
+    ok = proc.returncode == 0 and not totals["failures"] and not totals["errors"]
+    return {"ok": ok, "status": "passed" if ok else "failed", "build_tool": "gradle",
+            "returncode": proc.returncode, "partial": bool(fail_fast),
+            "tests_run": totals["tests_run"], "failures": totals["failures"],
+            "errors": totals["errors"], "skipped": totals["skipped"],
+            "failing_tests": totals["failing_tests"], "tail": out[-2000:]}
