@@ -67,3 +67,13 @@ def test_losing_the_moved_class_itself_is_within_tolerance():
     before = dict(_run([("a", "b", 3)]), classDirs=9, classes=1288)
     after = dict(_run([]), classDirs=9, classes=1287)
     assert comparable(before, after)["ok"]
+
+
+def test_the_oracle_precedence_is_written_down_where_the_weakest_one_lives():
+    # It used to be decided by whichever module a caller happened to import, which is how the
+    # product ended up verifying refactorings with a regex index over import statements.
+    from dsarp.verification.effect_checker import snapshot_smells
+    doc = snapshot_smells.__doc__ or ""
+    assert "NOT a verdict" in doc
+    assert "AUTHORITATIVE" in doc and "archunit_runner" in doc
+    assert "Do not accept a refactoring on it" in doc

@@ -60,7 +60,26 @@ class SmellSnapshot:
 
 
 def snapshot_smells(repo_path: Path, project_id: str = "snapshot") -> SmellSnapshot:
-    """Detect architectural smells from the current source of repo_path."""
+    """Detect architectural smells from the current source of repo_path. NOT a verdict.
+
+    This is the cheapest of the project's three oracles and the weakest, and the precedence
+    between them is stated here because it used to be decided by whichever module a caller
+    happened to import:
+
+      1. ArchUnit + jdeps on compiled bytecode (`dsarp.tools.archunit_runner`,
+         `jdeps_runner`) -- AUTHORITATIVE. It reads what the JVM will load, two independent
+         implementations agree on it, and `dsarp.verification.gates` reads its answers.
+      2. Arcan / Designite (`dsarp.verification.openrewrite_loop.detect`) -- authoritative for
+         DETECTING smells, never for scoring a refactoring: its Cyclic Dependency count
+         measures per-element participation in a few giant components, so it falls without a
+         cycle breaking.
+      3. This function -- a source-text index. It matches imports with regexes, so it cannot
+         tell a type named in a comment from one actually used, and cannot see a dependency the
+         compiler introduced. Fast enough to enumerate candidates over a whole repository,
+         which is what it is for.
+
+    Use it to find candidates. Do not accept a refactoring on it.
+    """
     idx = SourceIndexer().index(project_id, Path(repo_path))
     dg = DependencyGraphBuilder().build(idx.import_edges)
     findings = StructuralSmellDetector().detect(project_id, dg, idx.to_dict())
