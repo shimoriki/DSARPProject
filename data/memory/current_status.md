@@ -1353,3 +1353,34 @@ is better than the edge count this project replaced it with.
 Sample: one project measured directly (compress); jeromq building for a second. Do not
 generalise from n=1 -- the mechanism (extract a package, invert through it, accept more edges to
 shrink a cycle) is what to carry forward, not the exact numbers.
+
+CORRECTION, SECOND PROJECT MEASURED (jeromq, built from the same package's source):
+    version        packages classes  cycles   participation  edges
+    Init              33      362    [28]          28         159
+    noDependency      33      369    [28]          28         156
+    Init -> noDependency: 17 edges removed, 14 added, NET -3 | participation 28 -> 28
+
+This contradicts the conclusion written above from compress alone. The two expert refactorings
+optimise different scalars:
+    compress   net +1 edge, participation -36%
+    jeromq     net -3 edges, participation  0%
+So "experts optimise cycle participation" is NOT supported at n=2. Retract it.
+
+WHAT SURVIVES BOTH PROJECTS:
+  * neither refactoring dissolved a single cycle (2->2, 1->1), which matches every measurement
+    this project has made on pdfbox, log4j2 and tika;
+  * both RESTRUCTURED rather than monotonically reduced: 10 removed / 11 added, and
+    17 removed / 14 added. A planner that only proposes monotone improvements (predicted_net <
+    0) would have refused compress's refactoring outright and accepted jeromq's for the wrong
+    reason;
+  * both ADDED classes (+6, +7) in new packages or new utility types -- an operation DSARP does
+    not have at all;
+  * no single scalar we can compute -- edge count or participation -- captures both. Neither is
+    the objective.
+
+The transferable mechanism, stated in the authors' own words for Jackrabbit: "Create a new
+utility class ... in a newly created 'util' package. Move the functionality that is causing
+dependencies ... to this new class." Compress's archivers.factory is the same shape. That is a
+COMPOSITE: create package, create class, move the dependency-causing members, let references
+invert. Method movement is step three of four, which is why moving methods alone removed 0 of 5
+package edges in the SWE-Refactor experiment.
