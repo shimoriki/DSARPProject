@@ -234,3 +234,43 @@ def test_a_body_using_its_own_class_members_is_not_extracted(tmp_path):
     hits = references_own_members(OWN_MEMBER, [OWN_MEMBER.split("public static Engine named")[1]
                                                .split("public static Engine plain")[0]], ["named"])
     assert "PREFIX" in hits and "tally" in hits
+
+
+LOCALS = """package com.app.web;
+
+import com.app.core.Engine;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Copier {
+
+    private static final String TAG = "t";
+
+    public static Map<String, Engine> copyAll(Map<String, Engine> in) {
+        final Map<String, Engine> results = new HashMap<>(in.size());
+        for (String k : in.keySet()) {
+            results.put(k, in.get(k));
+        }
+        return results;
+    }
+
+    public static Engine tagged(Engine e) {
+        return new Engine(TAG + e.name());
+    }
+}
+"""
+
+
+def test_a_local_variable_is_not_mistaken_for_a_field(tmp_path):
+    """`final Map results = ...` inside a method is a local, not a member.
+
+    At eight-space indentation the field pattern matched locals, and the guard refused
+    commons-validator's ValidatorUtils -- the one candidate that had already compiled AND
+    removed its targeted edge.
+    """
+    repo = _repo(tmp_path)
+    (repo / "src/main/java/com/app/web/Copier.java").write_text(LOCALS, encoding="utf-8")
+    m = methods_reaching(SourceFacts(repo), "com.app.web.Copier", "com.app.core")
+    # copyAll declares a local called results and must stay eligible;
+    # tagged reads the private constant TAG and must not.
+    assert m == ["copyAll"], m

@@ -216,7 +216,11 @@ def _overloaded(text: str, method: str) -> bool:
 # member carries no modifier and is not guarded here; the compile gate still catches those.
 _MODS = (r"(?:(?:public|protected|private|static|final|synchronized|abstract|native"
          r"|transient|volatile|default)\s+)+")
-_FIELD = re.compile(r"^[ \t]{1,8}" + _MODS + r"[\w<>\[\],.\s]+?"
+# Fields are matched at class-body indentation only (up to four spaces). At eight the pattern
+# also caught LOCAL variables -- commons-validator's `final FastHashMap results = ...` inside
+# copyFastHashMap -- and refused the one candidate that had already compiled and removed its
+# edge. A field of a nested class sits deeper and is missed; the compile gate covers that.
+_FIELD = re.compile(r"^[ \t]{1,4}" + _MODS + r"[\w<>\[\],.\s]+?"
                     r"\b([A-Za-z_]\w*)\s*(?:=[^=]|;)", re.M)
 _METHOD = re.compile(r"^[ \t]{1,8}" + _MODS + r"[\w<>\[\],.\s]+?"
                      r"\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*(?:throws [\w.,\s]+)?[{;]", re.M)
