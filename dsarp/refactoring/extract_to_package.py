@@ -52,6 +52,14 @@ def methods_reaching(facts: SourceFacts, fqn: str, target_pkg: str,
     for m in static_methods(facts, fqn):
         if uses_instance_state(facts, fqn, m) or uses_non_public_members(facts, fqn, m):
             continue
+        if _overloaded(text, m):
+            # _cut_methods takes one declaration per name. With an overload, the other
+            # declaration stays behind and the unqualified-call rewrite turns it into
+            # `public static boolean Support.isDate(` -- a syntax error. Measured on
+            # commons-validator's GenericValidator.isDate, which has two overloads.
+            # extract_class guards the case where NO declaration was cut; this is the case
+            # where one was and another remains.
+            continue
         bodies, _ = _cut_methods(text, [m])
         if not bodies:
             continue
@@ -185,3 +193,13 @@ def _add_import(text: str, fqn: str) -> str:
     if not m:
         return text
     return text[:m.end()] + "\nimport %s;\n" % fqn + text[m.end():]
+
+
+def _overloaded(text: str, method: str) -> bool:
+    """Is this static method declared more than once in the class?
+
+    Counted on the declaration shape _cut_methods matches, so the answer is about the same
+    declarations the surgery will act on.
+    """
+    pat = r"^[ \t]{1,8}public\s+static\b[^;{\n]*\b%s\s*\(" % re.escape(method)
+    return len(re.findall(pat, text, re.M)) > 1

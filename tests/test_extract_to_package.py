@@ -158,3 +158,39 @@ def test_the_result_actually_compiles(tmp_path):
     assert proc.returncode == 0, "javac rejected the extracted code:\n" + proc.stderr
     # the new type is a real class in the new package, not just a file
     assert (out / "com/app/web/support/BuilderSupport.class").exists()
+
+
+OVERLOADED = """package com.app.web;
+
+import com.app.core.Engine;
+
+public class Multi {
+
+    public static Engine make(String n) {
+        return new Engine(n);
+    }
+
+    public static Engine make(String n, int size) {
+        return new Engine(n + size);
+    }
+
+    public static String label(Engine e) {
+        return e.name();
+    }
+}
+"""
+
+
+def test_an_overloaded_method_is_not_extracted(tmp_path):
+    """Cutting one overload and qualifying the name rewrites the other's DECLARATION.
+
+    Measured on commons-validator: GenericValidator.isDate has two overloads, and the
+    extraction produced `public static boolean GenericValidatorSupport.isDate(` -- javac
+    reported "';' expected".
+    """
+    repo = _repo(tmp_path)
+    p = repo / "src/main/java/com/app/web/Multi.java"
+    p.write_text(OVERLOADED, encoding="utf-8")
+    m = methods_reaching(SourceFacts(repo), "com.app.web.Multi", "com.app.core")
+    assert "make" not in m, "overloaded method selected; its sibling declaration will break"
+    assert m == ["label"]
