@@ -386,7 +386,8 @@ def run_recipe_gradle(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: 
 def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = False,
                plugin: str = DEFAULT_PLUGIN, timeout: int = 2400,
                log_path: Optional[Path] = None,
-               modules: Optional[List[str]] = None) -> Dict[str, Any]:
+               modules: Optional[List[str]] = None,
+               recipe_artifacts: Optional[List[str]] = None) -> Dict[str, Any]:
     """Run the OpenRewrite recipe already written to <repo>/rewrite.yml.
 
     `modules` restricts the reactor to those paths, which is the only way a large repository can
@@ -441,8 +442,15 @@ def run_recipe(repo_path: Path, recipe_name: str = RECIPE_NAME, dry_run: bool = 
         cmd += ["-pl", ",".join(scoped), "-am"]
     # Put DSARP's custom recipes (field visibility, extract interface) on the plugin's
     # classpath so rewrite.yml can name them alongside the stock ones.
+    # Stock recipes outside rewrite-java live in their own artifacts and are NOT on the
+    # plugin's classpath by default: naming org.openrewrite.staticanalysis.* without
+    # rewrite-static-analysis fails validation with "DeclarativeRecipe must not contain
+    # uninitialized recipes", which reads like a YAML error and is a missing dependency.
+    coords = list(recipe_artifacts or [])
     if custom_recipes_installed():
-        cmd.append(f"-Drewrite.recipeArtifactCoordinates={CUSTOM_RECIPE_GAV}")
+        coords.append(CUSTOM_RECIPE_GAV)
+    if coords:
+        cmd.append("-Drewrite.recipeArtifactCoordinates=" + ",".join(coords))
     excluded: List[str] = []
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
