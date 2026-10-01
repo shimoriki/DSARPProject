@@ -35,7 +35,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..refactoring.java_text import body_range
+from ..refactoring.java_text import body_range, code_only
 from .smell_reduction import is_test_code, trial_limit_hit
 
 # Buckets, worst-to-best, so a sort puts what is actually actionable first.
@@ -103,7 +103,15 @@ def exposed_fields(src: str) -> List[Dict[str, Any]]:
 
 
 def suppression_in_member(src: str, start_line: Optional[str]) -> Optional[str]:
-    """The suppression marker inside the member declared at `start_line`, or None.
+    """The suppression covering the member declared at `start_line`, or None.
+
+    Two scopes, and missing the second one produced a wrong answer here. A per-line marker inside
+    the member is the obvious case. The other is a FILE-LEVEL switch: `// CHECKSTYLE:OFF` with no
+    matching `:ON` turns the check off for the rest of the file. commons-validator has exactly two
+    such files, `CreditCardValidator.java` and `ISSNValidator.java` -- and between them they hold
+    every one of the seven magic numbers that a member-scoped check called "genuinely open". With
+    the file scope included, none of that repository's 68 magic numbers is open: 49 are suppressed
+    line by line and the rest sit under a blanket switch.
 
     Searched in the raw text, because a suppression IS a comment. The member's extent comes from
     `body_range`, which strips comments before balancing braces -- Designite points at the javadoc
@@ -116,11 +124,68 @@ def suppression_in_member(src: str, start_line: Optional[str]) -> Optional[str]:
     lines = src.splitlines()
     if not lines or start < 1 or start > len(lines):
         return None
+    switch = _blanket_switch(lines, start)
+    if switch:
+        return switch
     span = body_range(lines, start)
     if span is None:
         return None
     blob = "\n".join(lines[span[0]:span[1] + 1]).lower()
     return next((m for m in SUPPRESSIONS if m in blob), None)
+
+
+def _blanket_switch(lines: List[str], start: int) -> Optional[str]:
+    """An unclosed `OFF` switch above `start`, which suppresses everything after it.
+
+    Pairs each OFF with a later ON; what is left open at the member's line covers it. A
+    `@SuppressWarnings` on the enclosing type counts too, since it applies to every member.
+    """
+    open_marker = None
+    for line in lines[:max(start - 1, 0)]:
+        low = line.lower()
+        if "checkstyle:off" in low or "@formatter:off" in low:
+            open_marker = line.strip()[:60]
+        elif "checkstyle:on" in low or "@formatter:on" in low:
+            open_marker = None
+        elif "@suppresswarnings" in low and "class " not in low:
+            # on its own line directly above a type or member declaration
+            open_marker = open_marker or line.strip()[:60]
+    return open_marker
+
+
+def bit_level_use(src: str, start_line: Optional[str], value: Optional[str]) -> Optional[str]:
+    """Why this literal is a shift amount or a bit mask, if it is, else None.
+
+    commons-codec reports 1049 magic numbers and they are not thresholds: 133 are in
+    `Sha2Crypt.sha2Crypt`, 67 in `PureJavaCrc32.update`, 67 in `UnixCrypt.desSetKey`, 59 in
+    `MurmurHash3.hash128x64Internal`, 42 in `Blake3.round`. The commonest values are 0xff (99
+    times), then 8, 16 and 24. Those are byte masks and shift amounts transcribed from SHA-2,
+    CRC-32, DES, MurmurHash and BLAKE3. `x & 0xff` is the universal Java idiom for taking a byte,
+    and `(x >>> 24) & 0xff` says which byte; naming either hides the correspondence to the
+    published algorithm, which is the only documentation such code has.
+
+    Two signals, both local to the use rather than guessed from the class name:
+      * the literal is written in hexadecimal -- an author choosing hex is writing a bit pattern;
+      * the literal appears immediately after a shift operator, so it is a shift distance.
+    """
+    if not value:
+        return None
+    if value.lower().startswith(("0x", "-0x")):
+        return "written in hexadecimal: a bit pattern, not a quantity to name"
+    try:
+        start = int(start_line)
+    except (TypeError, ValueError):
+        return None
+    lines = src.splitlines()
+    if not lines or start < 1 or start > len(lines):
+        return None
+    span = body_range(lines, start)
+    if span is None:
+        return None
+    body = "\n".join(code_only(lines[span[0]:span[1] + 1]))
+    if re.search(r"(?:<<|>>>|>>)\s*" + re.escape(value) + r"(?![\w.])", body):
+        return "used as a shift distance; a name would not say which byte it selects"
+    return None
 
 
 def declares_public_type(src: str, simple_name: str) -> bool:
@@ -172,6 +237,9 @@ def classify(row: Dict[str, str], src: str,
         if value in TRIVIAL_LITERALS:
             return {"bucket": NO_OPERATION,
                     "why": "literal %s is clearer than any name for it" % value}
+        bitwise = bit_level_use(src, row.get("Method start line no"), value)
+        if bitwise:
+            return {"bucket": NO_OPERATION, "why": bitwise}
         return {"bucket": NEEDS_MEANING,
                 "why": "extraction is mechanical; a meaningful name for %s is not"
                        % (value or "the literal")}

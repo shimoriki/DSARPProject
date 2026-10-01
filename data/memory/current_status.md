@@ -1543,3 +1543,106 @@ log4j2, God Component splits, both metrics: appender compiled but Arcan +1, edge
 selector and manager failed to compile; formatter compiled but edges +4, participation +1, tests
 FAILED. None accepted. With the earlier prediction over all findings (0 better, 77 worse) and the
 first measured split, package splitting is closed.
+
+## Measured smell reduction on commons-validator, and the ceiling tightened twice
+
+NO CUSTOM RECIPE HAD EVER BOUND AN OPTION. OpenRewrite matches a declarative recipe's options to
+constructor PARAMETER NAMES; javac discards those without `-parameters`, so all four DSARP recipes
+received null for everything and reported "is required" while `rewrite:discover` listed every option
+correctly. One line in `tools/dsarp-recipes/pom.xml` fixed all four. Verified after: both
+`ReduceFieldVisibility` (on `Field.property`) and `ReplaceMagicNumberWithConstant` now change a
+file; before, both changed nothing. `ai_recipes.py` had been advertising three of them to the model.
+
+Diagnosis cost a pass: `mvn rewrite:dryRun` on commons-validator dies in apache-rat before
+OpenRewrite validates anything, because rewrite forks the lifecycle and rewrite.yml has no licence
+header. A probe that looked clean had never reached validation. Probes go through `run_recipe`,
+which already passes `-Drat.skip`.
+
+MEASURED, each compiling with 1147 tests green:
+  stock CommonStaticAnalysis    201 -> 194   Complex Conditional -6, Long Statement -1
+  four named constants          201 -> 197   Magic Number -5, Long Statement +1
+
+The +1 is the honest part: `MIN_CARD_NUMBER_LENGTH` and `MAX_CARD_NUMBER_LENGTH` made isValid's
+condition long enough to trip Designite's statement-length threshold. The refactoring introduced a
+smell while removing five, so its net is -4. The two arms touch the same smell type and are
+therefore being measured together rather than summed.
+
+The constants were named from the code, not the digits: isValid rejects cards shorter than 13 or
+longer than 19; luhnCheck folds a doubled digit back past 9 (`MAX_SINGLE_DIGIT`, both sites) and
+checks `sum % 10 == 0` (`LUHN_MODULUS`). The 13 inside `private static class Visa` -- where it is
+one of the two lengths a Visa number may have -- is untouched, because the recipe scopes by fully
+qualified type. One name could not have been right for both.
+
+CEILING, tightened twice as the evidence came in:
+  first pass   60%   counting smells by type and assuming each was addressable
+  then         49%   after excluding test-source findings, published API, and maintainer
+                     suppressions (49 of commons-validator's 68 magic numbers)
+  now          29%   after excluding bit-level literals. commons-codec reports 1049 magic numbers
+                     and they are not thresholds: 133 in Sha2Crypt.sha2Crypt, 67 in
+                     PureJavaCrc32.update, 67 in UnixCrypt.desSetKey, 59 in
+                     MurmurHash3.hash128x64Internal, 42 in Blake3.round. The commonest values are
+                     0xff (99 times), then 8, 16, 24 -- byte masks and shift amounts transcribed
+                     from SHA-2, CRC-32, DES, MurmurHash and BLAKE3. `x & 0xff` is the universal
+                     idiom for taking a byte and `(x >>> 24) & 0xff` says which one; a name hides
+                     the correspondence to the published algorithm, the only documentation such
+                     code has. Rule applied: hexadecimal literal, or literal immediately after a
+                     shift operator. codec's reachable set fell 853 -> 438, upper bound 66% -> 34%.
+
+SIX MEASURABLE REPOSITORIES, 2085 production findings:
+  validated by a measured run        7   0.3%
+  mechanical, needs a name/design  597  28.6%
+  blocked: published API           119   5.7%
+  maintainers kept on purpose       88   4.2%
+  no operation in the toolkit     1274  61.1%
+
+The spread between repositories is large and commons-validator is not representative: 9% for
+commons-cli, 17% for validator, 30% for text, 34% for codec. A single headline number for "any Java
+repository" would be misleading; the analysis has to be run per repository.
+
+ANSWER TO THE GOAL. "The majority of Designite's smells, refactored" is not reachable here. The
+upper bound is 29%, and that figure already assumes an oracle supplying a meaningful name or a
+design decision for all 597. What is validated today is 7 of 2085. The gap is not mostly tooling:
+it is 61% with no operation at all, plus 10% that is published API or a decision the maintainers
+already took and wrote down.
+
+### Correction: none of commons-validator's magic numbers were open, and the four I applied are void
+
+The patch header gave it away. `CreditCardValidator` carries `// CHECKSTYLE:OFF (deprecated code)`
+at line 53 with no matching `:ON`, so checkstyle is off for the rest of the file, and the class is
+`@Deprecated`. Exactly two production files in the repository carry that switch --
+`CreditCardValidator.java` and `ISSNValidator.java` -- and between them they hold ALL SEVEN magic
+numbers that the member-scoped suppression check had called "genuinely open".
+
+The check only looked inside the member. With file scope included, commons-validator's Magic Number
+count is **0 reachable**: 56 suppressed (49 line by line, the rest under the blanket switch) and 12
+trivial or bit-level. Not 68, not 7, zero.
+
+So the four constants -- MIN_CARD_NUMBER_LENGTH, MAX_CARD_NUMBER_LENGTH, MAX_SINGLE_DIGIT,
+LUHN_MODULUS -- are correct code that compiles with 1147 tests green, and they are NOT a legitimate
+reduction. They override a decision the maintainers wrote down, in a deprecated class, which is the
+one thing this recipe exists to avoid doing automatically. The measured -4 is not claimed.
+
+The recipe itself stands: it is the only way to perform this refactoring, it binds, it scopes
+correctly by type, and it demands a human-supplied name. It simply had no legitimate target in this
+repository.
+
+REVISED CEILING, six measurable repositories, 2085 production findings:
+  validated by a measured run        7   0.3%
+  mechanical, needs a name/design  578  27.7%
+  blocked: published API           119   5.7%
+  maintainers kept on purpose      118   5.7%
+  no operation in the toolkit     1263  60.6%
+  upper bound                      585  28.1%
+
+Per repository: commons-csv 8.8%, commons-cli 9.2%, commons-validator 14.4%, commons-email 17.7%,
+commons-text 27.9%, commons-codec 33.5%.
+
+WHAT IS ACTUALLY VALIDATED. 7 findings, all from the stock catalogue on commons-validator
+(Complex Conditional -6, Long Statement -1), compiling, 1147 tests green. Everything else is either
+blocked, adjudicated, or waiting on an oracle that does not exist yet.
+
+LICENCE. Designite here runs as the trial edition and refuses any repository over 50k lines. The
+unrestricted outputs in ~/Downloads/dsarp repos/Designite were produced on another machine
+(`/Users/surabhilone/...`). `measure_smells` passes `-k` when `DESIGNITE_KEY` or
+`tools/designite.key` supplies one; until then pdfbox, log4j2, maven, tika, struts, spring,
+collections, io, lang and opennlp cannot be measured at all.

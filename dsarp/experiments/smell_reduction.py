@@ -291,6 +291,10 @@ def _write_patch(original: Path, copy: Path, out_dir: Path, recipes: List[str]) 
                                                        tofile="b/" + rel, n=3)))
     out_dir.mkdir(parents=True, exist_ok=True)
     names = [(r if isinstance(r, str) else r[0]) for r in recipes]
+    # The header records the options too: four runs of one recipe differ only by those, and a
+    # patch that named the recipe alone would not say which constant it introduced.
+    header = ["# recipes:"] + ["#   %s" % (r if isinstance(r, str) else
+                                           "%s %s" % (r[0], r[1])) for r in recipes]
     p = out_dir / ("smells__%s.patch" % "_".join(n.rsplit(".", 1)[-1] for n in names)[:80])
-    p.write_text("# recipes: %s\n" % ", ".join(recipes) + "".join(chunks), encoding="utf-8")
+    p.write_text("\n".join(header) + "\n" + "".join(chunks), encoding="utf-8")
     return p
