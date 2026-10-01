@@ -15,6 +15,11 @@ the brief, so a model cannot memorise a project or learn Arcan's phrasing.
 Held-out evaluation is BY REPOSITORY, never by random split: a random split lets the same
 project appear in train and test, and a model that has seen a project's conventions is not
 being tested on generalisation.
+
+STATUS: superseded. The ROSE-style baseline stands as published-precedent
+comparison; the ranker it feeds was one of five selection attempts, none of which
+survived a held-out repository. Kept as a recorded negative result. No caller by
+design -- see docs/negative-results.md.
 """
 from __future__ import annotations
 

@@ -19,6 +19,9 @@ So: order candidates by how little the rest of the smelly subgraph depends on th
 This is a heuristic with practitioner provenance rather than a learned model, and it is
 evaluated the same strict way everything else here is: against the measured outcomes, held out
 by repository, scored in smells actually removed.
+
+STATUS: disproved. Leaf-first ordering scored -0.115 against the oracle. Kept as a
+recorded negative result. No caller by design -- see docs/negative-results.md.
 """
 from __future__ import annotations
 

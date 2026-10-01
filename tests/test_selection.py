@@ -17,3 +17,15 @@ def test_repo_with_one_class_is_ignored_not_counted_as_agreement():
     rows = [{"project": "a", "win": 1, "x": 5.0}, {"project": "a", "win": 0, "x": 1.0},
             {"project": "b", "win": 0, "x": 9.0}]          # b has no winners
     assert direction_consistent(rows, ["x"], lambda r, f: r[f], lambda r: r["win"]) == ["x"]
+
+
+def test_every_disproved_selector_says_so_at_the_top_of_its_module():
+    # An audit read these as live machinery because nothing imports them. They are kept as
+    # evidence of five failed attempts; the label is what stops the next reader guessing.
+    import importlib
+    expected = {"ranker": "superseded", "value_ranker": "disproved", "mikado": "disproved",
+                "selection": "disproved", "smell_methods": "live build script"}
+    for name, word in expected.items():
+        doc = importlib.import_module("dsarp.dataset." + name).__doc__ or ""
+        assert "STATUS:" in doc, name
+        assert word in doc, (name, word)

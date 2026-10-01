@@ -13,6 +13,11 @@ That did NOT survive a pre-registered confirmation on fresh candidates, with the
 before any outcome existed: model 1/9, shipped 0/9, random 2/9. The held-out number was noise.
 The screen is kept because rejecting features that flip sign between repositories is still the
 right filter against the failure it targets, but it is not a validated selector.
+
+STATUS: disproved by its own pre-registered confirmation (model 1/9, shipped 0/9,
+random 2/9). Kept because the method -- screen features by cross-repository direction
+before fitting -- is worth reporting with its failure. No caller by design except its
+test, which documents direction_consistent. See docs/negative-results.md.
 """
 from __future__ import annotations
 

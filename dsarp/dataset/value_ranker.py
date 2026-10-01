@@ -17,6 +17,11 @@ and candidates are ordered by predicted reduction.
 
 Held out BY REPOSITORY, always — a random split lets a model learn one project's package
 conventions and call it generalisation.
+
+STATUS: disproved. Ranking by expected smells removed inherits the smell-count
+metric that a bytecode cycle oracle later showed measures participation in a few
+giant components. Kept as a recorded negative result. No caller by design -- see
+docs/negative-results.md.
 """
 from __future__ import annotations
 

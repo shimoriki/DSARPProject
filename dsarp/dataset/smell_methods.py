@@ -17,6 +17,10 @@ The label is the refactoring method that was actually applied. Whether that meth
 the smell is a separate, measured field (`outcome`), filled in by the validation pipeline —
 it is deliberately not assumed here, because the whole point of the exercise is that
 type-correct recommendations often fail to remove anything.
+
+STATUS: live build script, run by hand. It produced data/datasets/smell_methods_v1.json
+(committed, described in docs/smell-refactoring/METHODS.md). No caller because nothing
+calls it automatically, not because it is unused.
 """
 from __future__ import annotations
 
