@@ -428,8 +428,14 @@ def cmd_measure_edges(cfg: Config, args) -> int:
     rows = edge_measure.run(repo_path, out_dir, limit=args.limit,
                             run_the_tests=args.tests, baseline_tests=baseline_tests)
     accepted = [r for r in rows if (r.get("verdict") or {}).get("accepted")]
+    # The project's contract applies to what this path emits too, not only to the suggestions
+    # the older pipeline produced from a source-text index.
+    from .experiments.suggestions import write as write_suggestions_from_rows
+    sug = write_suggestions_from_rows(rows, repo_path, args.repo,
+                                      out_dir / "suggestions.json",
+                                      recipe_dir=out_dir / "recipes")
     print(f"[measure-edges] {len(rows)} candidates, {len(accepted)} accepted; rows in "
-          f"{out_dir / 'rows.jsonl'}")
+          f"{out_dir / 'rows.jsonl'}, schema-valid suggestions in {sug}")
     return 0
 
 
