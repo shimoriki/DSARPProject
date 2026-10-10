@@ -190,6 +190,37 @@ def _java_files(repo_path, only=None):
             and "/build/" not in str(f).replace("\\", "/")]
 
 
+def names_fqn(text: str, fqn: str) -> bool:
+    """Does `text` refer to `fqn` as a WHOLE dotted name, rather than as the prefix of a longer one?
+
+    A plain `fqn in text` is wrong in a way that costs a build. `Metadata` moved out of
+    `org.apache.tika.metadata` still needed `import org.apache.tika.metadata.Property;`, but the
+    file already carried `import org.apache.tika.metadata.Property.PropertyType;`. That string
+    CONTAINS `org.apache.tika.metadata.Property`, so a substring test concluded the type was
+    already qualified and skipped the import -- while a nested-type import does nothing to make
+    the bare name `Property` resolve. 36 `cannot find symbol` errors in one file, and the whole
+    tika-core module with 91 others behind it.
+
+    A match must therefore not be glued to an identifier character on either side, and must not
+    be followed by a dot that starts another name segment. Scanned character by character,
+    because this module is deliberately regex-free.
+    """
+    if not fqn:
+        return False
+    ident = lambda c: c.isalnum() or c in "_$"
+    start = text.find(fqn)
+    while start != -1:
+        end = start + len(fqn)
+        before_ok = start == 0 or not (ident(text[start - 1]) or text[start - 1] == ".")
+        after = text[end] if end < len(text) else ""
+        # `...Property.PropertyType` continues the name, so this occurrence is a prefix, not a use
+        continues = after == "." and end + 1 < len(text) and ident(text[end + 1])
+        if before_ok and not ident(after) and not continues:
+            return True
+        start = text.find(fqn, start + 1)
+    return False
+
+
 def add_origin_imports(repo_path, moves) -> Dict[str, List[str]]:
     """Give a moved file the imports it needs for types it used to sit beside.
 
@@ -235,7 +266,7 @@ def add_origin_imports(repo_path, moves) -> Dict[str, List[str]]:
         body = "".join(ln for ln in txt.splitlines(keepends=True) if import_fqn(ln) is None)
         used = idents(body)
         need = sorted(n for n in left_behind
-                      if n in used and (origin_pkg + "." + n) not in txt)
+                      if n in used and not names_fqn(txt, origin_pkg + "." + n))
         if not need:
             continue
         lines, new_lines, done = txt.splitlines(keepends=True), [], False
