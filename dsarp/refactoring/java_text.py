@@ -514,3 +514,68 @@ def body_range(lines: List[str], start: int, window: int = 200) -> Optional[Tupl
         if depth <= 0:
             return start - 1 + first, start - 1 + i
     return start - 1 + first, start - 1 + len(code) - 1
+
+
+def repair_static_imports(original_root, refactored_root, moves) -> Dict[str, List[str]]:
+    """Restore `import static` lines that a type move dropped instead of repointing.
+
+    OpenRewrite's ChangeType rewrites a plain `import a.b.Type` when Type moves, and rewrites
+    references to it, but a STATIC MEMBER import of that type -- `import static a.b.Type.CONST;`
+    -- is removed outright rather than repointed at the new package. The member then has no
+    binding and every unqualified use of it fails.
+
+    Measured: moving org.apache.tika.metadata.TikaCoreProperties cost ParserUtils its
+    `import static ...TikaCoreProperties.EMBEDDED_EXCEPTION;`, and the one line that used
+    EMBEDDED_EXCEPTION failed with `cannot find symbol`. The project's own tidy chain was
+    innocent -- strip_unused_imports and drop_same_package_imports both remove nothing from that
+    file -- and the rewrite log names ChangeType as the only thing that touched it.
+
+    The original tree is the evidence: a static import present there, for a type that moved, and
+    absent from the refactored file, is one this restores at the new package.
+    """
+    original_root, refactored_root = Path(original_root), Path(refactored_root)
+    moved = {old: new for old, new in (moves or []) if old != new}
+    out: Dict[str, List[str]] = {}
+    if not moved:
+        return out
+    for after in refactored_root.rglob("*.java"):
+        sp = after.as_posix()
+        if "/target/" in sp or "/build/" in sp:
+            continue
+        rel = after.relative_to(refactored_root)
+        before = original_root / rel
+        if not before.is_file():
+            continue
+        try:
+            old_text = before.read_text(encoding="utf-8", errors="ignore")
+            new_text = after.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        wanted = []
+        for line in old_text.splitlines():
+            s = line.strip()
+            if not (s.startswith("import static ") and s.endswith(";")):
+                continue
+            target = s[len("import static "):-1].strip()
+            owner, _, member = target.rpartition(".")
+            if owner not in moved or not member:
+                continue
+            repointed = "import static " + moved[owner] + "." + member + ";"
+            # only when the refactored file no longer binds that member at all
+            if repointed in new_text or s in new_text:
+                continue
+            wanted.append(repointed)
+        if not wanted:
+            continue
+        lines, rebuilt, done = new_text.splitlines(keepends=True), [], False
+        for line in lines:
+            rebuilt.append(line)
+            s = line.strip()
+            if not done and s.startswith("package ") and s.endswith(";"):
+                for w in wanted:
+                    rebuilt.append(w + chr(10))
+                done = True
+        if done:
+            after.write_text("".join(rebuilt), encoding="utf-8")
+            out[after.as_posix()] = wanted
+    return out
