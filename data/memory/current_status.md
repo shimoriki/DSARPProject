@@ -1660,3 +1660,50 @@ been right for the wrong reason.
 Of the 11, five are the withdrawn magic numbers in the blanket-suppressed deprecated class. The
 legitimate validated reduction on commons-validator is therefore **7 of 201 = 3.5%**, from the stock
 catalogue alone (201 -> 194).
+
+## CORRECTION: UD30.csv duplicates UD.csv, and every Arcan total here was inflated
+
+Arcan 1.2.1 writes both `UD.csv` and `UD30.csv`. UD30 is the SAME unstable dependencies filtered
+at a 30% threshold -- a severity view, not additional findings. Verified by set comparison: every
+UD30 pair is already present in UD. 53 of 53 on log4j2, 8 of 8 on tika.
+
+`ArcanAdapter` counts rows from both files, so every unstable dependency above the threshold is
+counted twice.
+
+I made this worse rather than catching it. Earlier in this session the converter read only UD.csv
+and reported 252 for tika; I treated the adapter's 260 as ground truth and changed the converter
+to match it. The converter was right and the adapter is wrong.
+
+  tree                as counted    distinct
+  tika baseline              260         252
+  log4j2 baseline            767         714
+  struts baseline            274         227
+
+The inflation does NOT cancel in a delta, because the duplicate count varies with the tree:
+
+  log4j2 best batch:   -16 as counted   |   -6 by distinct smell
+                       ten of the sixteen are duplicate UD rows vanishing
+
+How it surfaced: `arcan_diff` matches smells by identity and reported net -6 where the row count
+said -16. Chasing that gap, rather than rationalising it, was the whole finding.
+
+DIRECTION IS UNAFFECTED. No reduction becomes an increase and no increase becomes a reduction.
+Magnitudes shrink, and every percentage computed off these totals should be restated.
+
+## BEST-BATCH EXPERIMENT (model suggestions only, best selection the system can justify)
+
+Rule: include moves from batches measured to REDUCE; exclude moves from batches measured to
+WORSEN; rank the untested by the generator's `candidate_score`. The model's own `model_score`
+spans 0.559-0.569 across every candidate, so it cannot order anything.
+
+  log4j2  27 moves (B1's 25 + B7's 2)  41/41 modules  767 -> 751  -16 as counted, -6 distinct
+  tika    16 moves by candidate_score  101/101        260 -> 262  +2   (worse than doing nothing)
+  struts  90 moves by candidate_score  4 of 24 built  VOID (broke the build)
+
+THE REDUCING BATCHES DO NOT COMBINE: B1 alone -16, B7 alone -1, together -16. Declining to sum
+them earlier was correct.
+
+THE SYSTEM'S OWN RANKING DOES NOT FIND WINNERS: candidate_score selection gave +2 on tika and a
+broken build on struts.
+
+0 of the 27 selected suggestions removed the smell it targeted, even in the best batch.
