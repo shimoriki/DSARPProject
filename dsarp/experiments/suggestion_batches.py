@@ -270,9 +270,14 @@ def verdict(batch: Dict[str, Any], base_build: Dict[str, Any],
                        "code" % (got, want),
                 "smells_raw": arc.get("smells")}
     delta = (arc.get("smells") or 0) - base_smells
+    # Signed as a CHANGE, not as a saving. Negating it here printed "delta +23 (-8.85%)" for a
+    # batch that added 23 smells, which reads as an 8.85% improvement and is the opposite.
+    # Negative pct_change means fewer smells; removed_pct is 0 unless the count actually fell.
     return {"comparable": True, "before": base_smells, "after": arc.get("smells"),
             "delta": delta,
-            "pct": round(-100.0 * delta / base_smells, 2) if base_smells else None}
+            "pct_change": round(100.0 * delta / base_smells, 2) if base_smells else None,
+            "removed_pct": round(-100.0 * delta / base_smells, 2)
+                           if base_smells and delta < 0 else 0.0}
 
 
 def chunk(items: List[Any], size: int) -> List[List[Any]]:
