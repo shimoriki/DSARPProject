@@ -1766,3 +1766,42 @@ under `verdict_inflated` beside the corrected `verdict`.
 
 NOT yet updated: the published HTML artifact of the interim review still shows the inflated
 figures, pending the user's go-ahead to republish.
+
+## Deck restructured into nine sections; v5's manual edits ported
+
+The user hand-edited the deck in PowerPoint and returned `DSARP_interim_review_v5.pptx`. That file
+was built on the PRE-correction deck, so it carried the inflated 260/767/274 and 1,301 back and
+had no correction slide. Its genuine additions were ported into `build_interim_deck.js` instead of
+being left in a file the next generated build would overwrite, with every figure restated on
+distinct counts.
+
+Ported from v5: the four-stage pipeline breakdown, status dots in the capability table, the
+In/DistilBERT/Out panel, the macro-F1 line, per-system baseline figures, the MetadataList edit on
+the clean-win slide, the "Where this stands" slide, and the four closing figures.
+
+Verified before porting: `macro-F1 0.039` is real. `model/final_model/labels.json` -> test_metrics
+gives eval_macro_f1 0.038678, eval_micro_f1 0.3526, over exactly 18 labels. Move Class carries 381
+of 686 rows, so a classifier that always answered "Move Class" scores macro-F1 about 0.040 - the
+trained model is level with that baseline, which is a sharper statement than v5's wording.
+
+Two of v5's row deletions were NOT carried over, because the correction invalidates them:
+- v5 cut struts-C2 from the wins table and kept struts-C4. struts-C4 is +8 on distinct counts, so
+  it is not a win at all, while struts-C2 (-15) is the best arm C result in the project.
+- v5 reduced the arm B vs C table to "each system's stronger arm". log4j2 is now a TIE at -6, so
+  there is no stronger arm to show.
+
+Deck is now 41 slides in nine sections (Intro / C4 / Dashboard / How smells are presented /
+Suggestions / Output / Results / Conclusions / Future work). Results is placed before conclusions,
+inverting the requested 7/8 order, because the conclusion slides quote result figures - raised
+with the user rather than changed silently.
+
+Four dashboard captures are embedded from `docs/img/`. Two of the six supplied images (the
+pipeline map and the overview KPIs) were phone photos of a monitor with heavy moire, so that
+content was redrawn natively instead: the thirteen-stage map and the run's KPI figures are now
+vector slides. The other four are clean screenshots and are used as-is.
+
+`compress_pptx.py` is now part of the build. pptxgenjs writes parts STORED, and the theme step
+that used to re-zip them is unavailable here, which left the deck at 1,306 KB; deflating brings
+the identical content to 412 KB.
+
+Citation added as a footnote on the title slide: Nursapa et al., "ROSE," arXiv:2507.12561, 2025.
