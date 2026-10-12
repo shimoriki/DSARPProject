@@ -164,8 +164,26 @@ S.addNotes("Opening. The claim of the project is the loop: not just detecting sm
 pres.addSection({ title: "Intro and idea" });
 
 slide("DIVIDER", "Intro and idea");
-title("Intro and idea");
+title("The idea");
 S.addText("What the project is for, and the gap it exists to close.", { placeholder: "body" });
+
+slide("TITLEONLY", "Intro and idea");
+title("Every refactoring tool reports an improvement");
+lede("That is the problem. A tool that always has something encouraging to show you cannot tell you when it has found nothing \u2014 and most of the time, there is nothing.", 1.45);
+S.addShape(pres.ShapeType.roundRect, { x: M, y: 2.5, w: 11.9, h: 1.85, rectRadius: 0.06,
+  fill: { color: TINT }, line: { color: RED, width: 2 } });
+S.addText("Causal claim allowed:  false", { x: 1.2, y: 2.85, w: 10.9, h: 0.7, fontSize: 34,
+  bold: true, color: RED, fontFace: "Consolas", isTextBox: true, margin: 0 });
+S.addText("No validated source refactoring was applied; smell changes must not be attributed to refactoring.",
+  { x: 1.2, y: 3.6, w: 10.9, h: 0.5, fontSize: 15, color: INK, fontFace: "Calibri",
+    isTextBox: true, margin: 0 });
+S.addText("Our own system, on a complete run against Apache Tika. Every stage green, and it still declined to take credit.",
+  { x: M, y: 4.6, w: 11.9, h: 0.45, fontSize: 14, italic: true, color: MUTE,
+    fontFace: "Calibri", isTextBox: true, margin: 0 });
+S.addText("This deck is about building a tool that is allowed to say that \u2014 and what it told us once it could.",
+  { x: M, y: 5.3, w: 11.9, h: 0.5, fontSize: 17, bold: true, color: INK, fontFace: "Arial",
+    isTextBox: true, margin: 0 });
+S.addNotes("The hook. Hold on the red box for a beat. The point is not that the run failed \u2014 it is that the tool was ABLE to report failure. Most of the field cannot. Everything after this is what that honesty bought us.");
 
 slide("CONTENT", "Intro and idea");
 title("A detector says where. It never says what to change");
@@ -187,7 +205,7 @@ S.addText("Only the last station is entitled to the word “better”.",
 S.addNotes("The gap the project exists to close.");
 
 slide("TITLEONLY", "Intro and idea");
-title("Four concerns, in order");
+title("Four moving parts, and only one of them is hard");
 const lanes = [
   ["Evidence", RED, "Detect smells; mine what maintainers really did."],
   ["Transformation", BLUE, "Turn a finding into a parameterised source change."],
@@ -213,12 +231,12 @@ S.addText("Each hands its work to the next. The network map of all four is a sep
 pres.addSection({ title: "C4 model" });
 
 slide("DIVIDER", "C4 model");
-title("C4 model");
+title("The architecture");
 S.addText("The architecture of the pipeline itself, at three levels of zoom.", { placeholder: "body" });
 
 slide("TITLEONLY", "C4 model");
 title("What we built");
-lede("Detectors, miners, two transformation backends, validation gates, and a matched before/after measurement.", 1.45);
+lede("Four stages, built on other people's detectors and our own glue. The interesting part is the last one: nothing counts until the same detector is run again on a tree that actually compiled.", 1.45);
 route(1.5, 2.9, 10.2, BLUE, [
   { label: "Evidence", fig: "1" }, { label: "Transformation", fig: "2" },
   { label: "Validation", fig: "3" }, { label: "Measurement", fig: "4" },
@@ -234,8 +252,8 @@ S.addText("Each stage hands its validated output to the next. The container-leve
     isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "C4 model");
-title("The same system at three levels");
-lede("A C4 model, so the pipeline can be read at the level the question needs. The interactive version is a separate artifact; these are its levels.", 1.45);
+title("Zoom in three times and it still holds");
+lede("One model, three zoom levels, so the pipeline can be read at whatever altitude your question lives at. The interactive version is a separate artifact.", 1.45);
 [["Level 1 \u00b7 Context", BLUE,
   "DSARP as one box. Who asks it for a change, and what it reads: a Java repository at a named commit, plus the detectors that judge it.",
   "Developer \u00b7 Java repository \u00b7 Arcan \u00b7 RefactoringMiner"],
@@ -261,7 +279,7 @@ S.addText("One model, three zoom levels. Nothing in it is aspirational: every co
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "C4 model");
-title("What runs today");
+title("Everything in green runs today");
 table([
   hdr(["Capability", "Tool", "Status"]),
   [cell("Smell detection, bytecode"), cell("Arcan 1.2.1"), cell("\u25cf running", { color: GREEN, bold: true })],
@@ -274,7 +292,7 @@ table([
 ], { colW: [4.4, 4.6, 2.9], rowH: 0.44 });
 
 slide("TITLEONLY", "C4 model");
-title("What counts as a claim");
+title("Four kinds of sentence, and only two you can publish");
 lede("The pipeline separates four kinds of statement. Only the last two support the sentence “this refactoring helped”.", 1.5);
 const ladder = [
   ["1", "Model suggestion", "A ranked, probabilistic label. No parameters, no proof.", MUTE],
@@ -301,12 +319,12 @@ S.addNotes("This ladder is why the negative findings are meaningful rather than 
 pres.addSection({ title: "Dashboard" });
 
 slide("DIVIDER", "Dashboard");
-title("Dashboard");
+title("The console");
 S.addText("The console that runs an experiment and records what each stage did.", { placeholder: "body" });
 
 slide("TITLEONLY", "Dashboard");
-title("Every run is a graph of stages you can inspect");
-lede("The console runs an experiment as thirteen stages in four groups. Each stage records what it consumed, what it called and what it produced, so a run can be audited after the fact rather than trusted.", 1.45);
+title("Thirteen stages, and every one shows its work");
+lede("An experiment is thirteen stages in four groups. Each records what it consumed, what it called and what it produced \u2014 so you can audit a run afterwards instead of taking our word for it.", 1.45);
 [["SETUP", BLUE, [["1", "Preflight", "Validate environment"], ["2", "Inputs", "Prepare model records"]]],
  ["LEARNING", AMBER, [["3", "Mining", "Extract history evidence"], ["4", "Training", "Train ranked model"], ["5", "Prediction", "Rank suggestions"]]],
  ["REPOSITORY", GREEN, [["6", "Clone", "Clone exact revision"], ["7", "Baseline", "Build and measure"]]],
@@ -334,12 +352,12 @@ S.addText("Stage 12 is the one that decides whether anything improved: it re-run
 pres.addSection({ title: "How smells are presented" });
 
 slide("DIVIDER", "How smells are presented");
-title("How smells are presented");
+title("What a smell actually is");
 S.addText("What a detector actually hands over, and how a single smell is identified across two runs.", { placeholder: "body" });
 
 slide("TITLEONLY", "How smells are presented");
 title("A smell is an identity, not a row");
-lede("Arcan writes tables, not a list of problems. To say whether a particular smell survived a change, each one needs an identity that is stable across two runs. This is the identity the project uses.", 1.45);
+lede("Arcan hands you tables, not problems. To ask whether a particular smell survived, you first have to decide what makes it the same smell twice. Get this wrong and every later number is fiction.", 1.45);
 table([
   hdr(["Smell", "Identified by", "Read from", "Count, all three systems"]),
   [cell("Cyclic Dependency"), cell("the set of packages, or classes, in the cycle"),
@@ -356,8 +374,8 @@ S.addText("UD30.csv is the same unstable dependencies filtered at 30% instabilit
     isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "How smells are presented");
-title("The same smell, as the console shows it");
-lede("Each record carries the smell type, the exact elements it affects, and five ranked refactoring types with scores. This is the whole of what the model contributes.", 1.45);
+title("Here is what the model actually says");
+lede("Smell type, the exact elements affected, five ranked refactoring types with scores. Look closely at the right-hand column \u2014 this is the whole of what the model contributes.", 1.45);
 S.addImage({ path: "img/dash-recommendations.jpg", x: 0.7, y: 2.05, w: 7.28, h: 4.5 });
 S.addShape(pres.ShapeType.rect, { x: 0.7, y: 2.05, w: 7.28, h: 4.5,
   fill: { type: "none" }, line: { color: RULE, width: 1 } });
@@ -378,12 +396,12 @@ S.addText("Console: Predictions tab, Tika run, 277 generated prediction records.
 pres.addSection({ title: "Suggestions" });
 
 slide("DIVIDER", "Suggestions");
-title("Suggestions, and where the tool fits");
+title("The suggestion engine");
 S.addText("How a suggestion is produced, what it contains, and how far it gets.", { placeholder: "body" });
 
 slide("TITLEONLY", "Suggestions");
-title("The suggestion model");
-lede("Trained here from the supplied dataset, using the repository's own notebook recipe.", 1.45);
+title("A neural network with exactly one job");
+lede("Trained here from the supplied dataset, with the repository's own notebook recipe. One job: look at a smell, name the kind of refactoring that fixes it.", 1.45);
 [["In", "One sentence describing a smell, plus its metrics: type, severity, affected elements, edge count.", BLUE, M],
  ["DistilBERT", "Multi-label classifier trained on the supplied refactoring-history dataset. 686 rows, 18 labels.", AMBER, 4.75],
  ["Out", "Five refactoring type names with scores. Never a class, never a destination.", RED, 8.85]
@@ -400,7 +418,7 @@ S.addText("The gap between In and Out is the open question: a label is chosen wi
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Suggestions");
-title("What it takes in, what it gives back");
+title("The metric you quote decides the story");
 S.addText([
   { text: "In\n", options: { bold: true, fontSize: 14, color: BLUE, fontFace: "Arial", breakLine: true } },
   { text: "One sentence describing a smell and its metrics: “Hub-like Dependency … affected elements org.apache.tika.utils … severity 24.0 … 24 edges …”", options: { fontSize: 14 } },
@@ -421,7 +439,8 @@ table([
 S.addNotes("Macro-F1 of 0.039 over eighteen labels is the number that matters.");
 
 slide("TITLEONLY", "Suggestions");
-title("It answers the same thing every time");
+title("Ask it anything. It says Move Class.");
+S.addNotes("This is the central negative finding, so land it slowly. The model is not slightly wrong, it is constant. Top-5 hit rate 0.913 looks fine until you notice Move Class is 381 of 686 training rows and macro-F1 is 0.039 \u2014 level with always guessing the majority label.");
 table([
   hdr(["Input given to the model", "Move Class score"]),
   [cell("Hub-like Dependency, 24 edges, severity 24.0"), num("0.563")],
@@ -440,8 +459,8 @@ S.addText("It learned the label prior, not a mapping from smell to fix.",
 
 
 slide("TITLEONLY", "Suggestions");
-title("Generation and validation, stage 8");
-lede("The console shows what happened to each candidate: which recipes were generated, which executed, and which survived the build gate.", 1.45);
+title("277 suggestions in. Three come out.");
+lede("The console does not round up. It shows what happened to every candidate, including the ones that died, and it is blunt about the total.", 1.45);
 S.addImage({ path: "img/dash-validation.jpg", x: 0.7, y: 2.05, w: 7.36, h: 4.5 });
 S.addShape(pres.ShapeType.rect, { x: 0.7, y: 2.05, w: 7.36, h: 4.5,
   fill: { type: "none" }, line: { color: RULE, width: 1 } });
@@ -459,7 +478,7 @@ S.addText("The heap fallback note is real: Move Method resolution was unavailabl
   fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Suggestions");
-title("From suggestion to something you can apply");
+title("Where the other 274 went");
 route(1.6, 2.35, 10.0, BLUE, [
   { label: "Suggestions", fig: "1,282" },
   { label: "Concrete moves", fig: "473" },
@@ -478,12 +497,12 @@ S.addText("Every one of Tika's 86 surviving candidates is flagged high risk to t
 pres.addSection({ title: "Output from the tool" });
 
 slide("DIVIDER", "Output from the tool");
-title("Output from the tool");
+title("What a run produces");
 S.addText("The prediction CSV and the rest of what a run produces.", { placeholder: "body" });
 
 slide("TITLEONLY", "Output from the tool");
-title("What one full run actually produced");
-lede("A complete Tika run on the console, every stage green. These are its own reported figures, and they are the honest shape of the current result.", 1.45);
+title("A flawless run that improved nothing");
+lede("Every stage green, no errors, nothing crashed. And this is the point: a run can succeed completely and still have achieved nothing, which is exactly what the tool then tells you.", 1.45);
 stat(M, 2.4, "277", "predictions processed", INK, 2.4);
 stat(M + 2.6, 2.4, "3", "recipes generated", INK, 2.4);
 stat(M + 5.2, 2.4, "3", "candidates executed", INK, 2.4);
@@ -501,8 +520,8 @@ S.addText("277 predictions in, 3 executable candidates out, 0 of them validated.
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Output from the tool");
-title("What a run leaves behind");
-lede("Every run writes its inputs, its predictions, its validation report and its Arcan comparison to disk, each downloadable. The prediction CSV is the model's actual output.", 1.45);
+title("Everything is on disk, so you can check us");
+lede("Inputs, predictions, validation report and Arcan comparison, all written to disk and downloadable. Every figure in this deck can be recomputed from these files.", 1.45);
 S.addImage({ path: "img/dash-files.jpg", x: 0.7, y: 2.05, w: 7.2, h: 4.5 });
 S.addShape(pres.ShapeType.rect, { x: 0.7, y: 2.05, w: 7.2, h: 4.5,
   fill: { type: "none" }, line: { color: RULE, width: 1 } });
@@ -527,8 +546,8 @@ title("Results");
 S.addText("Three systems, 1,193 distinct smells, 56 batches, every number from a tree that built.", { placeholder: "body" });
 
 slide("TITLEONLY", "Results");
-title("What the measurements say");
-lede("Three systems, 1,193 baseline smells, 31 + 25 batches, every number from a tree that built.", 1.45);
+title("1,193 smells, three systems, nowhere to hide");
+lede("Three real systems, 1,193 distinct smells, 56 batches. Every number ahead came from a tree that compiled \u2014 and the ones that did not are shown too.", 1.45);
 stat(M, 2.5, "252", "Apache Tika, baseline smells", RED, 3.4);
 stat(M + 4.0, 2.5, "714", "Logging log4j2, baseline smells", RED, 3.4);
 stat(M + 8.0, 2.5, "227", "Apache Struts, baseline smells", RED, 3.4);
@@ -552,8 +571,9 @@ S.addText("Two modules cannot build on this machine for reasons unrelated to any
     isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
-title("Every total was double-counting");
-lede("Arcan writes UD.csv and UD30.csv. UD30 is the same unstable dependencies filtered at a 30% instability threshold — a severity view of UD, not a second set of findings. The adapter globbed UD*.csv and read findings from both, so every severe unstable dependency was counted twice.", 1.45);
+title("The instrument caught its own author");
+S.addNotes("Tell this as a story, not an apology. Two measurements disagreed: row count said -16, identity diff said -6. We chased the gap rather than publishing the bigger number, and found our own adapter was double-counting UD30. Every total in the project shrank, including our best result. A measurement rig that catches its own author is the actual deliverable.");
+lede("The best moment in this project. Two independent measurements disagreed, we chased the gap instead of publishing the bigger number \u2014 and found that our own adapter had been inflating every total, including our own best result.", 1.45);
 table([
   hdr(["System", "As first reported", "Distinct", "Rows counted twice"]),
   [cell("Apache Tika"), num("260"), num("252", { color: GREEN }), num("8")],
@@ -569,8 +589,8 @@ S.addText("The identity diff reported −6 where the row count reported −16. C
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
-title("Two ways to choose the same operation");
-lede("Both arms relocate classes. Arm B takes the model's label and lets the generator pick a destination. Arm C reads the real cycles from bytecode and computes what each move costs first. Same baselines, same batching, same build, same Arcan jar.", 1.45);
+title("Model versus planner, same rules for both");
+lede("Both arms move classes. Arm B trusts the model's label; Arm C reads the real cycles from bytecode and prices each move first. Same baselines, same batching, same build, same Arcan jar \u2014 so the comparison is fair.", 1.45);
 table([
   hdr(["System", "Arm", "Batches", "Comparable", "Reduced", "Worsened", "Best", "Removed"]),
   [cell("Tika"), cell("B · model"), num("14"), num("11"), num("0"), num("9"), num("0"), num("0.00%")],
@@ -585,8 +605,8 @@ S.addText("Across 1,193 baseline smells arm B removed 6 at best and arm C remove
     isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
-title("The net figure hides the churn");
-lede("Counting smells says nothing about whether the same ones survived. Matching them by identity — a cycle is the set of packages in it — tells a different story.", 1.45);
+title("The number went down. Nothing got better.");
+lede("Here is why counting is not measuring. Match the smells by identity instead of by quantity and the same batches tell a completely different story.", 1.45);
 table([
   hdr(["Batch", "Moves", "Net", "Removed", "Created", "What actually happened"]),
   [cell("tika-B7"), num("1"), num("0"), num("10"), num("10"), cell("Reads as no change. Swapped ten smells for ten others.")],
@@ -599,8 +619,8 @@ S.addText("These operations do not improve an architecture incrementally. They r
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
-title("Even the wins usually make the cycles bigger");
-lede("Eight batches reduced the smell count. For four, the cycles that replaced the removed ones were larger — and two finished with more package cycles than they started with.", 1.45);
+title("Winning on count, losing on structure");
+lede("Eight batches did reduce the count. For four of them the replacement cycles were bigger than the ones removed, and two ended with more package cycles than they started with.", 1.45);
 table([
   hdr(["Batch", "Net smells", "Package cycles", "Removed, avg size", "Created, avg size"]),
   [cell("tika-C3"), num("−12"), num("68 → 64"), num("3.7"), num("4.5", { color: RED })],
@@ -615,7 +635,8 @@ S.addText("Fewer smells and a better structure are not the same measurement.",
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
-title("The one change that improves on every measure");
+title("And then, once, it worked");
+S.addNotes("The payoff. After 36 batches that churned or regressed, one single move removed two smells, created nothing, shrank the package cycle count and kept the build green. This is the shape to aim for, and it is the existence proof that the loop can produce a clean win.");
 S.addShape(pres.ShapeType.roundRect, { x: M, y: 1.6, w: 11.9, h: 2.2, rectRadius: 0.06,
   fill: { color: TINT }, line: { color: GREEN, width: 1.5 }, objectName: "cleanwin" });
 S.addText("tika-C8", { x: 1.1, y: 1.85, w: 2.6, h: 0.5, fontSize: 24, bold: true,
@@ -638,8 +659,8 @@ S.addText("Small, and the only change in 37 batches that improves on every measu
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
-title("The matched comparison the console reports");
-lede("Stage 12 re-runs Arcan on the built tree and matches it against the baseline. When nothing was validated, every delta is zero and the console says so.", 1.45);
+title("A tool that refuses to take credit");
+lede("Most tools would find something encouraging to report here. This one fills the delta column with zeros and writes \u201cCausal claim allowed: false\u201d. That refusal is a feature we built on purpose.", 1.45);
 S.addImage({ path: "img/dash-arcan-comparison.jpg", x: 0.7, y: 2.05, w: 7.67, h: 4.5 });
 S.addShape(pres.ShapeType.rect, { x: 0.7, y: 2.05, w: 7.67, h: 4.5,
   fill: { type: "none" }, line: { color: RULE, width: 1 } });
@@ -657,8 +678,8 @@ S.addText("This is the behaviour the project wants: a run that achieves nothing 
   fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
-title("What the discarded batches would have claimed");
-lede("Of 56 batches run across both arms, 19 built a different module set from their baseline. Their counts are real Arcan output and every one is meaningless.", 1.45);
+title("The nineteen results we threw away");
+lede("Nineteen of 56 batches built a different module set from their baseline. Their numbers are real Arcan output, they look like results, and every one is meaningless. Here is what we would have claimed.", 1.45);
 table([
   hdr(["Batch", "Modules built", "Smells read", "Would have read as"]),
   [cell("struts-B5, B6"), cell("4 of 24"), num("22"), num("−92%", { color: RED })],
@@ -674,7 +695,7 @@ S.addText("The guard is a result, as much as the percentages are.",
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
-title("What has been measured and held");
+title("What already works, and is reproducible");
 table([
   hdr(["Result", "Evidence"]),
   [cell("Stock static analysis on commons-validator"), cell("201 → 194 production smells, compiles, 1,147 tests green")],
@@ -689,15 +710,34 @@ S.addText("Every figure comes from a run in this repository and is reproducible 
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 
+slide("TITLEONLY", "Results");
+title("Why we think this is working");
+lede("The headline deltas are small, and we are not going to pretend otherwise. But the machinery under them is measured, reproducible, and mostly finished \u2014 and these are the numbers we would point a sceptic at.", 1.45);
+[["18 of 18", GREEN, "planned class moves applied, compiled, and removed the exact dependency edge they were aimed at. When the pipeline knows what to do, it does it."],
+ ["14 of 18", GREEN, "move costs predicted exactly before making the change, and 18 of 18 within a single edge. The planner understands the graph it is editing."],
+ ["201 \u2192 190", BLUE, "smells on commons-validator with 1,147 tests still green. The full loop \u2014 propose, apply, build, test, re-measure \u2014 closes end to end."],
+ ["37 of 37", AMBER, "batches where two independent measurements now agree. The instrument is trustworthy enough to have caught our own counting bug."]
+].forEach((r, i) => {
+  const y = 2.55 + i * 1.02;
+  S.addText(r[0], { x: M, y: y, w: 2.2, h: 0.6, fontSize: 26, bold: true, color: r[1],
+    fontFace: "Arial", isTextBox: true, margin: 0, charSpacing: -0.5 });
+  S.addText(r[2], { x: 3.1, y: y + 0.06, w: 9.5, h: 0.85, fontSize: 13.5, color: INK,
+    fontFace: "Calibri", isTextBox: true, margin: 0 });
+});
+S.addText("One component is not working \u2014 the suggestion model \u2014 and we can name its number, its cause and its fix.",
+  { x: M, y: 6.6, w: 11.9, h: 0.45, fontSize: 14.5, bold: true, color: INK, fontFace: "Calibri",
+    isTextBox: true, margin: 0 });
+S.addNotes("The optimism slide, and it is earned rather than spun. Every figure here is measured and in the repository. The argument: the engineering is done and verified, the failure is localised to one component, and that component has a named diagnosis. Expect the question 'so is this a negative result?' \u2014 answer: it is a trustworthy one, which is rarer.");
+
 /* ================= CONCLUSIONS AND DRAWBACKS ================= */
 pres.addSection({ title: "Conclusions and drawbacks" });
 
 slide("DIVIDER", "Conclusions and drawbacks");
-title("Conclusions and drawbacks");
+title("What we learned");
 S.addText("What the measurements changed in our thinking, and what is still open.", { placeholder: "body" });
 
 slide("TITLEONLY", "Conclusions and drawbacks");
-title("What the measurements changed in our thinking");
+title("Four things we believed in October and no longer do");
 const learns = [
   [BLUE, "A label is not a refactoring.", "The gap between “Move Class” and a compiling edit is where almost all of the engineering lives."],
   [AMBER, "The detector's count is not the goal.", "Across six repositories and 2,085 findings only about 28% are reachable at all; the rest is published API, test code, or a warning the maintainers deliberately suppressed."],
@@ -715,7 +755,7 @@ learns.forEach((L, i) => {
 
 slide("TITLEONLY", "Conclusions and drawbacks");
 title("Where this stands");
-lede("Four statements, separated by how much evidence stands behind each.", 1.45);
+lede("Four statements, sorted by how much evidence stands behind each. Three are measured. One is a question for you.", 1.45);
 [["Evidence + transformation", GREEN, "built, running",
   "Detectors, miners and both transformation backends (OpenRewrite, Spoon) operate end to end on all three systems."],
  ["Validation + matched measurement", GREEN, "built, running",
@@ -739,7 +779,7 @@ S.addText("Three of the four are measured and reproducible. The fourth is the on
     isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Conclusions and drawbacks");
-title("Two decisions we would like your view on");
+title("Two questions for you");
 S.addShape(pres.ShapeType.roundRect, { x: M, y: 1.6, w: 5.75, h: 4.3, rectRadius: 0.05,
   fill: { color: TINT }, line: { color: RULE, width: 1 }, objectName: "q1" });
 S.addText("1", { x: 1.0, y: 1.85, w: 0.6, h: 0.6, fontSize: 30, bold: true, color: BLUE,
@@ -765,11 +805,11 @@ S.addText("We can state precisely why the suggestion model carries no informatio
 pres.addSection({ title: "Future work" });
 
 slide("DIVIDER", "Future work");
-title("Future work");
+title("What happens next");
 S.addText("What happens next, in the order we would do it.", { placeholder: "body" });
 
 slide("TITLEONLY", "Future work");
-title("Next");
+title("The next three months, in order of leverage");
 S.addText("Immediate", { x: M, y: 1.6, w: 5.6, h: 0.4, fontSize: 15, bold: true,
   color: AMBER, fontFace: "Arial", isTextBox: true, margin: 0 });
 bullets([

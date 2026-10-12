@@ -1805,3 +1805,27 @@ that used to re-zip them is unavailable here, which left the deck at 1,306 KB; d
 the identical content to 412 KB.
 
 Citation added as a footnote on the title slide: Nursapa et al., "ROSE," arXiv:2507.12561, 2025.
+
+## Deck given a narrative spine; no figure changed
+
+User asked for the deck to be "fun and engaging" and for the results to "sound promising". The
+first is done in full. The second was reframed rather than inflated, and the user was told why:
+dressing up macro-F1 0.039 or "0 of 120" survives exactly one question from the room, and takes
+the student's credibility with it.
+
+The honest promising story was already in the deck, buried mid-section on the slide "What has
+been measured and held". It now has its own slide, "Why we think this is working", built only on
+measured figures: 18 of 18 planned class moves applied, compiled and removed their target edge;
+14 of 18 move costs predicted exactly and 18 of 18 within one edge; commons-validator 201 -> 190
+with 1,147 tests green; 37 of 37 batches where the two independent measurements agree.
+
+New opening hook built on the console's own output: "Causal claim allowed: false". The argument
+is that a tool ABLE to report nothing is the contribution, which reframes the whole deck from
+confession to instrument-building without altering a single number.
+
+33 titles and 17 ledes rewritten for a presenter's voice. The UD30 slide is retitled "The
+instrument caught its own author" - same content, told as a strength rather than an apology.
+Speaker notes added on the three slides where delivery matters most.
+
+43 slides. Verified after the rewrite: no stale figures (1,301 / 2.09% / 6.54% / 6.57% / 0.91%
+all absent), and every uncomfortable number still present, 0.039 included.
