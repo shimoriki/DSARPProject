@@ -1,0 +1,4 @@
+IdCycle,CycleType,MinWeight,MaxWeight,numVertices,ElementList
+2395,circle,2,2,3,"org.apache.commons.validator.routines.AbstractCalendarValidator,org.apache.commons.validator.routines.DateValidator,org.apache.commons.validator.GenericValidator,org.apache.commons.validator.routines.AbstractCalendarValidator"
+2403,circle,2,3,3,"org.apache.commons.validator.routines.InetAddressValidator,org.apache.commons.validator.routines.EmailValidator,org.apache.commons.validator.GenericValidator,org.apache.commons.validator.routines.InetAddressValidator"
+2411,chain,1,6,3,"org.apache.commons.validator.routines.UrlValidator,org.apache.commons.validator.GenericTypeValidator,org.apache.commons.validator.GenericValidator"

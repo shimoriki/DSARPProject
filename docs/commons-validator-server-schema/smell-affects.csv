@@ -1,0 +1,15 @@
+project,versionId,from,to,edgeLabel
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.util,org.apache.commons.validator,unstableDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator,org.apache.commons.validator.routines,unstableDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.routines.checkdigit,org.apache.commons.validator,unstableDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.routines.checkdigit,org.apache.commons.validator.routines,unstableDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.routines,org.apache.commons.validator,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.routines,org.apache.commons.validator.routines.checkdigit,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator,org.apache.commons.validator.routines,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator,org.apache.commons.validator.routines.checkdigit,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.routines.checkdigit,org.apache.commons.validator.routines,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.routines.checkdigit,org.apache.commons.validator,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator,org.apache.commons.validator.util,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.util,org.apache.commons.validator,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.routines,org.apache.commons.validator.routines.checkdigit,cyclicDependency
+commons-validator,b9eff75d99507e85207e2b3f59af2def11eaf12d,org.apache.commons.validator.routines.checkdigit,org.apache.commons.validator.routines,cyclicDependency

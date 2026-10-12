@@ -1,0 +1,5 @@
+UnstableDependenciesPackage,InstabilityUnstableDependenciesPackage,CorrelatedPackage,InstabilityCorrelatedPackage
+org.apache.commons.validator.util,0.84,org.apache.commons.validator,0.8452380952380952
+org.apache.commons.validator,0.8452380952380952,org.apache.commons.validator.routines,0.875
+org.apache.commons.validator.routines.checkdigit,0.7142857142857143,org.apache.commons.validator,0.8452380952380952
+org.apache.commons.validator.routines.checkdigit,0.7142857142857143,org.apache.commons.validator.routines,0.875

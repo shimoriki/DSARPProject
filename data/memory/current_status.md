@@ -1829,3 +1829,30 @@ Speaker notes added on the three slides where delivery matters most.
 
 43 slides. Verified after the rewrite: no stale figures (1,301 / 2.09% / 6.54% / 6.57% / 0.91%
 all absent), and every uncomfortable number still present, 0.039 included.
+
+## Server-schema converter moved into the repo, with the UD30 fix
+
+The three files the web UI validates (`component-metrics.csv`, `smell-characteristics.csv`,
+`smell-affects.csv`) are produced by what was a scratchpad-only script. It is now
+`scripts/arcan_to_server_schema.py` so the correction survives the session.
+
+That script carried the same UD30 double-count as the adapter, and its own comment recorded my
+earlier reasoning for it: reading only UD.csv gave 252 against the adapter's 260, so I made the
+converter match the adapter. The converter had been right. The `Detail` column made the bug
+visible in the data all along - 8 of Tika's 86 unstable rows literally say `UD30.csv: ...`.
+
+Now deduplicated by pair, with 30% membership carried as `[severe: instability >= 0.30]` on the
+single row, so no information is lost. It still reads both files, so a pair unique to UD30 would
+be emitted once rather than dropped.
+
+Tika regenerated: 260 -> 252 smells, 86 -> 78 unstableDep, 596 -> 588 affects rows.
+component-metrics unchanged at 2,051.
+
+New baseline measured this session: commons-validator at b9eff75, `mvn compile` green, 88 class
+files, Arcan 1.2.1. 18 distinct smells - 3 package cycles, 11 class cycles, 4 unstable, 0 hubs
+(no HL.csv written, which is a real finding). Both sets pass
+`evaluation/validate_baseline_inputs.py`.
+
+Note for later: 18 is an ARCHITECTURAL smell count and is not comparable with the 201 figure
+recorded for commons-validator elsewhere in this project, which came from DesigniteJava and
+counts implementation smells.

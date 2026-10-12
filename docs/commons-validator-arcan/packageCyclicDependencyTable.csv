@@ -1,0 +1,4 @@
+Cycle,org.apache.commons.validator.routines,org.apache.commons.validator,java.text,java.net,java.lang,java.math,java.nio.charset,java.util,org.apache.commons.beanutils,org.apache.commons.validator.util,org.apache.commons.digester.xmlrules,org.apache.commons.logging,org.apache.commons.validator.routines.checkdigit,java.io,java.util.concurrent,org.apache.commons.digester,org.xml.sax,java.lang.reflect,java.util.regex,org.apache.commons.collections
+Cycle0,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0
+Cycle1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0
+Cycle2,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0
