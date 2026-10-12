@@ -7,6 +7,12 @@ concrete stage, Maven for the build, and Arcan 1.2.1 for the measurement. A sugg
 credited with improving its target only when the specific smell it named is absent
 afterwards — not merely when the total fell.
 
+Every smell total quoted here is a count of **distinct** smells. Arcan's `UD30.csv` is
+`UD.csv` filtered at a 30% instability threshold, so reading findings from both files
+counted each severe unstable dependency twice; the baselines are 252 (Tika), 714 (log4j2)
+and 227 (Struts), not the 260/767/274 reported earlier. The funnel below is unaffected,
+because the target-smell test matches a smell's identity rather than counting rows.
+
 ## What one suggestion covers, and where its boundary is
 
 | System | Rows | Distinct top labels | Smell types named | Median elements named |
@@ -88,65 +94,65 @@ All 120 that reached a comparable measurement, with the smell each targeted and 
 
 | # | System | Targeted smell | Elements | Class moved | Batch | Net | Target gone? |
 |---|---|---|---|---|---|---|---|
-| 2 | log4j2 | Cyclic | 4 | `LogLog` | log4j2-B1 | -16 | no |
-| 3 | log4j2 | Cyclic | 3 | `AppenderAttachable` | log4j2-B2 | +27 | no |
-| 4 | log4j2 | Cyclic | 5 | `ObjectRenderer` | log4j2-B1 | -16 | no |
-| 5 | log4j2 | Cyclic | 3 | `RendererSupport` | log4j2-B1 | -16 | no |
-| 14 | log4j2 | Cyclic | 2 | `GzCompressAction` | log4j2-B1 | -16 | no |
-| 19 | log4j2 | Cyclic | 6 | `ZipCompressAction` | log4j2-B1 | -16 | no |
-| 26 | log4j2 | Cyclic | 16 | `LoggerRepository` | log4j2-B1 | -16 | no |
-| 29 | log4j2 | Cyclic | 3 | `PluginAttributeVisitor` | log4j2-B2 | +27 | no |
-| 31 | log4j2 | Cyclic | 10 | `PluginVisitor` | log4j2-B3 | +19 | no |
-| 33 | log4j2 | Cyclic | 4 | `PluginBuilderAttributeVisitor` | log4j2-B2 | +27 | no |
-| 36 | log4j2 | Cyclic | 5 | `PluginConfigurationVisitor` | log4j2-B2 | +27 | no |
-| 38 | log4j2 | Cyclic | 6 | `PluginElementVisitor` | log4j2-B2 | +27 | no |
-| 43 | log4j2 | Cyclic | 6 | `NotBlankValidator` | log4j2-B1 | -16 | no |
-| 44 | log4j2 | Cyclic | 5 | `RequiredValidator` | log4j2-B3 | +19 | no |
-| 45 | log4j2 | Cyclic | 3 | `ValidHostValidator` | log4j2-B3 | +19 | no |
-| 46 | log4j2 | Cyclic | 15 | `ValidPortValidator` | log4j2-B3 | +19 | no |
+| 2 | log4j2 | Cyclic | 4 | `LogLog` | log4j2-B1 | -6 | no |
+| 3 | log4j2 | Cyclic | 3 | `AppenderAttachable` | log4j2-B2 | +21 | no |
+| 4 | log4j2 | Cyclic | 5 | `ObjectRenderer` | log4j2-B1 | -6 | no |
+| 5 | log4j2 | Cyclic | 3 | `RendererSupport` | log4j2-B1 | -6 | no |
+| 14 | log4j2 | Cyclic | 2 | `GzCompressAction` | log4j2-B1 | -6 | no |
+| 19 | log4j2 | Cyclic | 6 | `ZipCompressAction` | log4j2-B1 | -6 | no |
+| 26 | log4j2 | Cyclic | 16 | `LoggerRepository` | log4j2-B1 | -6 | no |
+| 29 | log4j2 | Cyclic | 3 | `PluginAttributeVisitor` | log4j2-B2 | +21 | no |
+| 31 | log4j2 | Cyclic | 10 | `PluginVisitor` | log4j2-B3 | +16 | no |
+| 33 | log4j2 | Cyclic | 4 | `PluginBuilderAttributeVisitor` | log4j2-B2 | +21 | no |
+| 36 | log4j2 | Cyclic | 5 | `PluginConfigurationVisitor` | log4j2-B2 | +21 | no |
+| 38 | log4j2 | Cyclic | 6 | `PluginElementVisitor` | log4j2-B2 | +21 | no |
+| 43 | log4j2 | Cyclic | 6 | `NotBlankValidator` | log4j2-B1 | -6 | no |
+| 44 | log4j2 | Cyclic | 5 | `RequiredValidator` | log4j2-B3 | +16 | no |
+| 45 | log4j2 | Cyclic | 3 | `ValidHostValidator` | log4j2-B3 | +16 | no |
+| 46 | log4j2 | Cyclic | 15 | `ValidPortValidator` | log4j2-B3 | +16 | no |
 | 49 | log4j2 | Cyclic | 24 | `MessageFactory` | log4j2-B7 | -1 | no |
-| 55 | log4j2 | Cyclic | 12 | `PluginLoggerContextVisitor` | log4j2-B2 | +27 | no |
-| 60 | log4j2 | Cyclic | 13 | `PluginNodeVisitor` | log4j2-B2 | +27 | no |
-| 65 | log4j2 | Cyclic | 14 | `PluginValueVisitor` | log4j2-B2 | +27 | no |
-| 69 | log4j2 | Cyclic | 29 | `LogManagerStatus` | log4j2-B2 | +27 | no |
-| 80 | log4j2 | Cyclic | 32 | `TestProvider` | log4j2-B1 | -16 | no |
-| 84 | log4j2 | Cyclic | 21 | `ScriptRef` | log4j2-B3 | +19 | no |
-| 89 | log4j2 | Cyclic | 26 | `ScriptManager` | log4j2-B3 | +19 | no |
-| 92 | log4j2 | Cyclic | 28 | `ThreadContextDataInjector` | log4j2-B3 | +19 | no |
-| 94 | log4j2 | Cyclic | 27 | `AbstractScript` | log4j2-B3 | +19 | no |
-| 95 | log4j2 | Cyclic | 11 | `MultiFormatStringBuilderFormattable` | log4j2-B3 | +19 | no |
-| 99 | log4j2 | Cyclic | 26 | `ArrayBlockingQueueFactory` | log4j2-B1 | -16 | no |
-| 104 | log4j2 | Cyclic | 34 | `Advertiser` | log4j2-B3 | +19 | no |
-| 120 | log4j2 | Cyclic | 14 | `SecurityManagerTestRule` | log4j2-B2 | +27 | no |
-| 123 | log4j2 | Cyclic | 37 | `AbstractSerializationTest` | log4j2-B3 | +19 | no |
-| 125 | log4j2 | Cyclic | 8 | `TestLoggerContext` | log4j2-B3 | +19 | no |
-| 126 | log4j2 | Cyclic | 16 | `TestLoggerContextFactory` | log4j2-B3 | +19 | no |
-| 130 | log4j2 | Cyclic | 28 | `DiscardingAsyncQueueFullPolicy` | log4j2-B2 | +27 | no |
-| 131 | log4j2 | Cyclic | 35 | `LastModifiedSource` | log4j2-B2 | +27 | no |
-| 132 | log4j2 | Cyclic | 28 | `HttpInputStreamUtil` | log4j2-B2 | +27 | no |
-| 144 | log4j2 | Cyclic | 27 | `JndiRule` | log4j2-B3 | +19 | no |
-| 149 | log4j2 | Cyclic | 29 | `LoggerFields` | log4j2-B3 | +19 | no |
-| 152 | log4j2 | Cyclic | 23 | `JdbcRule` | log4j2-B2 | +27 | no |
-| 156 | log4j2 | Cyclic | 37 | `ExtendedLevels` | log4j2-B2 | +27 | no |
-| 157 | log4j2 | Cyclic | 30 | `GcFreeLoggingTestUtil` | log4j2-B3 | +19 | no |
-| 162 | log4j2 | Cyclic | 31 | `FailOnceAppender` | log4j2-B2 | +27 | no |
-| 163 | log4j2 | Cyclic | 30 | `BlockingAppender` | log4j2-B2 | +27 | no |
-| 169 | log4j2 | Cyclic | 32 | `InMemoryAppender` | log4j2-B2 | +27 | no |
-| 192 | log4j2 | Cyclic | 2 | `CompositeFilterComponentBuilder` | log4j2-B1 | -16 | no |
-| 196 | log4j2 | Cyclic | 18 | `CustomLevelComponentBuilder` | log4j2-B1 | -16 | no |
-| 197 | log4j2 | Cyclic | 13 | `KeyValuePairComponentBuilder` | log4j2-B1 | -16 | no |
-| 215 | log4j2 | Cyclic | 35 | `BasicAsyncLoggerContextSelector` | log4j2-B2 | +27 | no |
-| 223 | log4j2 | Cyclic | 28 | `PosixViewAttributeAction` | log4j2-B1 | -16 | no |
-| 226 | log4j2 | Cyclic | 27 | `CompositeAction` | log4j2-B1 | -16 | no |
-| 235 | log4j2 | Cyclic | 20 | `ThrowableFormatOptions` | log4j2-B3 | +19 | no |
-| 248 | log4j2 | Cyclic | 26 | `DirectFileRolloverStrategy` | log4j2-B2 | +27 | no |
-| 259 | log4j2 | Cyclic | 32 | `SimpleProvider` | log4j2-B2 | +27 | no |
-| 268 | log4j2 | Cyclic | 8 | `FilteredObjectInputStream` | log4j2-B3 | +19 | no |
-| 273 | log4j2 | Cyclic | 26 | `FilterAdapter` | log4j2-B1 | -16 | no |
-| 274 | log4j2 | Cyclic | 19 | `RingBufferAdmin` | log4j2-B3 | +19 | no |
-| 292 | log4j2 | Cyclic | 13 | `ExecutorServices` | log4j2-B3 | +19 | no |
-| 294 | log4j2 | Cyclic | 12 | `Source` | log4j2-B11 *(alone)* | +14 | no |
-| 304 | log4j2 | Cyclic | 7 | `ConfigurationFactoryData` | log4j2-B1 | -16 | no |
-| 307 | log4j2 | Cyclic | 6 | `SelectArbiter` | log4j2-B2 | +27 | no |
+| 55 | log4j2 | Cyclic | 12 | `PluginLoggerContextVisitor` | log4j2-B2 | +21 | no |
+| 60 | log4j2 | Cyclic | 13 | `PluginNodeVisitor` | log4j2-B2 | +21 | no |
+| 65 | log4j2 | Cyclic | 14 | `PluginValueVisitor` | log4j2-B2 | +21 | no |
+| 69 | log4j2 | Cyclic | 29 | `LogManagerStatus` | log4j2-B2 | +21 | no |
+| 80 | log4j2 | Cyclic | 32 | `TestProvider` | log4j2-B1 | -6 | no |
+| 84 | log4j2 | Cyclic | 21 | `ScriptRef` | log4j2-B3 | +16 | no |
+| 89 | log4j2 | Cyclic | 26 | `ScriptManager` | log4j2-B3 | +16 | no |
+| 92 | log4j2 | Cyclic | 28 | `ThreadContextDataInjector` | log4j2-B3 | +16 | no |
+| 94 | log4j2 | Cyclic | 27 | `AbstractScript` | log4j2-B3 | +16 | no |
+| 95 | log4j2 | Cyclic | 11 | `MultiFormatStringBuilderFormattable` | log4j2-B3 | +16 | no |
+| 99 | log4j2 | Cyclic | 26 | `ArrayBlockingQueueFactory` | log4j2-B1 | -6 | no |
+| 104 | log4j2 | Cyclic | 34 | `Advertiser` | log4j2-B3 | +16 | no |
+| 120 | log4j2 | Cyclic | 14 | `SecurityManagerTestRule` | log4j2-B2 | +21 | no |
+| 123 | log4j2 | Cyclic | 37 | `AbstractSerializationTest` | log4j2-B3 | +16 | no |
+| 125 | log4j2 | Cyclic | 8 | `TestLoggerContext` | log4j2-B3 | +16 | no |
+| 126 | log4j2 | Cyclic | 16 | `TestLoggerContextFactory` | log4j2-B3 | +16 | no |
+| 130 | log4j2 | Cyclic | 28 | `DiscardingAsyncQueueFullPolicy` | log4j2-B2 | +21 | no |
+| 131 | log4j2 | Cyclic | 35 | `LastModifiedSource` | log4j2-B2 | +21 | no |
+| 132 | log4j2 | Cyclic | 28 | `HttpInputStreamUtil` | log4j2-B2 | +21 | no |
+| 144 | log4j2 | Cyclic | 27 | `JndiRule` | log4j2-B3 | +16 | no |
+| 149 | log4j2 | Cyclic | 29 | `LoggerFields` | log4j2-B3 | +16 | no |
+| 152 | log4j2 | Cyclic | 23 | `JdbcRule` | log4j2-B2 | +21 | no |
+| 156 | log4j2 | Cyclic | 37 | `ExtendedLevels` | log4j2-B2 | +21 | no |
+| 157 | log4j2 | Cyclic | 30 | `GcFreeLoggingTestUtil` | log4j2-B3 | +16 | no |
+| 162 | log4j2 | Cyclic | 31 | `FailOnceAppender` | log4j2-B2 | +21 | no |
+| 163 | log4j2 | Cyclic | 30 | `BlockingAppender` | log4j2-B2 | +21 | no |
+| 169 | log4j2 | Cyclic | 32 | `InMemoryAppender` | log4j2-B2 | +21 | no |
+| 192 | log4j2 | Cyclic | 2 | `CompositeFilterComponentBuilder` | log4j2-B1 | -6 | no |
+| 196 | log4j2 | Cyclic | 18 | `CustomLevelComponentBuilder` | log4j2-B1 | -6 | no |
+| 197 | log4j2 | Cyclic | 13 | `KeyValuePairComponentBuilder` | log4j2-B1 | -6 | no |
+| 215 | log4j2 | Cyclic | 35 | `BasicAsyncLoggerContextSelector` | log4j2-B2 | +21 | no |
+| 223 | log4j2 | Cyclic | 28 | `PosixViewAttributeAction` | log4j2-B1 | -6 | no |
+| 226 | log4j2 | Cyclic | 27 | `CompositeAction` | log4j2-B1 | -6 | no |
+| 235 | log4j2 | Cyclic | 20 | `ThrowableFormatOptions` | log4j2-B3 | +16 | no |
+| 248 | log4j2 | Cyclic | 26 | `DirectFileRolloverStrategy` | log4j2-B2 | +21 | no |
+| 259 | log4j2 | Cyclic | 32 | `SimpleProvider` | log4j2-B2 | +21 | no |
+| 268 | log4j2 | Cyclic | 8 | `FilteredObjectInputStream` | log4j2-B3 | +16 | no |
+| 273 | log4j2 | Cyclic | 26 | `FilterAdapter` | log4j2-B1 | -6 | no |
+| 274 | log4j2 | Cyclic | 19 | `RingBufferAdmin` | log4j2-B3 | +16 | no |
+| 292 | log4j2 | Cyclic | 13 | `ExecutorServices` | log4j2-B3 | +16 | no |
+| 294 | log4j2 | Cyclic | 12 | `Source` | log4j2-B11 *(alone)* | +15 | no |
+| 304 | log4j2 | Cyclic | 7 | `ConfigurationFactoryData` | log4j2-B1 | -6 | no |
+| 307 | log4j2 | Cyclic | 6 | `SelectArbiter` | log4j2-B2 | +21 | no |
 
 … and 60 more, all with the same verdict.

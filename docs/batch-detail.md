@@ -9,15 +9,38 @@ of packages (or classes) in it, an unstable dependency by the (package, correlat
 pair, a hub-like by the class. So *removed* and *created* below are actual smells that
 appeared or disappeared, and the net figure is what Arcan's total moved by.
 
+## Counting correction applied to every number below
+
+Arcan 1.2.1 writes both `UD.csv` and `UD30.csv`. `UD30` is the same unstable dependencies
+filtered at a 30% instability threshold -- a severity view of `UD`, not a separate set of
+findings. Every pair in it is already in `UD`: verified across all 63 Arcan runs in this
+project, with no exceptions and no internally duplicated pairs. The adapter globbed
+`UD*.csv` and read findings from both files, so every severe unstable dependency was
+counted twice.
+
+Totals here are therefore **distinct smells**, which lowers all three baselines:
+
+| System | As previously counted | Distinct | Duplicated rows |
+|---|---|---|---|
+| Tika | 260 | **252** | 8 |
+| log4j2 | 767 | **714** | 53 |
+| Struts | 274 | **227** | 47 |
+
+The inflation does not cancel in a delta, because the number of duplicated rows changes
+with the tree: across these runs it ranges from 6 to 59. Three previously reported verdicts
+change direction once restated, and log4j2-B1 -- the best arm B result -- falls from -16 to
+-6. Both the old and the new figure are kept per batch in `results.json`
+(`verdict_inflated` vs `verdict`) so the correction stays auditable.
+
 
 ---
 
-## tika  (baseline 260 smells)
+## tika  (baseline 252 smells)
 
 ### tika-B3 — arm B, model suggestions
 
 - moves applied: **4**
-- Arcan total: **260 → 283 (net +23)**
+- Arcan total: **252 → 275 (net +23)**
 - smells removed: **22**, smells created: **45**
 - package cycles 68 → 91, class cycles 105 → 105, unstable 78 → 78, hub-like 1 → 1
 
@@ -71,7 +94,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B4 — arm B, model suggestions
 
 - moves applied: **3**
-- Arcan total: **260 → 269 (net +9)**
+- Arcan total: **252 → 261 (net +9)**
 - smells removed: **18**, smells created: **27**
 - package cycles 68 → 76, class cycles 105 → 105, unstable 78 → 79, hub-like 1 → 1
 
@@ -114,7 +137,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B5 — arm B, model suggestions
 
 - moves applied: **2**
-- Arcan total: **260 → 261 (net +1)**
+- Arcan total: **252 → 253 (net +1)**
 - smells removed: **0**, smells created: **1**
 - package cycles 68 → 68, class cycles 105 → 105, unstable 78 → 79, hub-like 1 → 1
 
@@ -128,7 +151,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B6 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **260 → 266 (net +6)**
+- Arcan total: **252 → 258 (net +6)**
 - smells removed: **19**, smells created: **25**
 - package cycles 68 → 75, class cycles 105 → 105, unstable 78 → 77, hub-like 1 → 1
 
@@ -169,7 +192,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B7 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **260 → 260 (net +0)**
+- Arcan total: **252 → 252 (net +0)**
 - smells removed: **10**, smells created: **10**
 - package cycles 68 → 68, class cycles 105 → 105, unstable 78 → 78, hub-like 1 → 1
 
@@ -214,7 +237,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B8 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **260 → 260 (net +0)**
+- Arcan total: **252 → 252 (net +0)**
 - smells removed: **0**, smells created: **0**
 - package cycles 68 → 68, class cycles 105 → 105, unstable 78 → 78, hub-like 1 → 1
 
@@ -225,7 +248,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B9 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **260 → 267 (net +7)**
+- Arcan total: **252 → 259 (net +7)**
 - smells removed: **20**, smells created: **27**
 - package cycles 68 → 75, class cycles 105 → 105, unstable 78 → 78, hub-like 1 → 1
 
@@ -268,7 +291,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B11 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **260 → 267 (net +7)**
+- Arcan total: **252 → 259 (net +7)**
 - smells removed: **20**, smells created: **27**
 - package cycles 68 → 75, class cycles 105 → 105, unstable 78 → 78, hub-like 1 → 1
 
@@ -311,7 +334,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B12 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **260 → 267 (net +7)**
+- Arcan total: **252 → 259 (net +7)**
 - smells removed: **19**, smells created: **26**
 - package cycles 68 → 76, class cycles 105 → 105, unstable 78 → 77, hub-like 1 → 1
 
@@ -352,7 +375,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B13 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **260 → 266 (net +6)**
+- Arcan total: **252 → 258 (net +6)**
 - smells removed: **28**, smells created: **34**
 - package cycles 68 → 76, class cycles 105 → 105, unstable 78 → 76, hub-like 1 → 1
 
@@ -395,7 +418,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-B14 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **260 → 271 (net +11)**
+- Arcan total: **252 → 260 (net +8)**
 - smells removed: **21**, smells created: **29**
 - package cycles 68 → 75, class cycles 105 → 105, unstable 78 → 79, hub-like 1 → 1
 
@@ -438,7 +461,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-C1 — arm C, DSARP planner
 
 - moves applied: **10**
-- Arcan total: **260 → 262 (net +2)**
+- Arcan total: **252 → 254 (net +2)**
 - smells removed: **42**, smells created: **44**
 - package cycles 68 → 78, class cycles 105 → 100, unstable 78 → 75, hub-like 1 → 1
 
@@ -503,7 +526,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-C3 — arm C, DSARP planner
 
 - moves applied: **12**
-- Arcan total: **260 → 243 (net -17)**
+- Arcan total: **252 → 240 (net -12)**
 - smells removed: **42**, smells created: **30**
 - package cycles 68 → 64, class cycles 105 → 105, unstable 78 → 70, hub-like 1 → 1
 
@@ -565,7 +588,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-C4 — arm C, DSARP planner
 
 - moves applied: **3**
-- Arcan total: **260 → 258 (net -2)**
+- Arcan total: **252 → 250 (net -2)**
 - smells removed: **41**, smells created: **39**
 - package cycles 68 → 73, class cycles 105 → 100, unstable 78 → 76, hub-like 1 → 1
 
@@ -625,7 +648,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-C5 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **260 → 267 (net +7)**
+- Arcan total: **252 → 259 (net +7)**
 - smells removed: **20**, smells created: **27**
 - package cycles 68 → 75, class cycles 105 → 105, unstable 78 → 78, hub-like 1 → 1
 
@@ -668,7 +691,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-C6 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **260 → 261 (net +1)**
+- Arcan total: **252 → 253 (net +1)**
 - smells removed: **27**, smells created: **28**
 - package cycles 68 → 75, class cycles 105 → 100, unstable 78 → 77, hub-like 1 → 1
 
@@ -724,7 +747,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-C7 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **260 → 257 (net -3)**
+- Arcan total: **252 → 249 (net -3)**
 - smells removed: **25**, smells created: **22**
 - package cycles 68 → 71, class cycles 105 → 100, unstable 78 → 77, hub-like 1 → 1
 
@@ -778,7 +801,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-C8 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **260 → 258 (net -2)**
+- Arcan total: **252 → 250 (net -2)**
 - smells removed: **2**, smells created: **0**
 - package cycles 68 → 67, class cycles 105 → 105, unstable 78 → 77, hub-like 1 → 1
 
@@ -795,7 +818,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### tika-C9 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **260 → 261 (net +1)**
+- Arcan total: **252 → 253 (net +1)**
 - smells removed: **30**, smells created: **31**
 - package cycles 68 → 73, class cycles 105 → 99, unstable 78 → 80, hub-like 1 → 1
 
@@ -856,12 +879,12 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 
 ---
 
-## log4j2  (baseline 767 smells)
+## log4j2  (baseline 714 smells)
 
 ### log4j2-B1 — arm B, model suggestions
 
 - moves applied: **25**
-- Arcan total: **767 → 751 (net -16)**
+- Arcan total: **714 → 708 (net -6)**
 - smells removed: **60**, smells created: **54**
 - package cycles 201 → 199, class cycles 380 → 377, unstable 130 → 129, hub-like 3 → 3
 
@@ -946,7 +969,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### log4j2-B2 — arm B, model suggestions
 
 - moves applied: **25**
-- Arcan total: **767 → 794 (net +27)**
+- Arcan total: **714 → 735 (net +21)**
 - smells removed: **98**, smells created: **119**
 - package cycles 201 → 207, class cycles 380 → 389, unstable 130 → 136, hub-like 3 → 3
 
@@ -1030,7 +1053,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### log4j2-B3 — arm B, model suggestions
 
 - moves applied: **25**
-- Arcan total: **767 → 786 (net +19)**
+- Arcan total: **714 → 730 (net +16)**
 - smells removed: **194**, smells created: **210**
 - package cycles 201 → 198, class cycles 380 → 398, unstable 130 → 131, hub-like 3 → 3
 
@@ -1115,7 +1138,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### log4j2-B7 — arm B, model suggestions
 
 - moves applied: **2**
-- Arcan total: **767 → 766 (net -1)**
+- Arcan total: **714 → 713 (net -1)**
 - smells removed: **1**, smells created: **0**
 - package cycles 201 → 201, class cycles 380 → 379, unstable 130 → 130, hub-like 3 → 3
 
@@ -1131,7 +1154,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### log4j2-B11 — arm B, model suggestions
 
 - moves applied: **1**
-- Arcan total: **767 → 781 (net +14)**
+- Arcan total: **714 → 729 (net +15)**
 - smells removed: **157**, smells created: **172**
 - package cycles 201 → 199, class cycles 380 → 398, unstable 130 → 129, hub-like 3 → 3
 
@@ -1200,7 +1223,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### log4j2-C3 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **767 → 768 (net +1)**
+- Arcan total: **714 → 714 (net +0)**
 - smells removed: **83**, smells created: **83**
 - package cycles 201 → 201, class cycles 380 → 379, unstable 130 → 131, hub-like 3 → 3
 
@@ -1252,7 +1275,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### log4j2-C4 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **767 → 760 (net -7)**
+- Arcan total: **714 → 708 (net -6)**
 - smells removed: **19**, smells created: **13**
 - package cycles 201 → 197, class cycles 380 → 379, unstable 130 → 129, hub-like 3 → 3
 
@@ -1302,7 +1325,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### log4j2-C5 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **767 → 779 (net +12)**
+- Arcan total: **714 → 725 (net +11)**
 - smells removed: **44**, smells created: **55**
 - package cycles 201 → 201, class cycles 380 → 390, unstable 130 → 131, hub-like 3 → 3
 
@@ -1351,7 +1374,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### log4j2-C6 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **767 → 767 (net +0)**
+- Arcan total: **714 → 714 (net +0)**
 - smells removed: **14**, smells created: **14**
 - package cycles 201 → 201, class cycles 380 → 379, unstable 130 → 131, hub-like 3 → 3
 
@@ -1398,12 +1421,12 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 
 ---
 
-## struts  (baseline 274 smells)
+## struts  (baseline 227 smells)
 
 ### struts-B4 — arm B, model suggestions
 
 - moves applied: **25**
-- Arcan total: **274 → 300 (net +26)**
+- Arcan total: **227 → 254 (net +27)**
 - smells removed: **26**, smells created: **53**
 - package cycles 87 → 104, class cycles 48 → 52, unstable 92 → 98, hub-like 0 → 0
 
@@ -1474,7 +1497,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### struts-C1 — arm C, DSARP planner
 
 - moves applied: **12**
-- Arcan total: **274 → 272 (net -2)**
+- Arcan total: **227 → 227 (net +0)**
 - smells removed: **55**, smells created: **55**
 - package cycles 87 → 91, class cycles 48 → 49, unstable 92 → 87, hub-like 0 → 0
 
@@ -1532,7 +1555,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### struts-C2 — arm C, DSARP planner
 
 - moves applied: **12**
-- Arcan total: **274 → 256 (net -18)**
+- Arcan total: **227 → 212 (net -15)**
 - smells removed: **24**, smells created: **9**
 - package cycles 87 → 75, class cycles 48 → 48, unstable 92 → 89, hub-like 0 → 0
 
@@ -1579,7 +1602,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### struts-C4 — arm C, DSARP planner
 
 - moves applied: **12**
-- Arcan total: **274 → 268 (net -6)**
+- Arcan total: **227 → 235 (net +8)**
 - smells removed: **56**, smells created: **64**
 - package cycles 87 → 97, class cycles 48 → 52, unstable 92 → 86, hub-like 0 → 0
 
@@ -1645,7 +1668,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### struts-C5 — arm C, DSARP planner
 
 - moves applied: **3**
-- Arcan total: **274 → 294 (net +20)**
+- Arcan total: **227 → 249 (net +22)**
 - smells removed: **72**, smells created: **94**
 - package cycles 87 → 105, class cycles 48 → 50, unstable 92 → 94, hub-like 0 → 0
 
@@ -1700,7 +1723,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### struts-C7 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **274 → 297 (net +23)**
+- Arcan total: **227 → 251 (net +24)**
 - smells removed: **76**, smells created: **100**
 - package cycles 87 → 107, class cycles 48 → 50, unstable 92 → 94, hub-like 0 → 0
 
@@ -1753,7 +1776,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### struts-C8 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **274 → 299 (net +25)**
+- Arcan total: **227 → 253 (net +26)**
 - smells removed: **77**, smells created: **103**
 - package cycles 87 → 108, class cycles 48 → 50, unstable 92 → 95, hub-like 0 → 0
 
@@ -1806,7 +1829,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### struts-C9 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **274 → 278 (net +4)**
+- Arcan total: **227 → 232 (net +5)**
 - smells removed: **5**, smells created: **10**
 - package cycles 87 → 88, class cycles 48 → 50, unstable 92 → 94, hub-like 0 → 0
 
@@ -1835,7 +1858,7 @@ appeared or disappeared, and the net figure is what Arcan's total moved by.
 ### struts-C10 — arm C, DSARP planner
 
 - moves applied: **1**
-- Arcan total: **274 → 297 (net +23)**
+- Arcan total: **227 → 251 (net +24)**
 - smells removed: **74**, smells created: **98**
 - package cycles 87 → 107, class cycles 48 → 50, unstable 92 → 94, hub-like 0 → 0
 

@@ -162,7 +162,7 @@ slide("CONTENT", "Opening");
 title("A detector says where. It never says what to change");
 S.addText([
   { text: "What the tools give us\n", options: { bold: true, fontSize: 15, color: RED, fontFace: "Arial", breakLine: true } },
-  { text: "Arcan reports 260 architectural smells in Tika. Each names packages and a severity. None of them names an edit.", options: { fontSize: 15 } },
+  { text: "Arcan reports 252 architectural smells in Tika. Each names packages and a severity. None of them names an edit.", options: { fontSize: 15 } },
 ], { x: M, y: 1.7, w: 5.6, h: 2.0, color: INK, fontFace: "Calibri", isTextBox: true, margin: 0, valign: "top" });
 S.addText([
   { text: "What is missing\n", options: { bold: true, fontSize: 15, color: AMBER, fontFace: "Arial", breakLine: true } },
@@ -292,22 +292,39 @@ pres.addSection({ title: "Results" });
 
 slide("DIVIDER", "Results");
 title("What the measurements say");
-S.addText("Three systems, 1,301 baseline smells, 31 + 25 batches, every number from a tree that built.", { placeholder: "body" });
+S.addText("Three systems, 1,193 baseline smells, 31 + 25 batches, every number from a tree that built.", { placeholder: "body" });
 
 slide("TITLEONLY", "Results");
 title("The baselines");
 table([
   hdr(["System", "Commit", "Modules built", "Classes", "Arcan smells"]),
-  [cell("Apache Tika"), cell("697d7c04"), num("101 of 102"), num("1,804"), num("260", { color: RED })],
-  [cell("Logging log4j2"), cell("4f474b32"), num("41 of 41"), num("3,170"), num("767", { color: RED })],
-  [cell("Apache Struts"), cell("d59aea5f"), num("24 of 27"), num("1,193"), num("274", { color: RED })],
+  [cell("Apache Tika"), cell("697d7c04"), num("101 of 102"), num("1,804"), num("252", { color: RED })],
+  [cell("Logging log4j2"), cell("4f474b32"), num("41 of 41"), num("3,170"), num("714", { color: RED })],
+  [cell("Apache Struts"), cell("d59aea5f"), num("24 of 27"), num("1,193"), num("227", { color: RED })],
 ], { colW: [3.2, 2.2, 2.4, 2.0, 2.1], rowH: 0.46 });
-S.addText("Tika's 260 reconciles exactly against Arcan's own raw output: 68 package cycles + 105 class cycles + 78 + 8 unstable + 1 hub-like.",
+S.addText("Tika's 252 reconciles exactly against Arcan's raw output: 68 package cycles + 105 class cycles + 78 unstable + 1 hub-like. The 260 reported earlier added UD30.csv's 8 rows, which UD.csv already contains.",
   { x: M, y: 3.5, w: 11.9, h: 0.5, fontSize: 13.5, color: MUTE, fontFace: "Calibri",
     isTextBox: true, margin: 0 });
 S.addText("Two modules cannot build on this machine for reasons unrelated to any refactoring: tika-grpc needs a protoc plugin, Struts 2 Tiles Plugin fails likewise. The same exclusion is applied to every later measurement, so before and after stay comparable.",
   { x: M, y: 4.2, w: 11.9, h: 0.8, fontSize: 13.5, color: MUTE, fontFace: "Calibri",
     isTextBox: true, margin: 0 });
+
+slide("TITLEONLY", "Results");
+title("Every total was double-counting");
+lede("Arcan writes UD.csv and UD30.csv. UD30 is the same unstable dependencies filtered at a 30% instability threshold — a severity view of UD, not a second set of findings. The adapter globbed UD*.csv and read findings from both, so every severe unstable dependency was counted twice.", 1.45);
+table([
+  hdr(["System", "As first reported", "Distinct", "Rows counted twice"]),
+  [cell("Apache Tika"), num("260"), num("252", { color: GREEN }), num("8")],
+  [cell("Logging log4j2"), num("767"), num("714", { color: GREEN }), num("53")],
+  [cell("Apache Struts"), num("274"), num("227", { color: GREEN }), num("47")],
+], { y: 2.7, colW: [3.2, 3.0, 2.6, 3.1], rowH: 0.42 });
+stat(M, 4.5, "63/63", "Arcan runs in which every UD30 pair was already present in UD. The subset holds without exception.", BLUE, 2.7);
+stat(M + 3.1, 4.5, "37/37", "batches where the row count and the independent identity diff now agree exactly. Before the fix they disagreed on every affected batch.", GREEN, 2.7);
+stat(M + 6.2, 4.5, "3", "verdicts that changed direction once restated, including one reduction that is really a worsening.", RED, 2.7);
+stat(M + 9.3, 4.5, "−6", "the best result in the project, restated from −16. The duplicate count varies with the tree, so it never cancels in a delta.", AMBER, 2.7);
+S.addText("The identity diff reported −6 where the row count reported −16. Chasing that gap instead of publishing the larger number is what exposed it.",
+  { x: M, y: 6.55, w: 11.9, h: 0.5, fontSize: 14, bold: true, color: INK,
+    fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
 title("From suggestion to something you can apply");
@@ -331,13 +348,13 @@ lede("Both arms relocate classes. Arm B takes the model's label and lets the gen
 table([
   hdr(["System", "Arm", "Batches", "Comparable", "Reduced", "Worsened", "Best", "Removed"]),
   [cell("Tika"), cell("B · model"), num("14"), num("11"), num("0"), num("9"), num("0"), num("0.00%")],
-  [cell("Tika"), cell("C · planner", { bold: true }), num("9"), num("8"), num("4", { color: GREEN }), num("4"), num("−17", { color: GREEN }), num("6.54%", { color: GREEN })],
-  [cell("log4j2"), cell("B · model", { bold: true }), num("11"), num("5"), num("2", { color: GREEN }), num("3"), num("−16", { color: GREEN }), num("2.09%", { color: GREEN })],
-  [cell("log4j2"), cell("C · planner"), num("6"), num("4"), num("1"), num("2"), num("−7"), num("0.91%")],
-  [cell("Struts"), cell("B · model"), num("6"), num("1"), num("0"), num("1"), num("+26", { color: RED }), num("0.00%")],
-  [cell("Struts"), cell("C · planner", { bold: true }), num("10"), num("8"), num("3", { color: GREEN }), num("5"), num("−18", { color: GREEN }), num("6.57%", { color: GREEN })],
+  [cell("Tika"), cell("C · planner", { bold: true }), num("9"), num("8"), num("4", { color: GREEN }), num("4"), num("−12", { color: GREEN }), num("4.76%", { color: GREEN })],
+  [cell("log4j2"), cell("B · model"), num("11"), num("5"), num("2"), num("3"), num("−6"), num("0.84%")],
+  [cell("log4j2"), cell("C · planner"), num("6"), num("4"), num("1"), num("1"), num("−6"), num("0.84%")],
+  [cell("Struts"), cell("B · model"), num("6"), num("1"), num("0"), num("1"), num("+27", { color: RED }), num("0.00%")],
+  [cell("Struts"), cell("C · planner", { bold: true }), num("10"), num("8"), num("1", { color: GREEN }), num("6"), num("−15", { color: GREEN }), num("6.61%", { color: GREEN })],
 ], { y: 2.5, colW: [1.9, 2.0, 1.3, 1.6, 1.3, 1.5, 1.1, 1.2], rowH: 0.42 });
-S.addText("Across 1,301 baseline smells arm B removed 16 at best and arm C removed 42. Arm C wins on two systems and loses on log4j2. Neither selection is generally better.",
+S.addText("Across 1,193 baseline smells arm B removed 6 at best and arm C removed 33. Arm C wins on two systems and ties log4j2. Neither selection is generally better.",
   { x: M, y: 5.6, w: 11.9, h: 0.7, fontSize: 14, color: INK, fontFace: "Calibri",
     isTextBox: true, margin: 0 });
 
@@ -347,9 +364,9 @@ lede("Counting smells says nothing about whether the same ones survived. Matchin
 table([
   hdr(["Batch", "Moves", "Net", "Removed", "Created", "What actually happened"]),
   [cell("tika-B7"), num("1"), num("0"), num("10"), num("10"), cell("Reads as no change. Swapped ten smells for ten others.")],
-  [cell("struts-C8"), num("1"), num("+25"), num("77"), num("103"), cell("One move dissolved 77 cycles and created 103.")],
-  [cell("log4j2-B3"), num("25"), num("+19"), num("194"), num("210"), cell("Wholesale re-shuffle of the cycle structure.")],
-  [cell("tika-C3"), num("12"), num("−17", { color: GREEN }), num("42"), num("30"), cell("Best Tika batch, and still created 30 new smells.")],
+  [cell("struts-C8"), num("1"), num("+26"), num("77"), num("103"), cell("One move dissolved 77 cycles and created 103.")],
+  [cell("log4j2-B3"), num("25"), num("+16"), num("194"), num("210"), cell("Wholesale re-shuffle of the cycle structure.")],
+  [cell("tika-C3"), num("12"), num("−12", { color: GREEN }), num("42"), num("30"), cell("Best Tika batch, and still created 30 new smells.")],
 ], { y: 2.5, colW: [1.5, 1.0, 1.0, 1.2, 1.2, 6.0], rowH: 0.46 });
 S.addText("These operations do not improve an architecture incrementally. They re-partition it, and the count lands wherever the re-partition puts it.",
   { x: M, y: 5.3, w: 11.9, h: 0.7, fontSize: 15, bold: true, color: INK,
@@ -357,14 +374,14 @@ S.addText("These operations do not improve an architecture incrementally. They r
 
 slide("TITLEONLY", "Results");
 title("Even the wins usually make the cycles bigger");
-lede("Ten batches reduced the smell count. For six, the cycles that replaced the removed ones were larger — and four finished with more package cycles than they started with.", 1.45);
+lede("Eight batches reduced the smell count. For four, the cycles that replaced the removed ones were larger — and two finished with more package cycles than they started with.", 1.45);
 table([
   hdr(["Batch", "Net smells", "Package cycles", "Removed, avg size", "Created, avg size"]),
-  [cell("tika-C3"), num("−17"), num("68 → 64"), num("3.7"), num("4.5", { color: RED })],
+  [cell("tika-C3"), num("−12"), num("68 → 64"), num("3.7"), num("4.5", { color: RED })],
   [cell("tika-C4"), num("−2"), num("68 → 73", { color: RED }), num("3.8"), num("4.6", { color: RED })],
-  [cell("struts-C4"), num("−6"), num("87 → 97", { color: RED }), num("4.9"), num("7.9", { color: RED })],
-  [cell("log4j2-B1"), num("−16"), num("201 → 199"), num("4.6"), num("5.4", { color: RED })],
-  [cell("struts-C2", { bold: true }), num("−18", { color: GREEN }), num("87 → 75", { color: GREEN }), num("4.6"), num("4.5", { color: GREEN })],
+  [cell("tika-C7"), num("−3"), num("68 → 71", { color: RED }), num("3.7"), num("4.4", { color: RED })],
+  [cell("log4j2-B1"), num("−6"), num("201 → 199"), num("4.6"), num("5.4", { color: RED })],
+  [cell("struts-C2", { bold: true }), num("−15", { color: GREEN }), num("87 → 75", { color: GREEN }), num("4.6"), num("4.5", { color: GREEN })],
   [cell("tika-C8", { bold: true }), num("−2", { color: GREEN }), num("68 → 67", { color: GREEN }), num("2.0"), num("none", { color: GREEN })],
 ], { y: 2.5, colW: [2.2, 2.2, 2.6, 2.5, 2.4], rowH: 0.42 });
 S.addText("Fewer smells and a better structure are not the same measurement.",
@@ -490,14 +507,22 @@ slide("DARK", "What it means");
 title("Thank you");
 S.addText("Every number in this deck comes from a run on one machine, against the commits named, with Arcan 1.2.1, and is reproducible from committed code. Where a measurement was discarded, the deck says so rather than reporting it.",
   { placeholder: "body" });
-S.addText("1,301 baseline smells · 56 batches · 37 comparable · 2 clean wins",
+S.addText("1,193 baseline smells · 56 batches · 37 comparable · 2 clean wins",
   { x: M, y: 6.3, w: 11.9, h: 0.4, fontSize: 13, color: AMBER, fontFace: "Arial",
     isTextBox: true, margin: 0 });
 
 /* ---------- write ---------- */
 (async () => {
   await pres.writeFile({ fileName: "DSARP_interim_review.pptx" });
-  const { applyTheme } = require(process.env.PPTX_SKILL + "/scripts/apply_theme.js");
-  await applyTheme("DSARP_interim_review.pptx", THEME);
-  console.log("written DSARP_interim_review.pptx");
+  // applyTheme rewrites the master's theme1.xml colour scheme. Every text element in this deck
+  // already carries an explicit fontFace and colour, so the deck is correct without it; it is
+  // skipped rather than fatal when the pptx skill is not installed in this environment.
+  try {
+    const { applyTheme } = require(process.env.PPTX_SKILL + "/scripts/apply_theme.js");
+    await applyTheme("DSARP_interim_review.pptx", THEME);
+    console.log("written DSARP_interim_review.pptx (theme applied)");
+  } catch (e) {
+    console.log("written DSARP_interim_review.pptx (theme step skipped: "
+                + (process.env.PPTX_SKILL ? e.code || e.message : "PPTX_SKILL unset") + ")");
+  }
 })();

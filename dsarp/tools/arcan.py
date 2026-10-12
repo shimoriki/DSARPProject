@@ -124,8 +124,20 @@ class ArcanAdapter(EvidenceAdapter):
             f = out_dir / name
             if f.exists():
                 out.extend(self._parse_cycle_matrix(f, level))
+        # UD30.csv is the SAME unstable dependencies as UD.csv filtered at a 30% instability
+        # threshold -- a severity view, not extra findings. Globbing UD*.csv and extending for
+        # each file therefore counted every severe pair twice, inflating every total this
+        # project reported (log4j2 767 vs 714, tika 260 vs 252, struts 274 vs 227). The
+        # instability column already carries severity, so the 30% view adds nothing. Deduped by
+        # pair rather than by filename, so a pair that somehow appears only in UD30 still counts.
+        seen_ud = set()
         for f in sorted(out_dir.glob("UD*.csv")):
-            out.extend(self._parse_ud(f))
+            for finding in self._parse_ud(f):
+                pair = tuple(finding.affected_components)
+                if pair in seen_ud:
+                    continue
+                seen_ud.add(pair)
+                out.append(finding)
         for f in sorted(out_dir.glob("HL*.csv")):
             out.extend(self._parse_hl(f))
         return out

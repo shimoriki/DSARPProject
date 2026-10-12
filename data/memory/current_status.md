@@ -1707,3 +1707,62 @@ THE SYSTEM'S OWN RANKING DOES NOT FIND WINNERS: candidate_score selection gave +
 broken build on struts.
 
 0 of the 27 selected suggestions removed the smell it targeted, even in the best batch.
+
+## Distinct counts applied everywhere, and three verdicts changed direction
+
+The UD30 duplication is now fixed at its source: `ArcanAdapter.parse_arcan_1_2` globbed `UD*.csv`
+and extended its finding list once per file, so every pair in `UD30.csv` was counted twice. It
+now dedupes by pair, which is safer than reading only `UD.csv` because a pair that somehow
+appeared only in the 30% view still counts once.
+
+Evidence, from all 63 Arcan runs in the scratchpad, not from a sample:
+
+- UD30 is a strict subset of UD in **63 of 63** runs, no exceptions.
+- No `UD.csv` contains an internally duplicated pair.
+- The duplicate count is **not constant**: 6 to 59 across runs. This is why the inflation never
+  cancelled in a delta and why restating was not cosmetic.
+
+The decisive check. `batch_detail.json`'s `detail` block counts smells by IDENTITY and had
+already deduplicated UD30 implicitly; the top-level totals came from the adapter's row count and
+had not. The two disagreed on every affected batch. After restating the row count they agree on
+**37 of 37** batches, which rules out a second counting fault hiding behind this one.
+
+### I was wrong to say direction was unaffected
+
+I told the user no finding changed direction. That held for the log4j2 headline, which is all I
+had checked. Across all 39 comparable verdicts, **three** change:
+
+| batch | as counted | distinct | effect |
+|---|---|---|---|
+| struts-C4 | −6 | **+8** | reported as a reduction; it is a worsening |
+| struts-C1 | −2 | **0** | reported as a reduction; it is neutral |
+| log4j2-C3 | +1 | **0** | worsening becomes neutral |
+
+Struts arm C therefore has **1** reducing batch, not 3. That is the largest single change to a
+reported result in this correction.
+
+### Headline figures, restated
+
+| arm | system | was | now |
+|---|---|---|---|
+| B | log4j2 | −16 (2.09%) | **−6 (0.84%)** |
+| B | tika / struts | 0% | 0% (unchanged) |
+| C | tika | −17 (6.54%) | **−12 (4.76%)** |
+| C | log4j2 | −7 (0.91%) | **−6 (0.84%)** |
+| C | struts | −18 (6.57%) | **−15 (6.61%)** |
+| best batch | log4j2 | −16 | **−6** |
+
+Baseline total 1,193, not 1,301. Arm B's best removes 6 smells, arm C's 33. log4j2 is now a tie
+between the arms, so neither is marked as the winner there.
+
+What does NOT change: the funnel (0 of 120 targeted smells removed) is identity-based, so it is
+untouched; tika-C8 remains the only change that improves on every measure; comparability is a
+build property and no batch gained or lost it.
+
+Regenerated on distinct counts: `docs/batch-detail.md`, `docs/suggestion-ledger.md`,
+`docs/DSARP_interim_review.pptx` (23 slides, one new slide on the correction).
+Per-batch audit in `scratchpad/correction_audit.json`; every `results.json` keeps the old numbers
+under `verdict_inflated` beside the corrected `verdict`.
+
+NOT yet updated: the published HTML artifact of the interim review still shows the inflated
+figures, pending the user's go-ahead to republish.
