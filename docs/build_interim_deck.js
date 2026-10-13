@@ -283,7 +283,7 @@ title("Everything in green runs today");
 table([
   hdr(["Capability", "Tool", "Status"]),
   [cell("Smell detection, bytecode"), cell("Arcan 1.2.1"), cell("\u25cf running", { color: GREEN, bold: true })],
-  [cell("Smell detection, source"), cell("DesigniteJava"), cell("\u25cf trial licence, 50k line cap", { color: AMBER })],
+  [cell("Smell detection, source"), cell("DesigniteJava 2.9.1"), cell("\u25cf licensed, Professional", { color: GREEN, bold: true })],
   [cell("History mining"), cell("RefactoringMiner 3.1.4"), cell("\u25cf running", { color: GREEN, bold: true })],
   [cell("Dependency graphs"), cell("jdeps + ArchUnit, cross-checked"), cell("\u25cf running", { color: GREEN, bold: true })],
   [cell("Source transformation"), cell("OpenRewrite 6.46.1, Spoon 10.4.2"), cell("\u25cf running", { color: GREEN, bold: true })],
@@ -852,7 +852,7 @@ S.addText("Then", { x: 7.0, y: 1.6, w: 5.6, h: 0.4, fontSize: 15, bold: true,
 bullets([
   "Rebalance the training corpus so the model stops answering with the majority label.",
   "Score candidates on cycle participation and cycle size, not on the raw smell count.",
-  "Extend the measured corpus beyond the repositories the current licence allows.",
+  "Run the source-level analysis on all three systems. The Designite licence now covers them, so the corpus is no longer capped at the small commons repositories.",
 ], 2.05, 5.6, 7.0);
 S.addText("The clean win, tika-C8, is the shape to aim for: a single move that removes smells and creates none.",
   { x: M, y: 5.6, w: 11.9, h: 0.5, fontSize: 14, italic: true, color: MUTE,

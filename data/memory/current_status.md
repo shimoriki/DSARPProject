@@ -1856,3 +1856,37 @@ files, Arcan 1.2.1. 18 distinct smells - 3 package cycles, 11 class cycles, 4 un
 Note for later: 18 is an ARCHITECTURAL smell count and is not comparable with the 201 figure
 recorded for commons-validator elsewhere in this project, which came from DesigniteJava and
 counts implementation smells.
+
+## CORRECTION: the Designite trial cap is gone. The jar is licensed Professional.
+
+The "MEASURABLE SET with the current licence: commons-validator, -cli, -csv, -email, -codec,
+-text" finding recorded earlier is NO LONGER TRUE, and the deck repeated it until now. Verified
+directly on 2026-10-13 by running the jar:
+
+    DesigniteJava Professional. Version 2.9.1
+    Total LOC analyzed: 180707       (tika_work/baseline, 1,821 java files)
+    ArchitectureSmells 274 | DesignSmells 1775 | ImplementationSmells 4711 rows
+
+180,707 LOC is 3.6x the old 50,000-line trial cap. No trial warning was printed, the CSVs carry
+real rows rather than headers only, and the File column resolves to paths on THIS machine - which
+was the specific test that previously distinguished this jar's output from the third-party
+outputs produced on `/Users/surabhilone/...`.
+
+The user stated this earlier in the project ("the designite is the enterprise version as i added
+the key"). I kept the trial finding in the deck anyway rather than re-testing. The re-test is
+cheap and should have been run then.
+
+Note there is no `tools/designite.key`, no `DESIGNITE_KEY` in the environment, and no
+`HKCU\Software\JavaSoft\Prefs` entry, so the licence is carried some other way - most likely
+baked into this jar build (dated 2026-08-04). Worth knowing if the jar is ever replaced.
+
+`trial_limit_hit` in measure_smells is left in place: it is cheap and would catch a regression if
+an unlicensed jar were ever swapped in.
+
+WHAT THIS UNBLOCKS. Tika, log4j2 and Struts have full ARCHITECTURAL results from Arcan but have
+never had source-level Designite analysis on this machine. That is now possible. Tika alone
+reports 274 architecture, 1,775 design and 4,711 implementation smell instances.
+
+Deck corrected in two places: the capability table now reads "licensed, Professional", and the
+future-work bullet "Extend the measured corpus beyond the repositories the current licence
+allows" is replaced with running the source-level analysis across all three systems.
