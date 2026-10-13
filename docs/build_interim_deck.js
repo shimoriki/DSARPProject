@@ -619,6 +619,36 @@ S.addText("These operations do not improve an architecture incrementally. They r
     fontFace: "Calibri", isTextBox: true, margin: 0 });
 
 slide("TITLEONLY", "Results");
+title("Nineteen Tika batches. These six tell you the rest.");
+lede("Eleven comparable batches from the model arm, eight from the planner. Net smell change, and underneath it the smells actually removed and created \u2014 which are not the same question.", 1.45);
+table([
+  hdr(["Batch", "Moves", "Net", "Removed", "Created", "Pkg cycles", "What it shows"]),
+  [cell("tika-C8", { bold: true }), num("1"), num("\u22122", { color: GREEN }), num("2"),
+   num("0", { color: GREEN }), num("68 \u2192 67", { color: GREEN }),
+   cell("The only clean win. One class moved, nothing created.")],
+  [cell("tika-C3"), num("12"), num("\u221212", { color: GREEN }), num("42"),
+   num("30", { color: RED }), num("68 \u2192 64", { color: GREEN }),
+   cell("Best count of any batch \u2014 by churning 72 smells to net 12.")],
+  [cell("tika-B7"), num("1"), num("0"), num("10"), num("10", { color: RED }),
+   num("68 \u2192 68"), cell("Reads as no change. Swapped ten smells for ten others.")],
+  [cell("tika-B8"), num("1"), num("0"), num("0"), num("0"), num("68 \u2192 68"),
+   cell("Same net as B7, and here genuinely nothing happened.")],
+  [cell("tika-C4"), num("3"), num("\u22122", { color: GREEN }), num("41"),
+   num("39", { color: RED }), num("68 \u2192 73", { color: RED }),
+   cell("Won on count, lost five package cycles of structure.")],
+  [cell("tika-B3"), num("4"), num("+23", { color: RED }), num("22"),
+   num("45", { color: RED }), num("68 \u2192 91", { color: RED }),
+   cell("Worst batch run. Four moves added 23 package cycles.")],
+], { y: 2.45, colW: [1.15, 0.85, 0.8, 1.05, 0.95, 1.35, 5.75], rowH: 0.42 });
+S.addText("B7 and B8: identical net, identical move count, nothing else in common. A net figure cannot tell them apart.",
+  { x: M, y: 5.8, w: 11.9, h: 0.45, fontSize: 14.5, bold: true, color: INK, fontFace: "Calibri",
+    isTextBox: true, margin: 0 });
+S.addText("tika-C8 moved MetadataList into server.core.writer. tika-B3 moved TeeContentHandler, DefaultDetector, OfficeOpenXMLExtended and AutoDetectParserConfig.",
+  { x: M, y: 6.4, w: 11.9, h: 0.4, fontSize: 11.5, italic: true, color: MUTE,
+    fontFace: "Calibri", isTextBox: true, margin: 0 });
+S.addNotes("The Tika drill-down. Arm B never reduced the count on Tika at all; every reduction here is arm C. If asked why C3 is not the headline: it moved twelve classes and created thirty new smells to remove forty-two, which is a re-partition rather than a repair. C8 is one move, two smells gone, nothing created.");
+
+slide("TITLEONLY", "Results");
 title("Winning on count, losing on structure");
 lede("Eight batches did reduce the count. For four of them the replacement cycles were bigger than the ones removed, and two ended with more package cycles than they started with.", 1.45);
 table([
