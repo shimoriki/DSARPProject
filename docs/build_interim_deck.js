@@ -730,8 +730,8 @@ table([
   hdr(["Result", "Evidence"]),
   [cell("Stock static analysis on commons-validator"), cell("201 → 194 production smells, compiles, 1,147 tests green")],
   [cell("With a custom magic-number recipe added"), cell("201 → 190, nothing introduced, same tests green")],
-  [cell("Planned class moves"), cell("18 of 18 applied, built, and removed their target edge")],
-  [cell("Predicting a move's cost before making it"), cell("Added edges exact on 14 of 18, within one on 18 of 18")],
+  [cell("Planned class moves"), cell("18 of 18 applied, built, removed their target edge; 14 of 18 also passed tests")],
+  [cell("Predicting a move's cost before making it"), cell("Added edges exact on 14 of 18, within two on 18 of 18")],
   [cell("Package splitting"), cell("0 of 4 accepted; predicted 0 better, 77 worse")],
   [cell("Dissolving a dependency cycle"), cell("Never achieved — here, or in two expert-refactored trees")],
 ], { colW: [5.4, 6.5], rowH: 0.48 });
@@ -743,8 +743,8 @@ S.addText("Every figure comes from a run in this repository and is reproducible 
 slide("TITLEONLY", "Results");
 title("Why we think this is working");
 lede("The headline deltas are small, and we are not going to pretend otherwise. But the machinery under them is measured, reproducible, and mostly finished \u2014 and these are the numbers we would point a sceptic at.", 1.45);
-[["18 of 18", GREEN, "planned class moves applied, compiled, and removed the exact dependency edge they were aimed at. When the pipeline knows what to do, it does it."],
- ["14 of 18", GREEN, "move costs predicted exactly before making the change, and 18 of 18 within a single edge. The planner understands the graph it is editing."],
+[["18 of 18", GREEN, "planned class moves applied, compiled, and removed the exact dependency edge they were aimed at. 14 of the 18 also kept the tests green; the four rejections were caught by tests, not by structure."],
+ ["14 of 18", GREEN, "move costs predicted exactly before making the change, and 18 of 18 within two edges. The planner understands the graph it is editing."],
  ["201 \u2192 190", BLUE, "smells on commons-validator with 1,147 tests still green. The full loop \u2014 propose, apply, build, test, re-measure \u2014 closes end to end."],
  ["37 of 37", AMBER, "batches where two independent measurements now agree. The instrument is trustworthy enough to have caught our own counting bug."]
 ].forEach((r, i) => {
