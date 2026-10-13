@@ -395,3 +395,261 @@ Steer toward these. They are where the work is strongest.
 3. **"We reduced smells."** On two of three systems the model arm reduced nothing at all. The
    precise claim is: one arm, on one system, reduced the distinct count by 6 of 714, and the smell
    it was aimed at is still there.
+
+---
+
+# Appendix A — Why these tools
+
+An examiner asks this to find out whether a choice was reasoned or inherited. The strongest
+answer separates the two honestly, because a post-hoc justification for an inherited default is
+easy to spot and expensive when spotted.
+
+## The short version
+
+| Tool | Version | Why it, specifically |
+|---|---|---|
+| **Arcan** | 1.2.1 | Reads **bytecode**, so it sees the graph that actually links, including dependencies the source does not make obvious. Independent of whether sources parse. |
+| **DesigniteJava** | 2.9.1 Pro | Reads **source**, so it sees implementation and design smells that do not survive compilation — long statement, magic number, complex conditional. Complementary to Arcan, not redundant. |
+| **RefactoringMiner** | 3.1.4 | Mines refactorings maintainers *actually performed* from commit history. The only source of ground-truth labels in the project. |
+| **OpenRewrite** | 6.46.1 | Transforms via a **Lossless Semantic Tree**: type-aware and formatting-preserving, so a recipe changes what it targets and nothing else. |
+| **Spoon** | 10.4.2 | Finer programmatic AST control, used for planned-move experiments where we needed a move's effect computed before applying it. |
+| **jdeps + ArchUnit** | JDK / lib | Two *independent* readings of the dependency graph, cross-checking the edge oracle. jdeps agreed with the oracle on 13 of 13 verdicts it could read. |
+| **Maven** | 3.9.9 | Not a choice. Tika, log4j2 and Struts are Maven projects. |
+
+## The questions behind the question
+
+### "Why detect smells twice, with two tools?"
+
+They answer different questions and neither subsumes the other. Arcan works from compiled classes
+and reports **architectural** smells — cycles, hubs, unstable dependencies — properties of the
+dependency graph. Designite works from source and reports **implementation and design** smells,
+properties of code inside a class.
+
+Sharpest evidence they are not interchangeable: commons-validator has **18** architectural smells
+and **201** implementation smells. Same repository, same commit, both correct.
+
+### "Why bytecode rather than source for the architecture?"
+
+Bytecode reflects what actually links, so it catches dependencies introduced through inheritance
+chains, generics and framework glue that a source reader can miss. It does not require sources to
+parse, which matters in a multi-module reactor where some modules fail. And it gives one uniform
+graph regardless of source style.
+
+Concede the cost: the compiler erases generics, synthesises bridge methods and desugars lambdas,
+so the bytecode graph is not the design-level graph. We hold it constant — same JDK, same flags,
+same jar for every before/after pair — so the *difference* stays attributable to the refactoring.
+We cannot claim the absolute graph equals the source design.
+
+### "Why two transformation engines?"
+
+OpenRewrite for catalogue recipes and declarative transformation; Spoon where a move's graph
+effect had to be computed programmatically before applying it. Carrying both is a real cost and
+consolidating is fair criticism. The defensible part is that they did different jobs.
+
+### "Why jdeps AND ArchUnit AND your own oracle?"
+
+Because one tool saying "the edge is gone" is an assertion, and three agreeing is evidence. Same
+reasoning that caught the UD30 bug: independent measurements that disagree are informative, and
+the project is built to notice when they do.
+
+---
+
+# Appendix B — Why DistilBERT
+
+## Be honest about provenance first
+
+**DistilBERT was inherited, not selected.** It comes from the supplied repository's own notebook
+recipe; we trained it here on the supplied dataset rather than choosing it after a comparison.
+Say that. Then give the justification, clearly labelled as post-hoc.
+
+## Why it is nevertheless defensible
+
+**The task shape.** Input is one sentence describing a smell plus its metrics. Output is a set of
+refactoring type labels, more than one of which can apply. That is **multi-label text
+classification over short inputs** — exactly what a pretrained encoder with a classification head
+is for.
+
+**The data size.** 686 labelled rows. Far too little to train a transformer from scratch, so
+transfer learning is close to mandatory. Also small enough that a full BERT's extra capacity buys
+nothing and overfits sooner.
+
+**What distillation buys.** DistilBERT is a student trained to reproduce BERT-base's behaviour
+(Sanh et al., 2019). Six transformer layers instead of twelve, same width (768) and head count
+(12), roughly 66M parameters against 110M — about **40% smaller and 60% faster**, retaining
+roughly **97%** of BERT-base's GLUE performance. On 686 rows on one laptop, that trade is clearly
+correct.
+
+**Our actual configuration**, from `config.json` and `labels.json`:
+
+```
+DistilBertForSequenceClassification
+problem_type        multi_label_classification
+n_layers 6 · dim 768 · n_heads 12 · vocab 30522 (WordPiece, uncased)
+max_length 256 · batch size 4 · 5 epochs
+```
+
+## The alternatives, and what each would have given
+
+| Alternative | What it would buy | Why it would not fix our problem |
+|---|---|---|
+| **BERT-base / RoBERTa** | ~3% more GLUE, more capacity | Our bottleneck is a corpus that is 55% one label. More capacity learns that prior faster, not better. |
+| **TF-IDF + logistic regression** | Interpretable, trivially fast, a real baseline | **We should have run this.** It is the missing control: if it matches macro-F1 0.039, the transformer adds nothing, and that is worth knowing. |
+| **CodeBERT / GraphCodeBERT** | Pretrained on code rather than prose | Genuinely better-matched family — but our input is a natural-language smell description, not source, so the advantage is smaller than it first looks. Worth trying. |
+| **An LLM, zero- or few-shot** | No training corpus needed | Does not address the real boundary: the output would still be a refactoring *type*, not a class and a destination. |
+| **Rules over graph metrics** | No ML at all, fully explainable | Arguably the right baseline. Our Arm C planner is close to this, and it beats the model arm on two of three systems. |
+
+## The two answers that win marks here
+
+**1. The model is not the bottleneck the architecture implies.** Even a perfect type-ranker would
+not produce a refactoring. A record contains a smell name, the affected elements, and five ranked
+refactoring *types*. It names no class to move and no destination; those come from the generator's
+inference over reciprocal package dependencies. The model constrains *what kind* of change and
+*where to look*, never *what edit to perform*.
+
+**2. Our own training evidence says stop tuning and fix the corpus.** The best checkpoint was at
+**step 120 — epoch 1 of 5**, selected on micro-F1. Four further epochs made it worse. A model that
+peaks after one pass over 480 examples and then degrades has learned the label prior almost
+immediately. That is a data problem, and no architecture swap fixes it.
+
+---
+
+# Appendix C — The mathematics
+
+## C.1 Graph theory — what a cycle actually is
+
+Model the system as a directed graph `G = (V, E)`, `V` the packages (or classes), an edge
+`u → v` meaning *u depends on v*.
+
+A **cyclic dependency** is a **strongly connected component** (SCC) of size ≥ 2: a maximal vertex
+set where every vertex reaches every other. Found in `O(|V| + |E|)` by Tarjan's algorithm.
+
+Two consequences that matter for our results:
+
+- **Removing one edge rarely removes a cycle.** An SCC survives until every return path is cut. An
+  edge whose removal splits the SCC is a bridge *in the condensation*; most edges are not. This is
+  why 18 of 18 moves removed their target edge while 0 of 120 targeted smells disappeared.
+- **Contracting each SCC to a single node gives the condensation**, always a DAG. The **Acyclic
+  Dependencies Principle** is the statement that the package graph should already be that DAG.
+
+## C.2 Martin's package metrics
+
+For a package, `Ca` afferent coupling (incoming) and `Ce` efferent (outgoing):
+
+```
+Instability      I = Ce / (Ca + Ce)             ∈ [0, 1]
+Abstractness     A = abstract types / all types ∈ [0, 1]
+Distance         D = | A + I − 1 |
+```
+
+`I = 0` is maximally stable (everyone depends on it, it depends on nothing); `I = 1` maximally
+unstable. `D` is distance from the "main sequence" `A + I = 1`, where a package is as abstract as
+it is stable.
+
+**Stable Dependencies Principle (SDP):** depend in the direction of increasing stability — a
+package should not depend on one with higher `I`. An **unstable dependency** smell is an SDP
+violation.
+
+**Worked from our data:** `org.apache.commons.validator.util` has `I = 0.84` and depends on
+`org.apache.commons.validator` at `I = 0.845` — something *less* stable, so it is flagged.
+`UD30.csv` is the same relation filtered at a 30% threshold, a severity view, which is exactly why
+counting it separately double-counted.
+
+## C.3 Multi-label classification
+
+**Why not softmax.** Softmax forces `Σ p_i = 1`, asserting mutually exclusive labels. A smell can
+warrant several refactorings at once, so each label gets an independent **sigmoid**:
+
+```
+σ(z) = 1 / (1 + e^(−z))
+```
+
+**Loss** is binary cross-entropy over `L` labels (HuggingFace selects `BCEWithLogitsLoss`
+automatically for `problem_type = multi_label_classification`):
+
+```
+ℒ = −(1/L) Σ_l [ y_l · log σ(z_l) + (1 − y_l) · log(1 − σ(z_l)) ]
+```
+
+Predictions are binarised at a threshold, conventionally 0.5.
+
+## C.4 Why macro-F1 is the honest metric — with the arithmetic
+
+```
+Precision  P = TP / (TP + FP)
+Recall     R = TP / (TP + FN)
+F1          = 2PR / (P + R)        harmonic mean — punishes imbalance between P and R
+```
+
+- **Micro-average:** pool TP, FP, FN across all labels, *then* compute F1. Dominated by frequent
+  labels.
+- **Macro-average:** compute F1 per label, then take the unweighted mean. Every label counts
+  equally regardless of support.
+
+**The decisive calculation.** `Move Class` is 381 of 686 rows (55.5%). Consider a classifier that
+answers "Move Class" and nothing else:
+
+```
+P = 0.555   R = 1.0
+F1(Move Class) = 2(0.555)(1.0) / 1.555 = 0.714
+F1(other 17 labels) = 0
+macro-F1 = 0.714 / 18 ≈ 0.0397
+```
+
+Our model scores **0.0387** — level with, fractionally below, a classifier that ignores its input
+entirely. Micro-F1 0.353 and top-5 hit rate 0.913 both look respectable because both are flattered
+by the majority class. This is the most important number in the project, and you should be able to
+derive it at the board.
+
+## C.5 Smell identity as set matching
+
+A smell has no stable identifier across runs — Arcan numbers cycles `Cycle0, Cycle1…` in detection
+order, and those shift whenever anything changes. So identity is structural:
+
+```
+cyclic dependency   ≡  the frozenset of its member components
+unstable dependency ≡  the ordered pair (package, correlated package)
+hub-like            ≡  the class
+```
+
+Matching a model's named elements `K` against an Arcan cycle with members `M` uses
+
+```
+| M ∩ K | ≥ 2
+```
+
+The threshold is 2 because a cycle needs at least two participants, and because Arcan's cycle may
+be a **subset or a superset** of the elements the model listed — equality would be far too strict,
+a single shared element far too loose.
+
+Set difference across two runs then gives genuine removals and creations, which is how tika-B7 was
+shown to have swapped ten smells for ten others while its net read zero.
+
+---
+
+# Appendix D — Architectural concepts
+
+| Concept | Where it appears | What to say |
+|---|---|---|
+| **C4 model** | The architecture slides | Simon Brown's Context / Container / Component / Code. We use the first three; Code adds nothing the source does not. |
+| **Pipes and filters** | The 13-stage console pipeline | Each stage has typed inputs and outputs and records what it consumed, called and produced, so a run is auditable after the fact. |
+| **Adapter pattern** | `EvidenceAdapter` → `ArcanAdapter` | Isolates the system from any one detector's CSV schema; swapping detectors changes one class. Own the irony: the UD30 bug lived in exactly this adapter. |
+| **Oracle pattern** | Bytecode edge oracle, cross-read by jdeps | An independent judge of whether a transformation achieved its structural goal, separate from the thing that performed it. |
+| **Martin's package principles** | The smell definitions | ADP (acyclic), SDP (depend toward stability), SAP (as abstract as it is stable). Our three Arcan smell types map onto ADP and SDP violations. |
+| **LST vs AST** | OpenRewrite vs Spoon | A Lossless Semantic Tree preserves formatting and type information, so a transformation is byte-identical outside its target. A plain AST discards formatting. |
+| **Separation of concerns** | Evidence / Transformation / Validation / Measurement | The central design claim: the thing that proposes a change must not be the thing that judges it. |
+| **Quasi-experimental design** | Every batch | Matched before/after, everything constant except the refactoring, plus a comparability gate voiding a run when the module set moves. No randomisation, hence quasi-experimental. |
+| **Knowledge distillation** | DistilBERT | A compact student trained to reproduce a larger teacher's output distribution. |
+| **Self-attention** | The transformer | `Attention(Q, K, V) = softmax(QKᵀ / √d_k)V`. The `√d_k` scaling keeps dot products out of the softmax's saturated region, where gradients vanish. |
+
+## The one architectural claim to lead with
+
+The system separates four kinds of statement, and only the last two license the sentence *"this
+refactoring helped"*:
+
+1. What the detector found — an observation.
+2. What the model suggests — a hypothesis.
+3. What was applied and compiled — an intervention.
+4. What the detector found afterwards on an equivalent build — a measurement.
+
+Most tooling in this space collapses 2 into 4. The console printing `Causal claim allowed: false`
+is that separation made executable.
