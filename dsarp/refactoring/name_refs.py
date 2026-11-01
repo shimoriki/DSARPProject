@@ -88,6 +88,18 @@ def declared_public(repo_path: Path, fqn: str) -> bool:
     return False
 
 
+def service_providers(repo_path: Path) -> Dict[str, List[str]]:
+    """Providers listed in every source META-INF/services file, in file order."""
+    out: Dict[str, List[str]] = {}
+    for p in Path(repo_path).rglob("src/*/resources/META-INF/services/*"):
+        if not p.is_file():
+            continue
+        lines = (ln.split("#")[0].strip() for ln in
+                 p.read_text(encoding="utf-8", errors="ignore").splitlines())
+        out[p.relative_to(repo_path).as_posix()] = [ln for ln in lines if ln]
+    return out
+
+
 def residual(repo_path: Path, fqn: str) -> Dict[str, Any]:
     """Files that still mention `fqn` after it was supposed to have moved away.
 
