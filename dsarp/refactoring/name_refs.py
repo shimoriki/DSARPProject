@@ -102,9 +102,11 @@ def residual(repo_path: Path, fqn: str) -> Dict[str, Any]:
     """
     repo_path = Path(repo_path)
     hits: List[str] = []
+    # A bare substring test fails valid moves: com.app.Thing is inside com.app.ThingDefaults.
+    named = re.compile(r"(?<![\w$])" + re.escape(fqn) + r"(?![\w$])")
     for p in _candidate_files(repo_path):
         try:
-            if fqn in p.read_text(encoding="utf-8", errors="ignore"):
+            if named.search(p.read_text(encoding="utf-8", errors="ignore")):
                 hits.append(p.relative_to(repo_path).as_posix())
         except OSError:
             continue

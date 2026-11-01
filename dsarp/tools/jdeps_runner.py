@@ -50,23 +50,41 @@ def parse(out: str) -> Set[Tuple[str, str]]:
 
 def package_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
     """Package edges as jdeps sees them, or why it could not say."""
-    dirs = [d for d in class_dirs if Path(d).is_dir()]
-    if not dirs:
-        return {"ok": False, "why": "no class directories"}
-    try:
-        p = subprocess.run([jdeps_exe(), "-verbose:package", *dirs],
-                           capture_output=True, text=True, timeout=timeout)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return {"ok": False, "why": f"jdeps unavailable: {exc}"}
-    out = (p.stdout or "") + "\n" + (p.stderr or "")
+    run = _each_directory("-verbose:package", class_dirs, timeout)
+    if not run["ok"]:
+        return run
+    out, returncode = run["out"], run["returncode"]
     edges = parse(out)
     # jdeps exits non-zero on unresolved external dependencies, which is normal here and says
     # nothing about the edges among our own packages. Read the edges, not the exit code --
     # but refuse to call an empty reading a success.
     if not edges:
         return {"ok": False, "why": "jdeps reported no internal package edges",
-                "returncode": p.returncode, "tail": out[-500:]}
-    return {"ok": True, "edges": sorted(edges), "returncode": p.returncode}
+                "returncode": returncode, "tail": out[-500:]}
+    return {"ok": True, "edges": sorted(edges), "returncode": returncode}
+
+
+def _each_directory(flag: str, class_dirs: List[str], timeout: int) -> Dict[str, Any]:
+    """jdeps output for every directory, read one at a time.
+
+    Passing log4j2's 39 directories in one command crashes jdeps inside
+    java.lang.module.Configuration.resolve, and the edges come back empty. Adding them as -cp
+    fails the same way, silently, with a partial graph. One process per directory costs a few
+    JVM starts and works; an edge into another directory is still reported, as "not found".
+    """
+    dirs = [d for d in class_dirs if Path(d).is_dir()]
+    if not dirs:
+        return {"ok": False, "why": "no class directories"}
+    chunks, returncode = [], 0
+    for d in dirs:
+        try:
+            p = subprocess.run([jdeps_exe(), flag, d],
+                               capture_output=True, text=True, timeout=timeout)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return {"ok": False, "why": f"jdeps unavailable: {exc}"}
+        chunks += [p.stdout or "", p.stderr or ""]
+        returncode = returncode or p.returncode
+    return {"ok": True, "out": "\n".join(chunks), "returncode": returncode}
 
 
 def class_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
@@ -77,15 +95,10 @@ def class_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
     tie to its former neighbours into a new package edge. ArchUnit drops them too, for the good
     reason that a package cannot be in a cycle with itself.
     """
-    dirs = [d for d in class_dirs if Path(d).is_dir()]
-    if not dirs:
-        return {"ok": False, "why": "no class directories"}
-    try:
-        p = subprocess.run([jdeps_exe(), "-verbose", *dirs],
-                           capture_output=True, text=True, timeout=timeout)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return {"ok": False, "why": f"jdeps unavailable: {exc}"}
-    out = (p.stdout or "") + "\n" + (p.stderr or "")
+    run = _each_directory("-verbose", class_dirs, timeout)
+    if not run["ok"]:
+        return run
+    out = run["out"]
     pairs = []
     for line in out.splitlines():
         m = _EDGE.match(line)

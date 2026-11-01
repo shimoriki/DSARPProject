@@ -19,7 +19,7 @@ Nothing here applies a refactoring or decides which to try; it only judges one t
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from ..refactoring.name_refs import declared_public, name_references, residual
 from ..tools.archunit_runner import edge_verdict
@@ -99,28 +99,53 @@ def behavioural(baseline_tests: Dict[str, Any],
                 after_tests: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """The project's own tests, against its own baseline. The only check that can accept."""
     if not after_tests:
-        return {"ok": False, "why": "tests were not run"}
+        return {"ok": False, "state": "INVALID", "why": "tests were not run"}
     v = tests_no_worse(baseline_tests, after_tests)
     if v["ok"]:
-        return v
-    return {**v, "why": v.get("why") or
+        return {**v, "state": "PASS"}
+    # A partial run proves a failure it saw, and proves nothing else. Calling the rest FAIL
+    # would blame the refactoring for tests that never ran.
+    unproven = v.get("partial") and not (v.get("extra_failures") or v.get("extra_errors"))
+    return {**v, "state": "INVALID" if unproven else "FAIL", "why": v.get("why") or
             ("%d tests stopped running" % v["tests_not_run"] if v.get("tests_not_run")
              else "%d new failures, %d new errors"
                   % (v.get("extra_failures", 0), v.get("extra_errors", 0)))}
 
 
+def dispatch(before: Dict[str, List[str]], after: Dict[str, List[str]],
+             renames: Dict[str, str]) -> Dict[str, Any]:
+    """Service providers, and the order a name sort puts them in, across a move.
+
+    Moving tika's FileCommandDetector compiled, and silently changed detection priority,
+    because ServiceLoaderUtils sorts providers by class name. Only one test happened to notice.
+    `renames` maps old names to new, so an updated service file is not read as a change.
+    """
+    for service, names in before.items():
+        expected = [renames.get(n, n) for n in names]
+        now = after.get(service, [])
+        if sorted(expected) != sorted(now):
+            return {"ok": False, "why": "providers of %s changed" % service}
+        if [renames.get(n, n) for n in sorted(names)] != sorted(now):
+            return {"ok": False, "why": "name order of %s providers changed" % service}
+    return {"ok": True}
+
+
 def decide(**checks: Dict[str, Any]) -> Dict[str, Any]:
     """Accept only when every check that ran passed, and say which one refused.
 
-    `before_apply` is advisory: it reports what a move will not fix by itself, and a candidate
-    is not refused for it. Everything else is a gate.
+    `before_apply` and `api` are advisory: they report, and a candidate is not refused for
+    them. Everything else is a gate. `state` is PASS, FAIL, or INVALID when the only reason
+    for refusing is that the evidence was incomplete; INVALID is not a finding about the
+    refactoring and must be reported apart from FAIL.
     """
-    advisory = {"before_apply"}
+    advisory = {"before_apply", "api"}
     failed = [name for name, r in checks.items()
               if name not in advisory and r is not None and not r.get("ok")]
     warn = [name for name in advisory
             if checks.get(name) is not None and not checks[name].get("ok")]
+    invalid = bool(failed) and all(checks[n].get("state") == "INVALID" for n in failed)
     return {"accepted": not failed,
+            "state": "PASS" if not failed else "INVALID" if invalid else "FAIL",
             "failed_gate": failed[0] if failed else None,
             "why": checks[failed[0]].get("why") if failed else None,
             "warnings": {n: checks[n].get("why") for n in warn}}

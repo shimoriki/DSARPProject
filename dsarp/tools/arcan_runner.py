@@ -25,6 +25,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
+from xml.etree import ElementTree
 
 from .arcan import ArcanAdapter
 
@@ -595,8 +596,16 @@ def run_tests(repo_path: Path, timeout: int = 3600,
     # the counts are a lower bound taken mid-run -- and it is exactly right for rejecting one,
     # because a single genuine failure is enough. tika spends 2186 seconds proving a broken
     # candidate broken with -fae. The result is marked partial so nothing can accept on it.
+    #
+    # -fae alone is not enough: it still skips every module depending on a failed one. log4j2's
+    # log4j-api-test is red before any change, so 27 of 42 modules were skipped, no layout test
+    # ran, and a move of a layout class "passed" on 948 tests. failure.ignore keeps the reactor
+    # going past a red test module; anything still SKIPPED is reported and makes the run partial.
+    keep_going = [] if fail_fast else ["-Dmaven.test.failure.ignore=true"]
+    for stale in repo_path.glob("**/target/surefire-reports/TEST-*.xml"):
+        stale.unlink(missing_ok=True)
     cmd = [mvn, "-B", "-ntp", "-ff" if fail_fast else "-fae",
-           "-f", str(repo_path / "pom.xml"), "test", *skips]
+           "-f", str(repo_path / "pom.xml"), "test", *skips, *keep_going]
     scoped = [m for m in (modules or []) if m and m != "."]
     if scoped:
         # -am makes the scoped reactor resolvable without installing anything; -amd is the
@@ -633,17 +642,43 @@ def run_tests(repo_path: Path, timeout: int = 3600,
         skipped += counts[3]
         if counts[1] or counts[2]:
             failing_modules.append(ln.strip()[:160])
-    ok = proc.returncode == 0
+    ok = proc.returncode == 0 and not fails and not errs
     result = {"ok": ok, "status": "passed" if ok else "failed",
               "returncode": proc.returncode, "command": " ".join(cmd),
               "tail": out[-2500:]}
     if run or fails or errs:
         result.update(tests_run=run, failures=fails, errors=errs, skipped=skipped,
                       failing_modules=failing_modules, failing_tests=failing_tests(out)[:200])
-    # A fail-fast run, or one restricted to part of the reactor, has not seen the whole suite.
-    # Callers may reject on it; tests_no_worse refuses to accept on it.
-    result["partial"] = bool(fail_fast or [m for m in (modules or []) if m and m != "."])
+    result["outcomes"] = surefire_outcomes(repo_path)
+    result["skipped_modules"] = reactor_skipped(out)
+    # A fail-fast run, one restricted to part of the reactor, or one that skipped modules has
+    # not seen the whole suite. Callers may reject on it; tests_no_worse refuses to accept on it.
+    result["partial"] = bool(fail_fast or result["skipped_modules"]
+                             or [m for m in (modules or []) if m and m != "."])
     return result
+
+
+def reactor_skipped(out: str) -> List[str]:
+    """Modules Maven's reactor summary lists as SKIPPED: tests that never ran."""
+    return [m.group(1).strip() for m in
+            re.finditer(r"^\[INFO\] (.+?) \.*\s*SKIPPED\s*$", out, re.MULTILINE)]
+
+
+def surefire_outcomes(repo_path: Path) -> Dict[str, str]:
+    """Outcome per test ID from surefire's XML, which no console format change can break."""
+    out: Dict[str, str] = {}
+    for path in Path(repo_path).glob("**/target/surefire-reports/TEST-*.xml"):
+        try:
+            cases = list(ElementTree.parse(path).getroot().iter("testcase"))
+        except ElementTree.ParseError:
+            continue
+        for case in cases:
+            state = "passed"
+            for tag in ("failure", "error", "skipped"):
+                if case.find(tag) is not None:
+                    state = tag
+            out["%s#%s" % (case.get("classname"), case.get("name"))] = state
+    return out
 
 
 def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:
@@ -655,6 +690,21 @@ def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str,
     these repositories are red before anything is changed (log4j2: 6 failures, 29 errors), so
     the comparison has to be against the baseline rather than against zero.
     """
+    if baseline.get("partial"):
+        return {"ok": False, "partial": True, "why": "the baseline itself was a partial run"}
+    before_ids, after_ids = baseline.get("outcomes"), after.get("outcomes")
+    if before_ids and after_ids is not None and not after.get("partial"):
+        # By identity when surefire's XML exists: a red baseline, and one test dropping out
+        # while another appears, cannot hide behind matching totals.
+        stopped = sorted(t for t, s in before_ids.items() if s == "passed" and t not in after_ids)
+        newly = sorted(t for t, s in before_ids.items() if s == "passed"
+                       and after_ids.get(t) in ("failure", "error"))
+        return {"ok": not stopped and not newly, "tests_not_run": len(stopped),
+                "stopped_running": stopped[:20], "newly_failing": newly[:20],
+                "extra_failures": len(newly), "extra_errors": 0,
+                "why": ("%d tests that passed before now fail: %s"
+                        % (len(newly), ", ".join(newly[:3]))) if newly else None,
+                "baseline_was_red": any(s in ("failure", "error") for s in before_ids.values())}
     fewer = max(0, (baseline.get("tests_run") or 0) - (after.get("tests_run") or 0))
     worse_f = (after.get("failures") or 0) - (baseline.get("failures") or 0)
     worse_e = (after.get("errors") or 0) - (baseline.get("errors") or 0)
