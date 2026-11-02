@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
+import tempfile
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -65,23 +67,30 @@ def package_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
 
 
 def _each_directory(flag: str, class_dirs: List[str], timeout: int) -> Dict[str, Any]:
-    """jdeps output for every directory, read one at a time.
+    """jdeps output for every directory, read one at a time, without module descriptors.
 
-    Passing log4j2's 39 directories in one command crashes jdeps inside
-    java.lang.module.Configuration.resolve, and the edges come back empty. Adding them as -cp
-    fails the same way, silently, with a partial graph. One process per directory costs a few
-    JVM starts and works; an edge into another directory is still reported, as "not found".
+    A build leaves module-info.class in target/classes, and jdeps then resolves that directory
+    as a named module, dying with FindException on any requirement it cannot see. On log4j2
+    that lost 36 of 39 directories, and what survived still parsed: 665 edges instead of
+    12,778, a smaller graph with no error. So descriptors are left out of a staged copy, and a
+    directory jdeps could not read fails the whole reading. A partial graph is never a graph.
+    An edge into another directory is still reported, as "not found".
     """
     dirs = [d for d in class_dirs if Path(d).is_dir()]
     if not dirs:
         return {"ok": False, "why": "no class directories"}
     chunks, returncode = [], 0
     for d in dirs:
-        try:
-            p = subprocess.run([jdeps_exe(), flag, d],
-                               capture_output=True, text=True, timeout=timeout)
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            return {"ok": False, "why": f"jdeps unavailable: {exc}"}
+        with tempfile.TemporaryDirectory() as tmp:
+            stage = Path(tmp) / "classes"
+            shutil.copytree(d, stage, ignore=shutil.ignore_patterns("module-info.class"))
+            try:
+                p = subprocess.run([jdeps_exe(), flag, str(stage)],
+                                   capture_output=True, text=True, timeout=timeout)
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                return {"ok": False, "why": f"jdeps unavailable: {exc}"}
+        if "Exception in thread" in (p.stderr or ""):
+            return {"ok": False, "why": "jdeps failed on %s: %s" % (d, p.stderr[:200])}
         chunks += [p.stdout or "", p.stderr or ""]
         returncode = returncode or p.returncode
     return {"ok": True, "out": "\n".join(chunks), "returncode": returncode}

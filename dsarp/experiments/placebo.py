@@ -51,7 +51,10 @@ def run(repo: Path, out: Path) -> Dict[str, Any]:
              and neutral["totals"]["smells_removed"] == neutral["totals"]["smells_introduced"] == 0)
     return {"ok": bool(third.get("measured")) and same and clean,
             "detector_repeatable": repeat["totals"], "neutral_edit": neutral["totals"],
-            "oracle_unchanged": same, "edited": str(source.name)}
+            "oracle_unchanged": same, "edited": str(source.name),
+            "oracle_only_before": sorted(map(sorted, au.cycle_set(before) - au.cycle_set(after))),
+            "oracle_only_after": sorted(map(sorted, au.cycle_set(after) - au.cycle_set(before))),
+            "class_counts": [before.get("classes"), after.get("classes")]}
 
 
 if __name__ == "__main__":

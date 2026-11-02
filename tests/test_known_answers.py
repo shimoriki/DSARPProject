@@ -108,7 +108,7 @@ def test_jdeps_reads_each_directory_alone(monkeypatch, tmp_path):
 
     monkeypatch.setattr(jdeps_runner.subprocess, "run", fake)
     assert jdeps_runner.class_edges([str(a), str(b)])["ok"]
-    assert len(seen) == 2 and all(len([c for c in cmd if str(tmp_path) in c]) == 1 for cmd in seen)
+    assert len(seen) == 2 and all(len(cmd) == 3 for cmd in seen)
 
 
 def test_service_order_change_is_a_failure():
@@ -133,3 +133,38 @@ def test_pass_needs_every_gate():
     assert gates.decide(structural={"ok": True}, behavioural={"ok": True})["state"] == "PASS"
     assert gates.decide(structural={"ok": False, "why": "x"},
                         behavioural={"ok": True})["state"] == "FAIL"
+
+
+def test_a_directory_jdeps_cannot_read_fails_the_whole_reading(monkeypatch, tmp_path):
+    """Log4j2 lost 36 of 39 directories to FindException, and the rest still parsed."""
+    (tmp_path / "a").mkdir()
+
+    class Crash:
+        stdout = ""
+        stderr = 'Exception in thread "main" java.lang.module.FindException: Module x not found'
+        returncode = 1
+
+    monkeypatch.setattr(jdeps_runner.subprocess, "run", lambda *a, **k: Crash())
+    assert jdeps_runner.class_edges([str(tmp_path / "a")])["ok"] is False
+
+
+def test_module_descriptors_are_not_shown_to_jdeps(monkeypatch, tmp_path):
+    d = tmp_path / "a"
+    d.mkdir()
+    (d / "module-info.class").write_bytes(b"x")
+    (d / "A.class").write_bytes(b"x")
+    seen = {}
+
+    class Done:
+        stdout = "   p.A  -> p.B  x\n"
+        stderr = ""
+        returncode = 0
+
+    def fake(cmd, **_):
+        from pathlib import Path
+        seen["files"] = sorted(p.name for p in Path(cmd[2]).iterdir())
+        return Done()
+
+    monkeypatch.setattr(jdeps_runner.subprocess, "run", fake)
+    jdeps_runner.class_edges([str(d)])
+    assert seen["files"] == ["A.class"]
