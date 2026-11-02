@@ -18,6 +18,13 @@ checked this. Three failed the build, two had no plan. opennlp failed its baseli
 `quality_gate_failed`; commons-collections froze no targets. Not a measure of repair quality,
 but it stands as the frozen outcome.
 
+Second confirmatory, Arm D only, code at 8369515, freeze now refuses a partial baseline. Of nine
+repos, maven and guava failed baseline compile; csv, email and codec froze no targets. cli, text,
+io and lang gave 4 targets: 2 accepted at 4b (io 8 to 7, lang 13 to 12), 1 rejected (text, 34
+tests stopped running, cause not diagnosed), 1 no plan. 0 dissolved, 0 without an API break
+(io 18, lang 85). Arcan confirmed neither accepted shrink. Defect seen: `rewrite_names` also
+edited historical text in RELEASE-NOTES.txt and src/changes/changes.xml.
+
 2026-07-21 — Completed full MVP + multi-repository generalisation continuation.
 
 ## Current objective
