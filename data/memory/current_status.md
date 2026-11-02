@@ -2,6 +2,15 @@
 
 ## Last updated
 
+2026-11-02 — SCC cycle repair pipeline piloted on branch `claude/cycle-repair-loop` (9f6b0bb).
+
+Pilot, exploratory, after tuning: commons-validator, pdfbox, tika. 10 targets, 7 accepted, 3
+dissolved, 0 without an API break. Log4j2: 3 of 3 accepted, 2 dissolved, also all with API breaks.
+Known misses: pdfbox XMPMetadata (test uses a non-public constructor, not modelled) and pdfbox
+size 7 (a moved file breaks the repo's checkstyle, tied to `skipTests` in its pom, so the run is
+partial and INVALID). Tika eval.app/reports is 4b only because Arcan never reported that cycle.
+Arm H (Abdeen annealing) is not implemented. Confirmatory plans come next; see `--freeze`.
+
 2026-07-21 — Completed full MVP + multi-repository generalisation continuation.
 
 ## Current objective
