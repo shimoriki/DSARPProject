@@ -109,6 +109,13 @@ def test_modules_are_found_at_the_root_and_nested(tmp_path):
     assert _modules(changed, tmp_path, tmp_path / "other") == [".", "a/b"]
 
 
+def test_a_partial_baseline_cannot_be_frozen():
+    from dsarp.experiments.scc_dissolve import cannot_freeze
+    assert cannot_freeze({"partial": False}) is None
+    assert "m" in cannot_freeze({"partial": True, "skipped_modules": ["m"]})
+    assert cannot_freeze(None)
+
+
 def test_a_multi_move_row_can_head_a_patch():
     from dsarp.experiments.scc_dissolve import _patch_row
     row = _patch_row({"before_apply": [{"ok": True}, {"why": "reflective"}]}, [["a.B", "c"], ["a.D", "c"]])

@@ -233,6 +233,18 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
         shutil.rmtree(work / "copy", ignore_errors=True)
 
 
+def cannot_freeze(tests: Any) -> Any:
+    """Why these baseline tests cannot support a confirmatory run: a partial one accepts nothing.
+
+    struts and karaf froze nine targets on partial baselines, and none could have passed.
+    """
+    if not tests:
+        return "the baseline tests were not run"
+    if tests.get("partial"):
+        return "the baseline skipped %s" % tests.get("skipped_modules")
+    return None
+
+
 def freeze(repo: Path, out: Path, plans: List[Dict[str, Any]], max_size: int, limit: int) -> Path:
     path = out / "preregistration.json"
     if path.exists():
@@ -283,13 +295,6 @@ def main() -> None:
         _copy_repo(a.repo, tree)
     a.repo = tree
     base = prepare(a.repo, a.out)
-    if a.confirm:
-        plans = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))["plans"]
-    else:
-        plans = make_plans(a.repo, base, a.max_size, a.limit, a.out / "work")
-    if a.freeze:
-        print("frozen:", freeze(a.repo, a.out, plans, a.max_size, a.limit))
-        return
     tests = None
     if not a.no_tests:
         cache = a.out / "baseline_tests.json"
@@ -300,6 +305,17 @@ def main() -> None:
             cache.write_text(json.dumps(tests), encoding="utf-8")
         print("baseline tests:", {k: tests.get(k) for k in
                                   ("tests_run", "failures", "errors", "partial", "skipped_modules")}, flush=True)
+    if a.freeze:
+        why = cannot_freeze(tests)
+        if why:
+            raise SystemExit("not frozen: " + why)
+    if a.confirm:
+        plans = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))["plans"]
+    else:
+        plans = make_plans(a.repo, base, a.max_size, a.limit, a.out / "work")
+    if a.freeze:
+        print("frozen:", freeze(a.repo, a.out, plans, a.max_size, a.limit))
+        return
     rows = []
     with (a.out / "rows.jsonl").open("a", encoding="utf-8") as f:
         for p in plans:
