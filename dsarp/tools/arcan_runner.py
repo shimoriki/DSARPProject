@@ -670,6 +670,11 @@ def reactor_skipped(out: str) -> List[str]:
             re.finditer(r"^\[INFO\] (.+?) \.*\s*SKIPPED\s*$", out, re.MULTILINE)]
 
 
+_XML_ILLEGAL = re.compile("[^\t\n\r\x20-퟿-�\U00010000-\U0010ffff]"
+                          r"|&#0*(?:[0-8]|1[124-9]|2\d|3[01]|6553[45]);"
+                          r"|&#[xX]0*(?:[0-8bBcCeEfF]|1[0-9a-fA-F]|[fF]{3}[eEfF]);")
+
+
 def surefire_outcomes(repo_path: Path) -> Dict[str, str]:
     """Outcome per test ID from surefire's XML, which no console format change can break."""
     out: Dict[str, str] = {}
@@ -677,7 +682,13 @@ def surefire_outcomes(repo_path: Path) -> Dict[str, str]:
         try:
             cases = list(ElementTree.parse(path).getroot().iter("testcase"))
         except ElementTree.ParseError:
-            continue
+            # A failure message can quote what XML forbids: commons-text's two failures reported
+            # U+FFFE and hid the other 32 tests of their class as "stopped running".
+            text = path.read_text(encoding="utf-8", errors="replace")
+            try:
+                cases = list(ElementTree.fromstring(_XML_ILLEGAL.sub("", text)).iter("testcase"))
+            except ElementTree.ParseError:
+                continue
         for case in cases:
             state = "passed"
             for tag in ("failure", "error", "skipped"):

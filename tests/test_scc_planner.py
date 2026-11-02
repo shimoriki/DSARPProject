@@ -109,6 +109,25 @@ def test_modules_are_found_at_the_root_and_nested(tmp_path):
     assert _modules(changed, tmp_path, tmp_path / "other") == [".", "a/b"]
 
 
+def test_illegal_xml_in_a_report_does_not_hide_its_tests(tmp_path):
+    from dsarp.tools.arcan_runner import surefire_outcomes
+    d = tmp_path / "target/surefire-reports"
+    d.mkdir(parents=True)
+    (d / "TEST-a.xml").write_text('<testsuite><testcase classname="a" name="t">'
+                                  '<failure>bad &#xfffe; ￾</failure></testcase>'
+                                  '<testcase classname="a" name="u"/></testsuite>', encoding="utf-8")
+    assert surefire_outcomes(tmp_path) == {"a#t": "failure", "a#u": "passed"}
+
+
+def test_release_history_is_neither_rewritten_nor_a_residual(tmp_path):
+    from dsarp.refactoring.name_refs import residual, rewrite_names
+    notes = tmp_path / "RELEASE-NOTES.txt"
+    notes.write_text("o p.Arg was added", encoding="utf-8")
+    (tmp_path / "changes.xml").write_text("<a>p.Arg</a>", encoding="utf-8")
+    assert rewrite_names(tmp_path, {"p.Arg": "q.Arg"}) == []
+    assert residual(tmp_path, "p.Arg")["ok"]
+
+
 def test_a_partial_baseline_cannot_be_frozen():
     from dsarp.experiments.scc_dissolve import cannot_freeze
     assert cannot_freeze({"partial": False}) is None

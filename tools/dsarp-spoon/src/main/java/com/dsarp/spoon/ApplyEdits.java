@@ -312,6 +312,7 @@ public final class ApplyEdits {
                 if (Files.isDirectory(testRoot)) launcher.addInputResource(testRoot.toString());
             }
         }
+        launcher.getEnvironment().setEncoding(java.nio.charset.StandardCharsets.UTF_8);
         launcher.getEnvironment().setCommentEnabled(true);
         launcher.getEnvironment().setComplianceLevel(compliance);
         // One unparseable file must not cost the whole module. log4j-core returned
@@ -455,6 +456,9 @@ public final class ApplyEdits {
         // package-info.java. Two launcher configurations that can drift apart is the real
         // defect here; this keeps them in step until they share one builder.
         launcher.getEnvironment().setIgnoreSyntaxErrors(true);
+        // Spoon's default is the platform charset: on Windows cp1252 turned commons-text's
+        // "￾" into '?' in the printed file, and the moved class changed behaviour.
+        launcher.getEnvironment().setEncoding(java.nio.charset.StandardCharsets.UTF_8);
         launcher.getEnvironment().setAutoImports(true);       // emit imports for moved types
         launcher.getEnvironment().setCommentEnabled(true);    // keep javadoc and comments
         launcher.getEnvironment().setComplianceLevel(compliance);

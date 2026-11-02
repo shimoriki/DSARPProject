@@ -22,13 +22,16 @@ _TEXT_SUFFIXES = (".xml", ".properties", ".json", ".yaml", ".yml", ".cfg", ".con
                   ".txt", ".MF", ".factories", ".handlers", ".schemas", ".tld")
 _SKIP_DIRS = {"target", "build", ".git", "node_modules"}
 _MAX_BYTES = 2_000_000
+# Release history names classes as they were. Rewriting it falsifies the record, and commons-io's
+# RELEASE-NOTES.txt and changes.xml were rewritten until these were left out.
+_HISTORY = re.compile(r"^(release-notes|changelog|changes|history|news)\b", re.IGNORECASE)
 
 
 def _candidate_files(repo_path: Path):
     for p in Path(repo_path).rglob("*"):
         if not p.is_file():
             continue
-        if _SKIP_DIRS & set(p.parts):
+        if _SKIP_DIRS & set(p.parts) or _HISTORY.match(p.name):
             continue
         if p.suffix in _TEXT_SUFFIXES or "META-INF/services" in p.as_posix() \
                 or p.suffix == ".java":
