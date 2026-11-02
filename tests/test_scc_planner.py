@@ -71,3 +71,29 @@ def test_regression_rule_names_both_packages():
 
 def test_a_new_cycle_blocks_success():
     assert sp.level({"a", "b"}, [{"a", "b"}], [{"c", "d"}], 1, "PASS", True) == "3"
+
+
+def test_a_flake_may_reject_but_never_accept():
+    from dsarp.verification.gates import settle_flakes
+    v = {"ok": False, "state": "FAIL", "newly_failing": ["a#t"], "tests_not_run": 0}
+    ok, bad, gone = {"a#t": "passed"}, {"a#t": "failure"}, {}
+    assert settle_flakes(v, [ok] * 3, [ok] * 3)["state"] == "PASS"
+    assert settle_flakes(v, [bad, ok, ok], [ok, bad, ok])["state"] == "PASS"
+    assert settle_flakes(v, [ok] * 3, [ok, ok, bad])["state"] == "FAIL"
+    assert settle_flakes(v, [ok] * 3, [gone] * 3)["state"] == "FAIL"
+    assert settle_flakes({**v, "tests_not_run": 1}, [ok] * 3, [ok] * 3)["state"] == "FAIL"
+
+
+def test_a_later_pass_does_not_hide_a_failed_run_of_the_same_id(tmp_path):
+    from dsarp.tools.arcan_runner import surefire_outcomes
+    d = tmp_path / "target/surefire-reports"
+    d.mkdir(parents=True)
+    (d / "TEST-a.xml").write_text('<testsuite><testcase classname="a" name="t"><failure/></testcase>'
+                                  '<testcase classname="a" name="t"/></testsuite>', encoding="utf-8")
+    assert surefire_outcomes(tmp_path) == {"a#t": "failure"}
+
+
+def test_a_multi_move_row_can_head_a_patch():
+    from dsarp.experiments.scc_dissolve import _patch_row
+    row = _patch_row({"before_apply": [{"ok": True}, {"why": "reflective"}]}, [["a.B", "c"], ["a.D", "c"]])
+    assert row["before_apply"] == {"why": "reflective"} and row["type"] == "a.B, a.D"

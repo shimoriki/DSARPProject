@@ -112,6 +112,31 @@ def behavioural(baseline_tests: Dict[str, Any],
                   % (v.get("extra_failures", 0), v.get("extra_errors", 0)))}
 
 
+def settle_flakes(verdict: Dict[str, Any], baseline_runs: List[Dict[str, str]],
+                  candidate_runs: List[Dict[str, str]]) -> Dict[str, Any]:
+    """Rerun evidence for tests that newly failed. A flake may reject, never accept.
+
+    log4j2's JsonTemplateLayoutNullEventDelimiterTest binds a socket: it failed on an untouched
+    baseline in the spike and passed on another. A test is a regression when the candidate
+    fails it in more reruns than the baseline does, so no single lucky pass clears one. A test
+    the candidate's rerun never ran counts as failed there.
+    """
+    def bad(run: Dict[str, str], test: str) -> bool:
+        return run.get(test) in ("failure", "error")
+
+    real, flaky = [], []
+    for test in verdict.get("newly_failing") or []:
+        on_candidate = sum(bad(r, test) or test not in r for r in candidate_runs)
+        on_baseline = sum(bad(r, test) for r in baseline_runs)
+        (real if on_candidate > on_baseline else flaky).append(test)
+    if real or verdict.get("tests_not_run"):
+        return {**verdict, "newly_failing": real, "flaky": flaky,
+                "why": "%d tests fail more on the candidate: %s" % (len(real), ", ".join(real[:3]))
+                if real else verdict.get("why")}
+    return {**verdict, "ok": True, "state": "PASS", "newly_failing": [], "flaky": flaky,
+            "extra_failures": 0, "why": None}
+
+
 def dispatch(before: Dict[str, List[str]], after: Dict[str, List[str]],
              renames: Dict[str, str]) -> Dict[str, Any]:
     """Service providers, and the order a name sort puts them in, across a move.

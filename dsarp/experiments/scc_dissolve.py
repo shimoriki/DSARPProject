@@ -30,6 +30,9 @@ from ..verification import gates
 from ..verification.effect_checker import _copy_repo
 
 
+RERUNS = 3
+
+
 def _sha(path: Optional[Path]) -> Optional[str]:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest() if path else None
 
@@ -101,9 +104,26 @@ def _regressions(row: Dict[str, Any], plan_: Dict[str, Any]) -> List[str]:
     return []
 
 
+def _rerun(repo: Path, copy: Path, suspects: List[str], work: Path, times: int = RERUNS):
+    """Outcomes of the suspects' test classes, `times` runs on each tree."""
+    classes = sorted({t.split("#")[0].split("$")[0] for t in suspects})
+
+    def runs(tree: Path, name: str) -> List[Dict[str, str]]:
+        return [run_tests(tree, timeout=3600, log_path=work / ("%s%d.log" % (name, i)),
+                          only=classes).get("outcomes") or {} for i in range(times)]
+
+    return runs(repo, "rerun_base"), runs(copy, "rerun_cand")
+
+
+def _patch_row(row: Dict[str, Any], moves: List[List[str]]) -> Dict[str, Any]:
+    """write_patch describes one move; a plan has several, each with its own before_apply."""
+    risk = next((b for b in row.get("before_apply") or [] if b.get("why")), None)
+    return {**row, "before_apply": risk, "type": ", ".join(c for c, _ in moves),
+            "to_package": ", ".join(d for _, d in moves)}
+
+
 def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
             baseline_tests: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    t0 = time.time()
     comp, moves = set(plan_["component"]), plan_["moves"]
     row: Dict[str, Any] = {"component": plan_["component"], "size": plan_["size"], "moves": moves,
                            "predicted_left": plan_["predicted_left"],
@@ -160,6 +180,11 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
             row["tests"] = {k: t.get(k) for k in ("status", "tests_run", "failures", "errors",
                                                   "partial", "skipped_modules")}
             behavioural = gates.behavioural(baseline_tests, t)
+            suspects = behavioural.get("newly_failing") or []
+            if suspects and behavioural.get("extra_failures", 0) <= len(suspects):
+                behavioural = gates.settle_flakes(behavioural, *_rerun(repo, copy, suspects, work))
+            row["behavioural"] = {k: behavioural.get(k) for k in ("state", "newly_failing", "flaky",
+                                                                  "appeared")}
         row["verdict"] = gates.decide(after_apply=bad, structural=structural, dispatch=dispatch,
                                       behavioural=behavioural or
                                       {"ok": False, "state": "INVALID", "why": "tests were not run"},
@@ -169,11 +194,9 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
                                          sum(1 for v in gone.values() if v), state, target_gone)
         row["regression_rules"] = _regressions(row, plan_)
         if row["verdict"]["accepted"]:
-            row["patch"] = str(write_patch(repo, copy, out / "patches", {
-                **row, "type": moves[0][0], "to_package": moves[0][1]}))
+            row["patch"] = str(write_patch(repo, copy, out / "patches", _patch_row(row, moves)))
         return {**row, "stage": "judged"}
     finally:
-        row["secs"] = round(time.time() - t0)
         shutil.rmtree(work / "copy", ignore_errors=True)
 
 
@@ -184,6 +207,8 @@ def freeze(repo: Path, out: Path, plans: List[Dict[str, Any]], max_size: int, li
     path.write_text(json.dumps({
         "selection": {"max_size": max_size, "limit": limit, "order": "SCC size ascending"},
         "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+        "flake_rule": "a newly failing test's class reruns %d times on each tree; regression "
+                      "when the candidate fails more reruns than the baseline" % RERUNS,
         "graph": "jdeps class edges, one directory at a time, nested classes folded",
         "arcan_sha256": _sha(arcan_jar()), "oracle_sha256": _sha(au.JAR) if Path(au.JAR).exists() else None,
         "plans": plans}, indent=1), encoding="utf-8")
@@ -246,7 +271,8 @@ def main() -> None:
     with (a.out / "rows.jsonl").open("a", encoding="utf-8") as f:
         for p in plans:
             print("target size %d: %d moves, predicted left %d" % (p["size"], len(p["moves"]), p["predicted_left"]), flush=True)
-            r = measure(a.repo, p, base, a.out, tests)
+            t0 = time.time()
+            r = {**measure(a.repo, p, base, a.out, tests), "secs": round(time.time() - t0)}
             rows.append(r)
             f.write(json.dumps(r, default=str) + "\n")
             f.flush()

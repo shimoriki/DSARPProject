@@ -554,8 +554,11 @@ def modules_for(repo_path: Path, changed: Iterable[Path]) -> List[str]:
 def run_tests(repo_path: Path, timeout: int = 3600,
               log_path: Optional[Path] = None,
               modules: Optional[List[str]] = None,
-              fail_fast: bool = False) -> Dict[str, Any]:
+              fail_fast: bool = False,
+              only: Optional[List[str]] = None) -> Dict[str, Any]:
     """Run the project's OWN test suite against the refactored code.
+
+    `only` narrows Maven to those test classes, for rerunning a suspect; such a run is partial.
 
     `modules` restricts the reactor to those paths and what they depend on (`-pl ... -am`).
     That is a FILTER, not a verdict: a module that uses the moved type reflectively is not in
@@ -606,6 +609,9 @@ def run_tests(repo_path: Path, timeout: int = 3600,
         stale.unlink(missing_ok=True)
     cmd = [mvn, "-B", "-ntp", "-ff" if fail_fast else "-fae",
            "-f", str(repo_path / "pom.xml"), "test", *skips, *keep_going]
+    if only:
+        cmd += ["-Dtest=" + ",".join(only), "-Dsurefire.failIfNoSpecifiedTests=false",
+                "-DfailIfNoTests=false"]
     scoped = [m for m in (modules or []) if m and m != "."]
     if scoped:
         # -am makes the scoped reactor resolvable without installing anything; -amd is the
@@ -653,7 +659,7 @@ def run_tests(repo_path: Path, timeout: int = 3600,
     result["skipped_modules"] = reactor_skipped(out)
     # A fail-fast run, one restricted to part of the reactor, or one that skipped modules has
     # not seen the whole suite. Callers may reject on it; tests_no_worse refuses to accept on it.
-    result["partial"] = bool(fail_fast or result["skipped_modules"]
+    result["partial"] = bool(fail_fast or result["skipped_modules"] or only
                              or [m for m in (modules or []) if m and m != "."])
     return result
 
@@ -677,7 +683,11 @@ def surefire_outcomes(repo_path: Path) -> Dict[str, str]:
             for tag in ("failure", "error", "skipped"):
                 if case.find(tag) is not None:
                     state = tag
-            out["%s#%s" % (case.get("classname"), case.get("name"))] = state
+            # Parameterised runs share an ID: log4j2 has 10794 runs and 10588 IDs. A later pass
+            # must not hide an earlier failure.
+            test = "%s#%s" % (case.get("classname"), case.get("name"))
+            if out.get(test) not in ("failure", "error"):
+                out[test] = state
     return out
 
 
@@ -701,6 +711,7 @@ def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str,
                        and after_ids.get(t) in ("failure", "error"))
         return {"ok": not stopped and not newly, "tests_not_run": len(stopped),
                 "stopped_running": stopped[:20], "newly_failing": newly[:20],
+                "appeared": sorted(set(after_ids) - set(before_ids))[:20],
                 "extra_failures": len(newly), "extra_errors": 0,
                 "why": ("%d tests that passed before now fail: %s"
                         % (len(newly), ", ".join(newly[:3]))) if newly else None,
