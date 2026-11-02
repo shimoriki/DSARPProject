@@ -93,6 +93,22 @@ def test_a_later_pass_does_not_hide_a_failed_run_of_the_same_id(tmp_path):
     assert surefire_outcomes(tmp_path) == {"a#t": "failure"}
 
 
+def test_rewrite_names_leaves_longer_names_alone(tmp_path):
+    from dsarp.refactoring.name_refs import rewrite_names
+    f = tmp_path / "rules.xml"
+    f.write_text("<a c='p.Arg'/><a c='p.ArgList'/>", encoding="utf-8")
+    assert rewrite_names(tmp_path, {"p.Arg": "q.Arg"}) == ["rules.xml"]
+    assert f.read_text(encoding="utf-8") == "<a c='q.Arg'/><a c='p.ArgList'/>"
+
+
+def test_modules_are_found_at_the_root_and_nested(tmp_path):
+    from dsarp.experiments.scc_dissolve import _modules
+    (tmp_path / "target/classes").mkdir(parents=True)
+    (tmp_path / "a/b/target/classes").mkdir(parents=True)
+    changed = [tmp_path / "src/main/java/X.java", tmp_path / "a/b/src/Y.java"]
+    assert _modules(changed, tmp_path, tmp_path / "other") == [".", "a/b"]
+
+
 def test_a_multi_move_row_can_head_a_patch():
     from dsarp.experiments.scc_dissolve import _patch_row
     row = _patch_row({"before_apply": [{"ok": True}, {"why": "reflective"}]}, [["a.B", "c"], ["a.D", "c"]])

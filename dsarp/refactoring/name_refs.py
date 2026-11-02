@@ -100,6 +100,31 @@ def service_providers(repo_path: Path) -> Dict[str, List[str]]:
     return out
 
 
+def rewrite_names(repo_path: Path, renames: Dict[str, str]) -> List[str]:
+    """Rewrite what a move left behind as text, and name the files so a reviewer can see them.
+
+    commons-validator names Arg, Msg and Var in digester-rules.xml, and pdfbox's debugger-app
+    pom names PDFDebugger as its mainClass. Neither is reachable by the compiler, and both
+    made a sound move fail on its old name.
+    """
+    repo_path = Path(repo_path)
+    patterns = [(re.compile(r"(?<![\w$])" + re.escape(old) + r"(?![\w$])"), new)
+                for old, new in renames.items()]
+    touched: List[str] = []
+    for p in _candidate_files(repo_path):
+        try:
+            raw = p.read_bytes().decode("utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        text = raw
+        for named, new in patterns:
+            text = named.sub(new, text)
+        if text != raw:
+            p.write_bytes(text.encode("utf-8"))
+            touched.append(p.relative_to(repo_path).as_posix())
+    return sorted(touched)
+
+
 def residual(repo_path: Path, fqn: str) -> Dict[str, Any]:
     """Files that still mention `fqn` after it was supposed to have moved away.
 

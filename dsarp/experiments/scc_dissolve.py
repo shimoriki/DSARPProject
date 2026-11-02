@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional
 from .arcan_diff import cycle_sets
 from .edge_measure import _changed_java, write_patch
 from ..refactoring import scc_planner, spoon_plan
-from ..refactoring.name_refs import service_providers
+from ..refactoring.name_refs import rewrite_names, service_providers
 from ..refactoring.strategies import SourceFacts
 from ..tools import api_runner, archunit_runner as au, jdeps_runner
 from ..tools.arcan_runner import arcan_jar, compile_repo, detect_with_arcan, run_tests
@@ -31,6 +31,7 @@ from ..verification.effect_checker import _copy_repo
 
 
 RERUNS = 3
+PLAN_ATTEMPTS = 5
 
 
 def _sha(path: Optional[Path]) -> Optional[str]:
@@ -58,18 +59,39 @@ def prepare(repo: Path, out: Path) -> Dict[str, Any]:
     return data
 
 
-def make_plans(repo: Path, base: Dict[str, Any], max_size: int, limit: int) -> List[Dict[str, Any]]:
+def make_plans(repo: Path, base: Dict[str, Any], max_size: int, limit: int,
+               work: Path) -> List[Dict[str, Any]]:
     facts = SourceFacts(repo)
     edges = scc_planner.top_level_edges(tuple(e) for e in base["edges"])
     comps = [c for c in scc_planner.components(scc_planner.package_edges(edges, {}))
              if len(c) <= max_size][:limit]
 
-    def accept(cls: str, dest: str) -> bool:
-        # No source here means nothing to move; another module's build cannot see the file.
-        return bool(facts.file_for(cls)) and \
-            spoon_plan.source_root_of(facts, cls) == spoon_plan.package_root(facts, dest)
+    def legal(comp: set) -> Dict[str, Any]:
+        """Plan, dry-run on a copy, ban what Spoon refuses and plan again.
 
-    return [scc_planner.plan(edges, c, accept) for c in comps]
+        pdfbox lost 2 of 4 targets to moves Spoon refused for visibility, which the class graph
+        cannot see. Asking Spoon is the authority, and doing it here keeps a frozen plan final.
+        """
+        banned: set = set()
+
+        def accept(cls: str, dest: str) -> bool:
+            # No source here means nothing to move; another module's build cannot see the file.
+            return cls not in banned and bool(facts.file_for(cls)) and \
+                spoon_plan.source_root_of(facts, cls) == spoon_plan.package_root(facts, dest)
+
+        for _ in range(PLAN_ATTEMPTS):
+            found = scc_planner.plan(edges, comp, accept)
+            if not found["moves"]:
+                break
+            shutil.rmtree(work, ignore_errors=True)
+            done = _apply(_copy_repo(repo, work / "copy"), found["moves"], work)
+            if done["applied"] or not done.get("refused"):
+                break
+            banned.add(done["refused"])
+        shutil.rmtree(work, ignore_errors=True)
+        return {**found, "refused": sorted(banned)}
+
+    return [legal(c) for c in comps]
 
 
 def _apply(copy: Path, moves: List[List[str]], work: Path) -> Dict[str, Any]:
@@ -86,9 +108,21 @@ def _apply(copy: Path, moves: List[List[str]], work: Path) -> Dict[str, Any]:
         res = apply_edits(copy, edits, source_roots=[rel], classpath=cp.get("entries"),
                           log_path=work / "spoon.log")
         if len(res.get("applied") or []) != len(edits):
-            return {"applied": False,
-                    "why": str((res.get("skipped") or [{}])[0].get("why", res.get("status")))[:300]}
+            first = (res.get("skipped") or [{}])[0]
+            return {"applied": False, "refused": (first.get("edit") or {}).get("type"),
+                    "why": str(first.get("why", res.get("status")))[:300]}
     return {"applied": True}
+
+
+def _modules(changed: List[Path], repo: Path, copy: Path) -> List[str]:
+    """The build modules touched: the nearest directory with classes, nested or at the root."""
+    out = set()
+    for p in changed:
+        root = copy if copy in p.parents else repo
+        home = next((q for q in p.parents if (q / "target/classes").is_dir()), None)
+        if home and (home == root or root in home.parents):
+            out.add(home.relative_to(root).as_posix())
+    return sorted(out)
 
 
 def _arcan_target_gone(comp: List[str], before: Path, after: Path) -> bool:
@@ -140,6 +174,7 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
         if not applied["applied"]:
             return {**row, **applied, "stage": "apply", "level": "1",
                     "verdict": {"accepted": False, "state": "FAIL", "failed_gate": "apply"}}
+        row["rewritten"] = rewrite_names(copy, {c: "%s.%s" % (d, c.rsplit(".", 1)[1]) for c, d in moves})
         residue = [gates.after_apply(copy, c) for c, _ in moves]
         bad = next((r for r in residue if not r["ok"]), {"ok": True})
         changed = _changed_java(repo, copy)
@@ -171,9 +206,7 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
         target_gone = _arcan_target_gone(plan_["component"], out / "arcan_before" / "arcan",
                                          work / "arcan_after" / "arcan")
         row.update(arcan_after=arcan.get("by_type"), arcan_target_gone=target_gone)
-        modules = sorted({p.relative_to(copy if copy in p.parents else repo).parts[0]
-                          for p in changed})
-        row["api"] = api_runner.report(repo, copy, modules)
+        row["api"] = api_runner.report(repo, copy, _modules(changed, repo, copy))
         behavioural = None
         if structural["ok"] and bad["ok"] and dispatch["ok"] and baseline_tests is not None:
             t = run_tests(copy, timeout=4 * 3600, log_path=work / "tests.log")
@@ -253,7 +286,7 @@ def main() -> None:
     if a.confirm:
         plans = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))["plans"]
     else:
-        plans = make_plans(a.repo, base, a.max_size, a.limit)
+        plans = make_plans(a.repo, base, a.max_size, a.limit, a.out / "work")
     if a.freeze:
         print("frozen:", freeze(a.repo, a.out, plans, a.max_size, a.limit))
         return
