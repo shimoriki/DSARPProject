@@ -64,7 +64,7 @@ def make_plans(repo: Path, base: Dict[str, Any], max_size: int, limit: int) -> L
     def accept(cls: str, dest: str) -> bool:
         # No source here means nothing to move; another module's build cannot see the file.
         return bool(facts.file_for(cls)) and \
-            spoon_plan.package_root(facts, cls.rsplit(".", 1)[0]) == spoon_plan.package_root(facts, dest)
+            spoon_plan.source_root_of(facts, cls) == spoon_plan.package_root(facts, dest)
 
     return [scc_planner.plan(edges, c, accept) for c in comps]
 
