@@ -216,6 +216,14 @@ def main() -> None:
     ap.add_argument("--confirm", action="store_true")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
+    # Measure the baseline on a fresh copy, built exactly as candidates are. A comment-only
+    # placebo moved log4j2's largest cycle 50 -> 49 when compared with the repository's own
+    # build, so a delta between differently built trees is not a delta.
+    a.repo = a.repo.resolve()
+    tree = a.out / "baseline_tree"
+    if not tree.exists():
+        _copy_repo(a.repo, tree)
+    a.repo = tree
     base = prepare(a.repo, a.out)
     if a.confirm:
         plans = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))["plans"]

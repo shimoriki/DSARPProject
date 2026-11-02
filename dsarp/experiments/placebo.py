@@ -27,6 +27,14 @@ from ..verification.effect_checker import _copy_repo
 def run(repo: Path, out: Path) -> Dict[str, Any]:
     repo, out = Path(repo), Path(out)
     out.mkdir(parents=True, exist_ok=True)
+    # Compare two trees built the same way. Against the repository's own build a comment-only
+    # edit moved log4j2's largest cycle 50 -> 49, which is the build, not the edit.
+    tree = out / "baseline_tree"
+    if not tree.exists():
+        _copy_repo(repo, tree)
+    if not compile_repo(tree, log_path=out / "baseline_compile.log", goal="test-compile").get("ok"):
+        return {"ok": False, "why": "the baseline copy did not compile"}
+    repo = tree
     one = detect_with_arcan(repo, out / "first")
     two = detect_with_arcan(repo, out / "second")
     if not (one.get("measured") and two.get("measured")):

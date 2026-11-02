@@ -61,7 +61,7 @@ def _candidates(edges: Set[Tuple[str, str]], comp: Set[str],
 
 def plan(edges: Set[Tuple[str, str]], comp: Set[str],
          accept: Optional[Callable[[str, str], bool]] = None,
-         width: int = 5, depth: int = 4) -> Dict[str, Any]:
+         width: int = 20, depth: int = 4) -> Dict[str, Any]:
     """Beam search for the smallest move set that shrinks `comp` most.
 
     A state is a set of moves. Lower is better on (packages of comp still cycling, packages
