@@ -456,8 +456,8 @@ public final class ApplyEdits {
         // package-info.java. Two launcher configurations that can drift apart is the real
         // defect here; this keeps them in step until they share one builder.
         launcher.getEnvironment().setIgnoreSyntaxErrors(true);
-        // Spoon's default is the platform charset: on Windows cp1252 turned commons-text's
-        // "￾" into '?' in the printed file, and the moved class changed behaviour.
+        // Read as UTF-8 here. Spoon's printer ignores this and writes the JVM's default charset,
+        // so spoon_runner also sets file.encoding.
         launcher.getEnvironment().setEncoding(java.nio.charset.StandardCharsets.UTF_8);
         launcher.getEnvironment().setAutoImports(true);       // emit imports for moved types
         launcher.getEnvironment().setCommentEnabled(true);    // keep javadoc and comments

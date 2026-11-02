@@ -329,7 +329,11 @@ def apply_edits(repo_path: Path, edits: List[Dict[str, str]],
                                      "conservative": conservative,
                                      "complianceLevel": level,
                                      "classpath": classpath or []}), encoding="utf-8")
-    cmd = [java, heap, "-jar", str(JAR), str(repo_path), str(plan_file), str(result_file)]
+    # Spoon prints in the JVM's default charset. On Windows that is cp1252, which silently turned
+    # log4j2's "…" default and commons-text's noncharacters into other text; only the latter
+    # failed a test.
+    cmd = [java, heap, "-Dfile.encoding=UTF-8", "-jar", str(JAR), str(repo_path), str(plan_file),
+           str(result_file)]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
                               env=dict(os.environ))
