@@ -102,7 +102,7 @@ def _apply(copy: Path, moves: List[List[str]], work: Path) -> Dict[str, Any]:
         if not root:
             return {"applied": False, "why": "no source root for %s" % cls}
         by_root.setdefault(str(Path(root).relative_to(copy)), []).append(
-            {"op": "moveClass", "type": cls, "toPackage": dest})
+            {"op": "moveClass", "type": cls, "toPackage": dest, "group": dest})
     for rel, edits in by_root.items():
         cp = module_classpath(copy, copy / rel)
         res = apply_edits(copy, edits, source_roots=[rel], classpath=cp.get("entries"),

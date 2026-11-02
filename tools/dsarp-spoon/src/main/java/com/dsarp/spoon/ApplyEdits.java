@@ -480,6 +480,15 @@ public final class ApplyEdits {
             return;
         }
 
+        // The precheck judges a group together; judging it alone here refuses what it allowed.
+        java.util.Map<String, java.util.Set<String>> groups = new java.util.HashMap<>();
+        for (JsonNode e : candidates) {
+            String g = e.path("group").asText("");
+            if (!g.isEmpty())
+                groups.computeIfAbsent(g, k -> new java.util.LinkedHashSet<>())
+                      .add(e.path("type").asText());
+        }
+
         Set<Path> removals = new LinkedHashSet<>();
         List<JsonNode> done = new ArrayList<>();
         for (JsonNode edit : candidates) {
@@ -526,7 +535,9 @@ public final class ApplyEdits {
                 continue;
             }
 
-            String why = classpath.length > 0 ? illegalReason(type, to) : null;
+            java.util.Set<String> moving =
+                groups.getOrDefault(edit.path("group").asText(""), java.util.Collections.emptySet());
+            String why = classpath.length > 0 ? illegalReason(type, to, moving) : null;
             if (why != null) {
                 ObjectNode sk = skipped.addObject();
                 sk.set("edit", edit);
