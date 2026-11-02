@@ -9,7 +9,14 @@ dissolved, 0 without an API break. Log4j2: 3 of 3 accepted, 2 dissolved, also al
 Known misses: pdfbox XMPMetadata (test uses a non-public constructor, not modelled) and pdfbox
 size 7 (a moved file breaks the repo's checkstyle, tied to `skipTests` in its pom, so the run is
 partial and INVALID). Tika eval.app/reports is 4b only because Arcan never reported that cycle.
-Arm H (Abdeen annealing) is not implemented. Confirmatory plans come next; see `--freeze`.
+Arm H (Abdeen annealing) is not implemented.
+
+Confirmatory, Arm D only, plans frozen on 756fbc2's code: struts 4 targets, karaf 5. Result 0 of 9
+accepted, 0 at level 3 or above. Four targets stopped at level 2 because each baseline was itself
+partial (struts skips 2 modules, karaf 10), so no candidate could be accepted; `--freeze` never
+checked this. Three failed the build, two had no plan. opennlp failed its baseline with
+`quality_gate_failed`; commons-collections froze no targets. Not a measure of repair quality,
+but it stands as the frozen outcome.
 
 2026-07-21 — Completed full MVP + multi-repository generalisation continuation.
 
