@@ -11,7 +11,7 @@ failed on held-out repositories (docs/negative-results.md).
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
 
 Move = Tuple[str, str]
 
@@ -29,12 +29,25 @@ def top_level_edges(edges: Iterable) -> Set[Tuple[str, str]]:
     return {(_top(a), _top(b)) for a, b in edges if _top(a) != _top(b)}
 
 
-def package_edges(edges: Set[Tuple[str, str]], moved: Dict[str, str]) -> Set[Tuple[str, str]]:
+def package_edges(edges: Set[Tuple[str, str]], moved: Dict[str, str],
+                  inverted: Iterable[Tuple[str, str]] = (),
+                  sig: Optional[Callable[[str], Set[str]]] = None) -> Set[Tuple[str, str]]:
+    """Package edges after `moved`, and after each (consumer_pkg, impl) inversion.
+
+    An inversion drops the consumer's edges to `impl`, adds `impl -> consumer` for the
+    implements clause, and keeps `consumer -> T` for each type T the interface's signatures name.
+    """
+    inv = set(inverted)
+    where = lambda c: moved.get(c) or _pkg(c)
     out = set()
     for a, b in edges:
-        pa, pb = moved.get(a) or _pkg(a), moved.get(b) or _pkg(b)
-        if pa != pb:
+        pa, pb = where(a), where(b)
+        if pa != pb and (pa, b) not in inv:
             out.add((pa, pb))
+    for consumer, impl in inv:
+        for p, q in [(where(impl), consumer)] + [(consumer, where(t)) for t in (sig(impl) if sig else ())]:
+            if p != q:
+                out.add((p, q))
     return out
 
 
@@ -61,51 +74,70 @@ def _candidates(edges: Set[Tuple[str, str]], comp: Set[str],
 
 def plan(edges: Set[Tuple[str, str]], comp: Set[str],
          accept: Optional[Callable[[str, str], bool]] = None,
-         width: int = 20, depth: int = 4) -> Dict[str, Any]:
-    """Beam search for the smallest move set that shrinks `comp` most.
+         width: int = 20, depth: int = 4,
+         inversions: Optional[List[Tuple[str, str]]] = None,
+         blocked: Optional[Callable[[str, str, Dict[str, str]], Optional[str]]] = None,
+         sig: Optional[Callable[[str], Set[str]]] = None) -> Dict[str, Any]:
+    """Beam search for the smallest operation set that shrinks `comp` most.
 
-    A state is a set of moves. Lower is better on (packages of comp still cycling, packages
-    newly pulled into a cycle, moves used). A plan that pulls an outside package into any
-    cycle is dropped: across 130 plans from the package-level planners, that was the failure
-    that made a move look good while the graph got worse.
+    A state is a set of moves, plus with `inversions` a set of (consumer_pkg, impl) pairs to
+    put behind a consumer-owned interface. Lower is better on (packages of comp still cycling,
+    packages newly pulled into a cycle, operations used). A plan that pulls an outside package
+    into any cycle is dropped: across 130 plans from the package-level planners, that was the
+    failure that made a move look good while the graph got worse. Every inversion in a state is
+    re-judged by `blocked` against that state's moves, since a move can bring a blocker in.
     """
     base = set().union(*components(package_edges(edges, {})))
+    Op = Tuple[str, str, str]
 
-    def score(moved: Dict[str, str]) -> Tuple[int, int, int]:
-        now = components(package_edges(edges, moved))
+    def split(state: FrozenSet[Op]) -> Tuple[Dict[str, str], List[Tuple[str, str]]]:
+        return ({a: b for k, a, b in state if k == "move"},
+                sorted((a, b) for k, a, b in state if k == "invert"))
+
+    def score(state: FrozenSet[Op]) -> Optional[Tuple[int, int, int]]:
+        moved, inv = split(state)
+        if blocked and any(blocked(p, i, moved) for p, i in inv):
+            return None
+        now = components(package_edges(edges, moved, inv, sig))
         cycling = set().union(*now) if now else set()
-        return (len(cycling & comp), len(cycling - base), len(moved))
+        return (len(cycling & comp), len(cycling - base), len(state))
 
-    start: Dict[str, str] = {}
+    start: FrozenSet[Op] = frozenset()
     best = (score(start), start)
     beam = [best]
     moves = _candidates(edges, comp, accept)
+    ops: List[Op] = [("move", c, d) for c, d in moves] + \
+        [("invert", p, i) for p, i in (inversions or [])]
     for _ in range(depth):
         seen, grown = set(), []
         for _, state in beam:
-            for cls, dest in moves:
-                if cls in state:
+            moved_now = {a for k, a, _ in state if k == "move"}
+            for op in ops:
+                if op in state or (op[0] == "move" and op[1] in moved_now):
                     continue
-                next_state = {**state, cls: dest}
-                key = tuple(sorted(next_state.items()))
-                if key in seen:
+                next_state = state | {op}
+                if next_state in seen:
                     continue
-                seen.add(key)
+                seen.add(next_state)
                 s = score(next_state)
-                if s[1] == 0:
+                if s is not None and s[1] == 0:
                     grown.append((s, next_state))
         if not grown:
             break
-        grown.sort(key=lambda x: (x[0], sorted(x[1].items())))
+        grown.sort(key=lambda x: (x[0], sorted(x[1])))
         beam = grown[:width]
         if beam[0][0] < best[0]:
             best = beam[0]
         if best[0][0] == 0:
             break
-    (left, _, _), moved = best
-    return {"component": sorted(comp), "size": len(comp), "predicted_left": left,
-            "dissolves": left == 0, "moves": sorted(moved.items()),
-            "candidates": len(moves)}
+    (left, _, _), state = best
+    moved, inv = split(state)
+    out = {"component": sorted(comp), "size": len(comp), "predicted_left": left,
+           "dissolves": left == 0, "moves": sorted(moved.items()),
+           "candidates": len(moves)}
+    if inversions is not None:
+        out["inversions"] = [list(x) for x in inv]
+    return out
 
 
 def level(comp: Set[str], before_cycles: List[Set[str]], after_cycles: List[Set[str]],

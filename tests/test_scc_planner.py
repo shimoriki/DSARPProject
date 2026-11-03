@@ -36,6 +36,38 @@ def test_refuses_a_plan_that_pulls_a_package_into_a_cycle():
     assert r["moves"] == [] and not r["dissolves"]
 
 
+NO_MOVES = lambda c, d: False
+FREE = lambda p, i, m: None
+
+
+def test_an_inversion_dissolves_where_no_move_is_accepted():
+    e = graph(("x.A", "y.B"), ("y.B", "x.C"))
+    r = sp.plan(e, {"x", "y"}, accept=NO_MOVES, inversions=[("x", "y.B")], blocked=FREE, sig=lambda i: set())
+    assert r["dissolves"] and r["inversions"] == [["x", "y.B"]] and r["moves"] == []
+
+
+def test_a_move_can_unblock_an_inversion():
+    # Maker builds y.B in x, so the inversion holds only once Maker has left x.
+    e = graph(("x.A", "y.B"), ("x.Maker", "y.B"), ("y.B", "x.C"))
+    blocked = lambda p, i, m: None if m.get("x.Maker") else "constructed by x.Maker"
+    r = sp.plan(e, {"x", "y"}, accept=lambda c, d: c == "x.Maker", inversions=[("x", "y.B")],
+                blocked=blocked, sig=lambda i: set())
+    assert r["dissolves"] and r["moves"] == [("x.Maker", "y")] and r["inversions"] == [["x", "y.B"]]
+
+
+def test_a_type_in_the_interface_signature_keeps_the_edge():
+    e = graph(("x.A", "y.B"), ("y.B", "x.C"), ("y.Foo", "y.B"))
+    r = sp.plan(e, {"x", "y"}, accept=NO_MOVES, inversions=[("x", "y.B")], blocked=FREE,
+                sig=lambda i: {"y.Foo"})
+    assert not r["dissolves"]
+
+
+def test_a_blocked_inversion_is_never_planned():
+    e = graph(("x.A", "y.B"), ("y.B", "x.C"))
+    r = sp.plan(e, {"x", "y"}, accept=NO_MOVES, inversions=[("x", "y.B")], blocked=lambda p, i, m: "no")
+    assert not r["dissolves"] and r["inversions"] == []
+
+
 def test_level_requires_passing_tests():
     assert sp.level({"a", "b"}, [{"a", "b"}], [], 1, "INVALID", True) == "2"
 
