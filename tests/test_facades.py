@@ -27,12 +27,15 @@ def test_final_utility_class_delegates_statics():
              "  public static final java.lang.String NAME;\n"
              "  public static <T> java.util.List<T> of(T...);\n"
              "  public static void run(a.b.Util$Job);\n"
+             "  public static a.b.Util$Job job(x.a.b.Util);\n"
              "}\n")
     src, kind = facade_source(H, "a.b.Util", "a.c.Util", javap)
     assert kind == "statics"
     assert "public static final java.lang.String NAME = a.c.Util.NAME;" in src
     assert "public static <T> java.util.List<T> of(T... p0) {\n        return a.c.Util.of(p0);" in src
-    assert "public static void run(a.b.Util.Job p0) {\n        a.c.Util.run(p0);" in src
+    # Nested types go by the new name, as the facade declares none; other packages are left alone.
+    assert "public static void run(a.c.Util.Job p0) {\n        a.c.Util.run(p0);" in src
+    assert "public static a.c.Util.Job job(x.a.b.Util p0) {" in src
 
 
 def test_interface_redeclares_statics():

@@ -81,6 +81,9 @@ def facade_source(header: str, old_fqn: str, new_fqn: str, javap: str) -> Tuple[
     pkg, simple = old_fqn.rsplit(".", 1)
     decl, names = _type_params(head.split(old_fqn, 1)[1])
     is_iface = " interface " in head
+    # A delegated static names the moved type and its nested types by their new names: the
+    # facade declares no `old.X.Inner`, and `new.X.m` returns `new.X`, not `old.X`.
+    retype = lambda s: re.sub(r"(?<![\w.])%s\b" % re.escape(old_fqn), new_fqn, s) if s else s
     statics, ctors = [], []
     for line in javap.splitlines()[1:]:
         m = _MEMBER.match(line)
@@ -93,12 +96,12 @@ def facade_source(header: str, old_fqn: str, new_fqn: str, javap: str) -> Tuple[
             ctors.append("    %s %s%s(%s)%s {\n        super(%s);\n    }\n"
                          % (access, tps, simple, p, throws, args))
         elif static and params is not None:
-            p, args = _params(params)
+            typ, (p, args) = retype(typ), _params(retype(params))
             ret = "" if typ == "void" else "return "
             statics.append("    %s static %s%s %s(%s)%s {\n        %s%s.%s(%s);\n    }\n"
                            % (access, tps, typ, name, p, throws, ret, new_fqn, name, args))
         elif static and final:
-            statics.append("    %s static final %s %s = %s.%s;\n" % (access, typ, name, new_fqn, name))
+            statics.append("    %s static final %s %s = %s.%s;\n" % (access, retype(typ), name, new_fqn, name))
     doc = "/**\n * @deprecated moved to {@link %s}; this name delegates to it.\n */\n@Deprecated\n" % new_fqn
     if is_iface:
         kind, body = "interface", "public interface %s%s extends %s%s {\n%s}\n" % (

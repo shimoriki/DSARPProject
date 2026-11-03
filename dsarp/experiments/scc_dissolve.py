@@ -288,12 +288,14 @@ def cannot_freeze(tests: Any) -> Any:
     return None
 
 
-def freeze(repo: Path, out: Path, plans: List[Dict[str, Any]], max_size: int, limit: int) -> Path:
+def freeze(repo: Path, out: Path, plans: List[Dict[str, Any]], max_size: int, limit: int,
+           arm: Dict[str, Any]) -> Path:
     path = out / "preregistration.json"
     if path.exists():
         raise SystemExit("already frozen: %s" % path)
     path.write_text(json.dumps({
         "selection": {"max_size": max_size, "limit": limit, "order": "SCC size ascending"},
+        "arm": arm,
         "invalid_rule": "INVALID counts as not-success and is reported on its own row",
         "flake_rule": "a newly failing test's class reruns %d times on each tree; regression "
                       "when the candidate fails more reruns than the baseline" % RERUNS,
@@ -359,12 +361,17 @@ def main() -> None:
         why = cannot_freeze(tests)
         if why:
             raise SystemExit("not frozen: " + why)
+    arm = {"engine": a.engine, "facades": a.facades}
     if a.confirm:
-        plans = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))["plans"]
+        pre = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))
+        # Older freezes named no arm; a freeze that names one is confirmed only with that arm.
+        if pre.get("arm", arm) != arm:
+            raise SystemExit("frozen for %s, not %s" % (pre["arm"], arm))
+        plans = pre["plans"]
     else:
         plans = make_plans(a.repo, base, a.max_size, a.limit, a.out / "work")
     if a.freeze:
-        print("frozen:", freeze(a.repo, a.out, plans, a.max_size, a.limit))
+        print("frozen:", freeze(a.repo, a.out, plans, a.max_size, a.limit, arm))
         return
     rows = []
     with (a.out / "rows.jsonl").open("a", encoding="utf-8") as f:
