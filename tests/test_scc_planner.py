@@ -68,6 +68,20 @@ def test_a_blocked_inversion_is_never_planned():
     assert not r["dissolves"] and r["inversions"] == []
 
 
+def test_a_class_built_through_a_hidden_constructor_in_its_package_does_not_move(tmp_path):
+    from dsarp.experiments.scc_dissolve import _hidden_ctor_used
+    from dsarp.refactoring.strategies import SourceFacts
+    files = {"src/main/java/a/Meta.java": "package a;\npublic class Meta {\n    protected Meta() {}\n}\n",
+             "src/test/java/a/MetaTest.java": "package a;\nclass MetaTest { Meta m = new Meta(); }\n",
+             "src/main/java/a/Open.java": "package a;\npublic class Open {\n    public Open() {}\n}\n",
+             "src/main/java/a/User.java": "package a;\nclass User { Open o = new Open(); }\n"}
+    for rel, text in files.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text, encoding="utf-8")
+    facts = SourceFacts(tmp_path)
+    assert _hidden_ctor_used(facts, "a.Meta") and not _hidden_ctor_used(facts, "a.Open")
+
+
 def test_level_requires_passing_tests():
     assert sp.level({"a", "b"}, [{"a", "b"}], [], 1, "INVALID", True) == "2"
 

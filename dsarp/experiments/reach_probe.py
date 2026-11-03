@@ -22,8 +22,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 from .arcan_diff import cycle_sets
 from .mixed_plan import dry_run
-from .scc_dissolve import PLAN_ATTEMPTS, prepare
-from ..refactoring import scc_planner, spoon_plan
+from .scc_dissolve import PLAN_ATTEMPTS, move_accept, prepare
+from ..refactoring import scc_planner
 from ..refactoring.inversion_facts import InversionFacts
 from ..refactoring.strategies import SourceFacts
 from ..tools.arcan_runner import select_jdk
@@ -65,14 +65,10 @@ def probe_repo(repo: Path, out: Path) -> List[Dict[str, Any]]:
     arcan = cycle_sets(out / "arcan_before" / "arcan", "package")
     comps = [c for c in scc_planner.components(scc_planner.package_edges(edges, {})) if len(c) <= MAX_SIZE]
 
-    def accept(banned):
-        return lambda cls, dest: cls not in banned and bool(facts.file_for(cls)) and \
-            spoon_plan.source_root_of(facts, cls) == spoon_plan.package_root(facts, dest)
-
     def mixed(comp, blocked):
         pairs = inv.candidates(edges, comp)
         return lambda banned: scc_planner.plan(
-            edges, comp, accept(banned), inversions=[p for p in pairs if p[1] not in banned],
+            edges, comp, move_accept(facts, banned), inversions=[p for p in pairs if p[1] not in banned],
             blocked=blocked, sig=inv.signature_types)
 
     # Diagnostic only: what construction alone costs. Never dry-run, never counted.
@@ -80,7 +76,7 @@ def probe_repo(repo: Path, out: Path) -> List[Dict[str, Any]]:
     rows = []
     for comp in comps:
         t0 = time.time()
-        moves = _legal(tree, out / "work", lambda banned: scc_planner.plan(edges, comp, accept(banned)))
+        moves = _legal(tree, out / "work", lambda banned: scc_planner.plan(edges, comp, move_accept(facts, banned)))
         mix = _legal(tree, out / "work", mixed(comp, inv.blocked))
         diag = mixed(comp, no_construction)(set())
         rows.append({

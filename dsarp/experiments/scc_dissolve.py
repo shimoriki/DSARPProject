@@ -62,6 +62,34 @@ def prepare(repo: Path, out: Path) -> Dict[str, Any]:
     return data
 
 
+def _hidden_ctor_used(facts: SourceFacts, cls: str) -> bool:
+    """A non-public constructor of `cls` called with `new` from its own package, tests included.
+
+    Spoon's legality check reads method and field access, not constructors: pdfbox's
+    TestValidatePermitedMetadata calls XMPMetadata's protected constructor from org.apache.xmpbox,
+    the move was judged legal three engines running, and every build failed.
+    """
+    import re
+    simple, pkg = cls.rsplit(".", 1)[1], cls.rsplit(".", 1)[0]
+    # A declaration line that is not `public Simple(`: protected, private or package-private.
+    decl = re.compile(r"^\s*(?:(?:protected|private)\s+)?%s\s*\(" % simple, re.M)
+    if not decl.search(facts.text_of(cls) or ""):
+        return False
+    call = re.compile(r"\bnew\s+%s\s*\(" % simple)
+    return any(call.search(facts.text_of(other) or "")
+               for other in facts.classes_in(pkg, production_only=False) if other != cls)
+
+
+def move_accept(facts: SourceFacts, banned: set):
+    """Which (class, package) moves the planner may consider."""
+    def accept(cls: str, dest: str) -> bool:
+        # No source here means nothing to move; another module's build cannot see the file.
+        return cls not in banned and bool(facts.file_for(cls)) and \
+            spoon_plan.source_root_of(facts, cls) == spoon_plan.package_root(facts, dest) and \
+            not _hidden_ctor_used(facts, cls)
+    return accept
+
+
 def make_plans(repo: Path, base: Dict[str, Any], max_size: int, limit: int,
                work: Path) -> List[Dict[str, Any]]:
     facts = SourceFacts(repo)
@@ -76,11 +104,7 @@ def make_plans(repo: Path, base: Dict[str, Any], max_size: int, limit: int,
         cannot see. Asking Spoon is the authority, and doing it here keeps a frozen plan final.
         """
         banned: set = set()
-
-        def accept(cls: str, dest: str) -> bool:
-            # No source here means nothing to move; another module's build cannot see the file.
-            return cls not in banned and bool(facts.file_for(cls)) and \
-                spoon_plan.source_root_of(facts, cls) == spoon_plan.package_root(facts, dest)
+        accept = move_accept(facts, banned)
 
         for _ in range(PLAN_ATTEMPTS):
             found = scc_planner.plan(edges, comp, accept)
