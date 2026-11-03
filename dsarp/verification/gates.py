@@ -55,6 +55,31 @@ def after_apply(work_copy: Path, old_fqn: str) -> Dict[str, Any]:
                    "%d files still name %s after the move" % (r["count"], old_fqn)}
 
 
+REFLECTIVE = ("Class.forName(", "ServiceLoader", "MethodHandles.", ".newInstance(")
+
+
+def reflection(repo_path: Path, work_copy: Path) -> Dict[str, Any]:
+    """A cycle hidden from bytecode is not a cycle removed.
+
+    A dependency turned into a `Class.forName` or `ServiceLoader` lookup leaves jdeps, ArchUnit
+    and Arcan nothing to see, as in Ant's XalanExecutor. Counted over the changed files only,
+    original against copy, so a moved file that already did a lookup is not counted twice.
+    """
+    from ..experiments.edge_measure import _changed_java
+    changed = _changed_java(repo_path, work_copy)
+    root = Path(work_copy).resolve()
+
+    def count(in_copy: bool) -> Dict[str, int]:
+        texts = [p.read_text(encoding="utf-8", errors="replace") for p in changed
+                 if Path(p).resolve().is_relative_to(root) == in_copy]
+        return {s: sum(t.count(s) for t in texts) for s in REFLECTIVE}
+
+    before, after = count(False), count(True)
+    added = [s for s in REFLECTIVE if after[s] > before[s]]
+    return {"ok": not added, "added": added,
+            "why": "adds reflective lookups: %s" % ", ".join(added) if added else None}
+
+
 def comparable(before: Dict[str, Any], after: Dict[str, Any],
                tolerance: float = 0.02) -> Dict[str, Any]:
     """Were the two snapshots taken over the same code?

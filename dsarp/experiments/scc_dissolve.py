@@ -244,7 +244,9 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
                 behavioural = gates.settle_flakes(behavioural, *_rerun(repo, copy, suspects, work))
             row["behavioural"] = {k: behavioural.get(k) for k in ("state", "newly_failing", "flaky",
                                                                   "appeared")}
-        row["verdict"] = gates.decide(after_apply=bad, structural=structural, dispatch=dispatch,
+        row["reflection"] = gates.reflection(repo, copy)
+        row["verdict"] = gates.decide(after_apply=bad, reflection=row["reflection"],
+                                      structural=structural, dispatch=dispatch,
                                       behavioural=behavioural or
                                       {"ok": False, "state": "INVALID", "why": "tests were not run"},
                                       api=row["api"])
