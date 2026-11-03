@@ -75,6 +75,14 @@ Also: the 13 breaks there are the classes leaving exported API entirely. OpenNLP
 
 ## Task queue (remaining), 2026-11-03
 
+Main goal (user, 2026-11-03): architectural refactoring without breaking the software system.
+Every operator counts only after build, full tests, API report and the reflection gate.
+Progress on the queue below: reflection gate done (3369a1a); inversion blockers per planner
+state done (510aed4); planner mixing moves and inversions in progress. The spec's
+implementation plan is `docs/superpowers/plans/2026-11-03-mixed-operator-cycle-repair.md` on
+the research worktree; it is executed here on `claude/cycle-repair-loop`, keeping the split
+rule already fixed in `configs/repos_pool.yaml`.
+
 Spec adopted: `docs/superpowers/specs/2026-11-02-mixed-operator-cycle-repair-design.md` (copied
 from the research worktree). Its Phase 0 is done: release history skipped (31b9518), the
 commons-text 34-test loss was the cp1252 charset (aa14712, rerun 4c), log4j2 `-fae` partial runs
@@ -87,7 +95,20 @@ not the Holdout claim.
 1. DONE: Log4j2 confirm, arm text+facades, 3 of 3 PASS, 2 dissolved (see above).
    New follow-up: the planner should not move a public API class into a package the build does
    not export (bnd `-exportcontents` / `module-info`), or should count that as a break.
-2. Extend the freeze `arm` with `planner` (moves | mixed) and `repair` (bool).
+2. DONE (c01c20a): freeze `arm` records `operators` (moves) and `repair` (false); older
+   freezes read as moves, unrepaired. Flags arrive with the mixed and repair arms.
+   Also done 2026-11-03: reflection gate (3369a1a), inversion blockers per state (510aed4),
+   planner mixing moves and inversions (ecc0c4c), two-pass dry run (fa15af8), reach probe
+   (e67252d). Beam bug fixed in e67252d: ties fell to inversion states and crowded out moves
+   (validator mixed 4 left vs moves 3); moves alone now win unless the mix is strictly better.
+   Deviation from the plan: one invertEdge edit per implementation type, because Spoon's
+   `groupPartition` calls a group legal when any one type is invertible (hides partial groups).
+   Smoke: pdfbox 3 SCCs of size <=4, moves 1 dissolvable, mixed 1, so no gain there.
+   Reach probe over 38 Discovery repos running (`%TEMP%\probe`, list `data/probe/discovery.txt`).
+   Spoon `\u` audit (item 6): not a loss. On commons-text Spoon rewrote 7 escapes into
+   equivalent forms: "\u0008" -> "\b", "\u000c" -> "\f", "￾"/"￿" -> the raw
+   characters in UTF-8. Values are identical when the module compiles as UTF-8, which the
+   build and test gates verify; a non-UTF-8 module would change them (the cp1252 bug).
 3. Add the `reflection` hard gate: newly added `Class.forName`, `ServiceLoader` or string lookups
    in changed files fail the candidate (spec 8.5).
 4. Repo pool and hash split into Discovery and Holdout, hash fixed before any repo is examined.
