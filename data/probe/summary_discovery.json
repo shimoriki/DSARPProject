@@ -1,0 +1,38 @@
+{
+ "sccs": 62,
+ "arcan_reported": 37,
+ "moves_only_dissolvable": 22,
+ "mixed_dissolvable": 24,
+ "mix_extra_dissolvable": 2,
+ "stop_rule_passed": false,
+ "unreported_dissolvable_by_mix": 11,
+ "repos": [
+  "apache-commons-bcel",
+  "apache-commons-beanutils",
+  "apache-commons-cli",
+  "apache-commons-compress",
+  "apache-commons-digester",
+  "apache-commons-net",
+  "apache-commons-text",
+  "apache-commons-validator",
+  "apache-commons-vfs",
+  "apache-curator",
+  "apache-karaf",
+  "apache-logging-log4j2",
+  "apache-maven-resolver",
+  "apache-pdfbox",
+  "apache-struts",
+  "apache-tika",
+  "apache-xmlgraphics-batik",
+  "apache-xmlgraphics-fop"
+ ],
+ "failed": {
+  "apache-opennlp": "baseline does not compile: quality_gate_failed",
+  "apache-maven": "baseline does not compile: dependency_unresolved",
+  "google-guava": "baseline does not compile: ['[ERROR] C:\\\\Users\\\\Rohit\\\\AppData\\\\Local\\\\Temp\\\\probe\\\\google-guava\\\\baseline_tree\\\\guava-testlib\\\\src\\\\module-info.java:[18,32] module not found: com.google.common', '[ERROR] C:\\\\Users\\\\Rohit\\\\AppData\\\\Local\\\\Temp\\\\probe\\\\google-guava\\\\baseline_tree\\\\guava-testlib\\\\src\\",
+  "apache-commons-crypto": "baseline does not compile: compile_failed",
+  "apache-httpcomponents-core": "baseline does not compile: quality_gate_failed",
+  "apache-httpcomponents-client": "baseline does not compile: quality_gate_failed",
+  "apache-parquet-java": "baseline does not compile: compile_failed"
+ }
+}

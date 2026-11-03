@@ -73,6 +73,25 @@ not export; a facade in the exported `io` package extending them leaks a private
 bnd-maven-plugin refuses. That refusal is correct: a facade cannot expose a non-exported package.
 Also: the 13 breaks there are the classes leaving exported API entirely. OpenNLP baseline failed.
 
+## REACH PROBE RESULT (2026-11-04): stop rule FAILED, mixed-operator Phases 2-4 stop
+
+Phase 1 over 38 Discovery repos (`data/probe/summary_discovery.json`, rows beside it), no tests,
+code at e67252d. 31 built; 7 baselines failed for environment reasons (opennlp JDK 21, fixed
+after and re-probed: 0 SCCs of size <=4; maven needs Maven 4; guava JPMS jars; commons-crypto
+needs `make`; httpcore and httpclient need a Maven toolchains.xml; parquet needs `thrift`).
+62 SCCs of size <=4, 37 reported by Arcan. Dissolvable (arithmetic 0 left AND Spoon dry-run
+legal), Arcan-reported: moves alone 22, mixed 24. The mix adds 2 (both xmlgraphics-fop), the
+pre-registered rule needed 10. Not Arcan-reported but dissolvable by the mix: 11 (cannot reach 4c).
+Diagnostics, not part of the rule:
+- Of 348 inversion pairs in the 15 hard SCCs, 80 are unblocked; the rest: already an interface 68,
+  no source 56, constructed 43, different source roots 43, declares nothing 41, enum 8, other 9.
+- Ignoring construction changes nothing (25 predicted dissolves either way).
+- Depth is not the limit: arithmetic dissolves of the 15 hard SCCs, mixed, depth 4/8/12 = 3/4/5;
+  moves alone at depth 12 = 3. Even unbounded search adds at most 2-5, under 10.
+Finding: consumer-owned interface extraction adds almost no whole-cycle reach on small Apache
+SCCs beyond class moves. Per the spec, the mixed arm stops here. Moves (text engine, facades,
+fallback) remain the operator; the Holdout pool is still untouched.
+
 ## Task queue (remaining), 2026-11-03
 
 Main goal (user, 2026-11-03): architectural refactoring without breaking the software system.
