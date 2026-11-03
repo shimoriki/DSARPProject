@@ -128,7 +128,21 @@ not the Holdout claim.
    files only, no test or build edits. Confirm a capable model first (qwen2.5-coder:3b scored 0/6).
 9. Phase 4: freeze on Holdout repos with full baselines, arms D, M, (R), P, same targets; at least
    20 targets or descriptive funnels only. Facade setting chosen before the freeze.
-10. Carried over: OpenNLP baseline `quality_gate_failed` (a plugin gate, likely skippable like
+10. Carried-over progress 2026-11-03:
+    - OpenNLP: cause found, it declares Java 21 and checkstyle 13 would not load on JDK 17
+      (UnsupportedClassVersionError). Fixed by per-repo JDK choice (`select_jdk`, 520c28e,
+      JDK 26 for levels above 17); not yet verified on OpenNLP (the running probe has old code).
+    - XMPMetadata: cause found, its protected constructor is called by a test in the old
+      package; Spoon checks method and field access, not constructors. Fixed in the planner's
+      accept rule (`_hidden_ctor_used`, 17df508); the real pdfbox tree now refuses it.
+    - maven: needs Maven 4 to build itself (`dependencies.dependency.version ... missing`).
+      Not fixed: installing Maven 4 needs user approval.
+    - guava: `guava-testlib` module-info cannot find `com.google.common` at test-compile; JPMS
+      needs packaged jars. Not fixed.
+    - Open: struts and karaf baselines are partial (any run is INVALID until fixed); tika
+      text+facades run waits for the probe; Eclipse JDT and IntelliJ need an IDE runtime;
+      public classes moved into bnd-private packages (`*.internal`) leave the OSGi exports.
+    Original list: OpenNLP baseline `quality_gate_failed` (a plugin gate, likely skippable like
     checkstyle); pdfbox size 7 checkstyle partial run; OpenRewrite partial run on pdfbox size 4;
     maven and guava baseline compile; tika, struts, karaf through text+facades; XMPMetadata plan
     fault (non-public constructor not modelled); Arm H deferred by the spec; Eclipse JDT and IntelliJ
