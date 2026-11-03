@@ -2,7 +2,7 @@
 
 ## Last updated
 
-2026-11-02 — SCC cycle repair pipeline piloted on branch `claude/cycle-repair-loop` (9f6b0bb).
+2026-11-03 — engine bench recorded below. 2026-11-02 — SCC cycle repair pipeline piloted on branch `claude/cycle-repair-loop` (9f6b0bb).
 
 Pilot, exploratory, after tuning: commons-validator, pdfbox, tika. 10 targets, 7 accepted, 3
 dissolved, 0 without an API break. Log4j2: 3 of 3 accepted, 2 dissolved, also all with API breaks.
@@ -24,6 +24,39 @@ io and lang gave 4 targets: 2 accepted at 4b (io 8 to 7, lang 13 to 12), 1 rejec
 tests stopped running, cause not diagnosed), 1 no plan. 0 dissolved, 0 without an API break
 (io 18, lang 85). Arcan confirmed neither accepted shrink. Defect seen: `rewrite_names` also
 edited historical text in RELEASE-NOTES.txt and src/changes/changes.xml.
+
+2026-11-03 — Fixes after those runs, exploratory, frozen results above unchanged. `rewrite_names`
+now skips release history. Spoon's printer wrote the JVM default charset (cp1252), which caused the
+text rejection and silently changed log4j2's "…" default to "" with all tests passing, so the first
+Log4j2 result was invalid. Fixed with `-Dfile.encoding=UTF-8`, at aa14712. Log4j2 rerun: 3 of 3
+accepted, 2 dissolved, 4b 15 to 11, patch keeps "…". Text rerun: 4c.
+
+Engine bench: same frozen plans, 8 targets on commons-text, io, lang, validator, pdfbox, full
+gates, `--engine`, Spoon still decides legality. Accepted: text mover 7, Spoon 6, OpenRewrite 6.
+All three fail XMPMetadata identically, a plan fault. Spoon loses pdfbox size 7 (partial run), and
+OpenRewrite loses pdfbox size 4 (partial run, tests stop at the PDFBox module, cause not
+diagnosed). Levels otherwise match. Only Spoon rewrote lines beyond the move (lang +1899 against
++1706), and its text patch still drops 7 `\u` lines. Text mover: `refactoring/text_move.py`, 0
+lost lines. Still 0 without an API break. Eclipse JDT and IntelliJ not tested: need an IDE runtime.
+Not run through the engines: Log4j2, tika, struts, karaf. Bench code is uncommitted.
+Decision (user, 2026-11-03): `scc_dissolve` now writes moves with the text engine by default;
+`--engine spoon` reproduces earlier runs. Plan legality still comes from a Spoon dry run.
+
+Facades (`--facades`, `refactoring/facades.py`, off by default): a deprecated type at each moved
+public class's old name, built from baseline `javap -public` and delegating to the new one.
+Same 8 frozen targets, text engine, japicmp breaks without -> with: io 18 -> 0, lang 85 -> 0
+(the first accepted repairs with NO API break), text 43 -> 7, validator 71 -> 9, pdfbox size 4
+27 -> 20, size 7 34 -> 5, levels unchanged. Cost: pdfbox size 2 was 4c, and with facades its
+cycle comes back (facade edge old -> new, left 2, level 2), so 6 accepted against 7. XMPMetadata
+still fails the build. Not measured: callers outside the repo casting library-made `new.X` objects
+to `old.X` (ClassCastException), which no API checker sees.
+
+Facade fallback (2026-11-03, `facade_first` in `scc_dissolve.py`): with `--facades`, a target
+whose facades fail the build or structural gate is measured again without them; the row keeps
+the first attempt under `facade_fallback`. Test failures do not trigger it. pdfbox rerun
+(`rows_fallback.jsonl`): size 2 back to 4c PASS (17 breaks, facades dropped, gate was
+structural), size 4 and 7 unchanged (4b, 20 and 5 breaks), size 3 still fails the build both
+ways. So facade-first gives 7 of 8 accepted, the same as without facades, with fewer breaks.
 
 2026-07-21 — Completed full MVP + multi-repository generalisation continuation.
 

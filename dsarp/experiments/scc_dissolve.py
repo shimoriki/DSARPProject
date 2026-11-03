@@ -25,6 +25,9 @@ from ..refactoring.name_refs import rewrite_names, service_providers
 from ..refactoring.strategies import SourceFacts
 from ..tools import api_runner, archunit_runner as au, jdeps_runner
 from ..tools.arcan_runner import arcan_jar, compile_repo, detect_with_arcan, run_tests
+from ..openrewrite.runner import run_recipe, write_move_recipe
+from ..refactoring.facades import add_facades
+from ..refactoring.text_move import move_classes
 from ..tools.spoon_runner import apply_edits, module_classpath
 from ..verification import gates
 from ..verification.effect_checker import _copy_repo
@@ -84,7 +87,8 @@ def make_plans(repo: Path, base: Dict[str, Any], max_size: int, limit: int,
             if not found["moves"]:
                 break
             shutil.rmtree(work, ignore_errors=True)
-            done = _apply(_copy_repo(repo, work / "copy"), found["moves"], work)
+            # Spoon on purpose, whatever writes the result: its refusal is the legality check.
+            done = _apply(_copy_repo(repo, work / "copy"), found["moves"], work, "spoon")
             if done["applied"] or not done.get("refused"):
                 break
             banned.add(done["refused"])
@@ -94,8 +98,25 @@ def make_plans(repo: Path, base: Dict[str, Any], max_size: int, limit: int,
     return [legal(c) for c in comps]
 
 
-def _apply(copy: Path, moves: List[List[str]], work: Path) -> Dict[str, Any]:
+def _apply_rewrite(copy: Path, moves: List[List[str]], work: Path) -> Dict[str, Any]:
+    recipe = write_move_recipe(copy, [(c, "%s.%s" % (d, c.rsplit(".", 1)[1])) for c, d in moves],
+                               include_text=False)      # rewrite_names does the text files
+    res = run_recipe(copy, log_path=work / "rewrite.log")
+    recipe.unlink(missing_ok=True)
+    if res.get("status") != "changed":
+        return {"applied": False, "why": "%s: %s" % (res.get("status"), (res.get("errors") or [""])[0][:250])}
+    return {"applied": True}
+
+
+def _apply(copy: Path, moves: List[List[str]], work: Path, engine: str = "spoon") -> Dict[str, Any]:
+    if engine == "rewrite":
+        return _apply_rewrite(copy, moves, work)
     facts = SourceFacts(copy)
+    if engine == "text":
+        roots = [(spoon_plan.source_root_of(facts, c), c, d) for c, d in moves]
+        missing = [c for r, c, _ in roots if not r]
+        return {"applied": False, "why": "no source root for %s" % missing[0]} if missing \
+            else move_classes(copy, roots)
     by_root: Dict[str, List[Dict[str, str]]] = {}
     for cls, dest in moves:
         root = spoon_plan.source_root_of(facts, cls)
@@ -157,9 +178,11 @@ def _patch_row(row: Dict[str, Any], moves: List[List[str]]) -> Dict[str, Any]:
 
 
 def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
-            baseline_tests: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+            baseline_tests: Optional[Dict[str, Any]], engine: str = "text",
+            facades: bool = False) -> Dict[str, Any]:
     comp, moves = set(plan_["component"]), plan_["moves"]
-    row: Dict[str, Any] = {"component": plan_["component"], "size": plan_["size"], "moves": moves,
+    row: Dict[str, Any] = {"engine": engine, "component": plan_["component"],
+                           "size": plan_["size"], "moves": moves,
                            "predicted_left": plan_["predicted_left"],
                            "success_criterion": "%d of %d packages stay in a cycle"
                                                 % (plan_["predicted_left"], plan_["size"])}
@@ -170,13 +193,16 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
     copy = _copy_repo(repo, work / "copy")
     try:
         row["before_apply"] = [gates.before_apply(repo, c) for c, _ in moves]
-        applied = _apply(copy, moves, work)
+        applied = _apply(copy, moves, work, engine)
         if not applied["applied"]:
             return {**row, **applied, "stage": "apply", "level": "1",
                     "verdict": {"accepted": False, "state": "FAIL", "failed_gate": "apply"}}
         row["rewritten"] = rewrite_names(copy, {c: "%s.%s" % (d, c.rsplit(".", 1)[1]) for c, d in moves})
         residue = [gates.after_apply(copy, c) for c, _ in moves]
         bad = next((r for r in residue if not r["ok"]), {"ok": True})
+        if facades:
+            # After the old-name check, which a facade would fail by design.
+            row["facades"] = add_facades(repo, copy, moves)
         changed = _changed_java(repo, copy)
         row["changed_files"] = len(changed)
         build = compile_repo(copy, log_path=work / "compile.log", goal="test-compile")
@@ -233,6 +259,23 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
         shutil.rmtree(work / "copy", ignore_errors=True)
 
 
+def facade_first(measure_once, plan_: Dict[str, Any]) -> Dict[str, Any]:
+    """Measure with facades, and again without when they broke the build or the cycle.
+
+    A facade adds an edge from the old package to the new one; on pdfbox it closed the cycle
+    again. Both refusals come before the tests, so the second attempt costs one build.
+    """
+    first = measure_once(plan_, True)
+    gate = (first.get("verdict") or {}).get("failed_gate")
+    if not first.get("facades") or gate not in ("build", "structural"):
+        return first
+    return {**measure_once(plan_, False),
+            "facade_fallback": {"failed_gate": gate, "level": first.get("level"),
+                                "measured_left": first.get("measured_left"),
+                                "why": (first.get("verdict") or {}).get("why") or first.get("why"),
+                                "facades": first["facades"]}}
+
+
 def cannot_freeze(tests: Any) -> Any:
     """Why these baseline tests cannot support a confirmatory run: a partial one accepts nothing.
 
@@ -284,6 +327,13 @@ def main() -> None:
     ap.add_argument("--no-tests", action="store_true")
     ap.add_argument("--freeze", action="store_true")
     ap.add_argument("--confirm", action="store_true")
+    # Text by default: on 8 frozen targets it was accepted 7 times to Spoon's 6 and OpenRewrite's
+    # 6, and alone rewrote nothing beyond the move.
+    ap.add_argument("--engine", choices=("spoon", "text", "rewrite"), default="text",
+                    help="what writes the moves; plans are still checked for legality by Spoon")
+    ap.add_argument("--facades", action="store_true",
+                    help="leave a deprecated delegating type at each moved public class's old name; "
+                         "measured again without them when they break the build or the cycle")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     # Measure the baseline on a fresh copy, built exactly as candidates are. A comment-only
@@ -321,7 +371,9 @@ def main() -> None:
         for p in plans:
             print("target size %d: %d moves, predicted left %d" % (p["size"], len(p["moves"]), p["predicted_left"]), flush=True)
             t0 = time.time()
-            r = {**measure(a.repo, p, base, a.out, tests), "secs": round(time.time() - t0)}
+            once = lambda p_, fac: measure(a.repo, p_, base, a.out, tests, a.engine, fac)
+            r = {**(facade_first(once, p) if a.facades else once(p, False)),
+                 "secs": round(time.time() - t0)}
             rows.append(r)
             f.write(json.dumps(r, default=str) + "\n")
             f.flush()
