@@ -363,11 +363,13 @@ def main() -> None:
         why = cannot_freeze(tests)
         if why:
             raise SystemExit("not frozen: " + why)
-    arm = {"engine": a.engine, "facades": a.facades}
+    # Operators and repair are fixed until the mixed and repair arms land; they are recorded now
+    # so a later freeze cannot be confirmed by a run with other operators.
+    arm = {"engine": a.engine, "facades": a.facades, "operators": "moves", "repair": False}
     if a.confirm:
         pre = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))
-        # Older freezes named no arm; a freeze that names one is confirmed only with that arm.
-        if pre.get("arm", arm) != arm:
+        # Older freezes named no arm, or only engine and facades: they were all moves, unrepaired.
+        if {"operators": "moves", "repair": False, **pre.get("arm", arm)} != arm:
             raise SystemExit("frozen for %s, not %s" % (pre["arm"], arm))
         plans = pre["plans"]
     else:
