@@ -1,0 +1,33 @@
+# Hourly work log
+
+One row per hour in which work happened. Times are local and come from commit times, result-file
+timestamps and run output, so they are accurate to the hour, not the minute. Hours with no row had
+no recorded activity. Newest at the bottom.
+
+| Hour | Task | What was done | Result / evidence |
+|---|---|---|---|
+| 2026-11-01 23:00 | Arcan over all modules | Ran Arcan once across every module; recorded the cycle-repair plan | 06bd7dc |
+| 2026-11-02 00:00 | Planner and experiment | Added the SCC planner, the dissolve experiment, API report and placebo; stopped the test gate passing runs that skipped the code under test | 3d17d1e, 5c0e1f3 |
+| 2026-11-02 01:00 | Baseline fairness | Refused partial jdeps graphs; measured baselines on a fresh copy built like candidates | 7cf37ee, b72f7ec |
+| 2026-11-02 02:00 | Multi-module moves | Accepted moves by the class's own source root, as packages span modules | 968d03d |
+| 2026-11-02 08:00 | Flakes and plan legality | Settled newly failing tests by rerun; planned only what Spoon applies, rewrote leftover names as text | 5448b69, 9ec93e0 |
+| 2026-11-02 13:00 | Group judging | Judged a planned move set as one group | 9f6b0bb |
+| 2026-11-02 14:00 | Pilot recorded | Pilot (validator, pdfbox, tika): 10 targets, 7 accepted, 3 dissolved, all with API breaks | 756fbc2 |
+| 2026-11-02 15:00 | First confirmatory run | struts, karaf, collections: nothing accepted, baselines were partial | feebd5f |
+| 2026-11-02 16:00 | Freeze rule, second confirmatory run | Refused to freeze plans on a partial test baseline; recorded the second run | 8369515, fdd8d9e |
+| 2026-11-02 17:00 | Spoon encoding fix | Spoon printed non-UTF-8 sources; fixed printing, illegal-XML reports, release history left alone | 31b9518 |
+| 2026-11-02 18:00 | Spoon charset | Ran Spoon with UTF-8 default charset; Log4j2 rerun 3 of 3 accepted (2 dissolved, 1 partial), "…" default preserved | aa14712 |
+| 2026-11-02 21:00 | Text move engine | Wrote `text_move.py` and its tests: package-line rewrite, two-phase move so later siblings get imports | tests/test_text_move.py |
+| 2026-11-03 00:00 | Engine bench | Ran Spoon, text and OpenRewrite engines on 8 frozen targets (commons-text first) | ec/*/rows_{spoon,text,rewrite}.jsonl |
+| 2026-11-03 01:00 | Engine bench | commons-io, commons-lang, commons-validator through all three engines | same |
+| 2026-11-03 02:00 | Engine bench result | pdfbox done. Accepted: text 7, Spoon 6, OpenRewrite 6; text made default (user decision) | rows_*.jsonl |
+| 2026-11-03 07:00 | Facades | Wrote `facades.py` (subclass, interface, statics kinds from `javap -public`); started facade bench | dsarp/refactoring/facades.py |
+| 2026-11-03 08:00 | Facade bench | Breaks without -> with: io 18->0, lang 85->0, text 43->7, validator 71->9, pdfbox 27->20, 34->5; pdfbox size 2 cycle came back | ec/*/rows_facades.jsonl |
+| 2026-11-03 15:00 | Facade fallback | Added `facade_first`: re-measure without facades when they fail build or cycle gates; test added | tests/test_facades.py |
+| 2026-11-03 16:00 | Fallback bench, commit, held-out run | pdfbox size 2 back to 4c PASS, 7 of 8 accepted; committed 72fec90; freezes now record the engine/facade arm; started held-out run | rows_fallback.jsonl, 72fec90 |
+| 2026-11-03 16:00 | Held-out: OpenNLP | Baseline did not build: `quality_gate_failed` (a build plugin gate, not javac). Nothing frozen | heldout run output |
+| 2026-11-03 16:00 | Held-out: Log4j2 | Froze 5 targets with arm text+facades on the cached baseline (10794 tests, 226 failures, 99 errors already failing) | cf4/l4j/preregistration.json |
+| 2026-11-03 17:00-20:00 | Held-out: Log4j2 confirm | First target (size 2): 4c, dissolved. Second target running | cf4/l4j/rows.jsonl |
+| 2026-11-03 20:00 | Mixed-operator spec, repo pool | Adopted the spec into the task queue (Phase 0 already done); fixed 40-repo pool and hash split before cloning (21 discovery, 19 holdout); shallow-cloned all 40 | configs/repos_pool.yaml, configs/repos_pool_heads.json |
+| 2026-11-03 20:00 | Held-out: Log4j2 confirm | Second target (size 2): 4c, dissolved. Third target (size 15, 4 moves, predicted left 11) running | cf4/l4j/rows.jsonl |
+| 2026-11-03 21:00 | Log4j2 confirm result, facade fix | Run done 21:36: 3 of 3 PASS, 2 dissolved, 1 at 4b; breaks 92, 13, 38. Facades fell back on both size-2 targets: statics facade used old nested-type names (fixed, `retype` in facades.py, rebuild compiles), and bnd refused a facade exposing non-exported `io.internal` (correct refusal) | cf4/l4j/rows.jsonl, tests/test_facades.py |

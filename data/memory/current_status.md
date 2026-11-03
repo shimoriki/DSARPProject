@@ -2,7 +2,9 @@
 
 ## Last updated
 
-2026-11-03 — engine bench recorded below. 2026-11-02 — SCC cycle repair pipeline piloted on branch `claude/cycle-repair-loop` (9f6b0bb).
+2026-11-03 — engine bench recorded below. Hour-by-hour log: `data/memory/hourly_log.md`.
+Held-out confirmatory run (arm text+facades, recorded in the freeze): OpenNLP baseline fails
+its build (`quality_gate_failed`), so nothing frozen; Log4j2 frozen, 5 targets, first is 4c. 2026-11-02 — SCC cycle repair pipeline piloted on branch `claude/cycle-repair-loop` (9f6b0bb).
 
 Pilot, exploratory, after tuning: commons-validator, pdfbox, tika. 10 targets, 7 accepted, 3
 dissolved, 0 without an API break. Log4j2: 3 of 3 accepted, 2 dissolved, also all with API breaks.
@@ -57,6 +59,59 @@ the first attempt under `facade_fallback`. Test failures do not trigger it. pdfb
 (`rows_fallback.jsonl`): size 2 back to 4c PASS (17 breaks, facades dropped, gate was
 structural), size 4 and 7 unchanged (4b, 20 and 5 breaks), size 3 still fails the build both
 ways. So facade-first gives 7 of 8 accepted, the same as without facades, with fewer breaks.
+By the mixed-operator spec's headline (4c only), that is 2 of 8 dissolved (text, pdfbox size 2).
+
+Log4j2 confirm, arm text+facades, frozen before the run (`%TEMP%\cf4\l4j`, done 21:36): 3 plans
+froze (limit 5), 3 of 3 PASS, 2 dissolved (4c), 1 at 4b (15 to 11). Same levels as the earlier
+exploratory Spoon run on the same targets. API breaks: 92, 13, 38 (Spoon run: 92, 13, 55). Facades
+held only on the size-15 target (4 interface facades). On both size-2 targets they broke the build
+and the fallback measured without them: (a) JsonTemplateLayout statics facade named the class's
+nested types by the old name, which the facade does not declare. Fixed after the run in
+`facades.py` (`retype`), and a rebuild of that target then compiled; not re-measured, so the
+frozen row stands. (b) ByteStreamLogger/CharStreamLogger moved into `io.internal`, which bnd does
+not export; a facade in the exported `io` package extending them leaks a private package, so
+bnd-maven-plugin refuses. That refusal is correct: a facade cannot expose a non-exported package.
+Also: the 13 breaks there are the classes leaving exported API entirely. OpenNLP baseline failed.
+
+## Task queue (remaining), 2026-11-03
+
+Spec adopted: `docs/superpowers/specs/2026-11-02-mixed-operator-cycle-repair-design.md` (copied
+from the research worktree). Its Phase 0 is done: release history skipped (31b9518), the
+commons-text 34-test loss was the cp1252 charset (aa14712, rerun 4c), log4j2 `-fae` partial runs
+now count as INVALID and the rerun was clean. How it fits the current loop: moves keep the text
+engine, inversions run as a second Spoon `invertEdge` pass on the moved tree; facades stay an
+orthogonal flag; arms D/M/R/P go into the freeze's `arm` field, which `--confirm` already enforces.
+The Log4j2 run below is Discovery by the spec's split, so it tests the engine and facade choice,
+not the Holdout claim.
+
+1. DONE: Log4j2 confirm, arm text+facades, 3 of 3 PASS, 2 dissolved (see above).
+   New follow-up: the planner should not move a public API class into a package the build does
+   not export (bnd `-exportcontents` / `module-info`), or should count that as a break.
+2. Extend the freeze `arm` with `planner` (moves | mixed) and `repair` (bool).
+3. Add the `reflection` hard gate: newly added `Class.forName`, `ServiceLoader` or string lookups
+   in changed files fail the candidate (spec 8.5).
+4. Repo pool and hash split into Discovery and Holdout, hash fixed before any repo is examined.
+   DONE 2026-11-03 (user approved cloning): `configs/repos_pool.yaml`, 40 new Maven Apache repos,
+   split by sha256('apache/<name>') first hex digit 0-7 discovery, else holdout, fixed before
+   cloning: 21 discovery (+17 already used = 38), 19 holdout. All 40 shallow-cloned (depth 1) into
+   data/raw/repos; HEAD SHAs in `configs/repos_pool_heads.json`. wss4j's GitHub name is
+   ws-wss4j; URL fixed, split kept. cassandra, lucene, solr, spark left out (too large).
+5. Phase 1 reach probe: inversion in `scc_planner` state (moves plus inverted pairs, blockers per
+   class, D4 signature edges), arithmetic screen, then Spoon dry-run on the moved tree. Stop rule:
+   continue only if the mix adds at least 10 dissolvable Arcan-reported SCCs over moves alone.
+6. Before Phase 2: Spoon's printer still drops 7 `\u` lines on commons-text. The `invertEdge`
+   pass prints through Spoon, so audit or fix that first.
+7. Phase 2: mixed plans through `_apply` (text moves, then Spoon inversions), exploratory on
+   pdfbox, tika, commons-validator; calibrate inversion prediction against measured edges.
+8. Phase 3 (only if compile failures dominate Phase 2): scoped LLM repair, Arm R, 5 rounds, plan
+   files only, no test or build edits. Confirm a capable model first (qwen2.5-coder:3b scored 0/6).
+9. Phase 4: freeze on Holdout repos with full baselines, arms D, M, (R), P, same targets; at least
+   20 targets or descriptive funnels only. Facade setting chosen before the freeze.
+10. Carried over: OpenNLP baseline `quality_gate_failed` (a plugin gate, likely skippable like
+    checkstyle); pdfbox size 7 checkstyle partial run; OpenRewrite partial run on pdfbox size 4;
+    maven and guava baseline compile; tika, struts, karaf through text+facades; XMPMetadata plan
+    fault (non-public constructor not modelled); Arm H deferred by the spec; Eclipse JDT and IntelliJ
+    untested.
 
 2026-07-21 — Completed full MVP + multi-repository generalisation continuation.
 
