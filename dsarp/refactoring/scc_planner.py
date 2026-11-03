@@ -137,6 +137,12 @@ def plan(edges: Set[Tuple[str, str]], comp: Set[str],
            "candidates": len(moves)}
     if inversions is not None:
         out["inversions"] = [list(x) for x in inv]
+        # Ties in the beam fall to inversion states, which can crowd out the moves that a
+        # moves-only search would keep (validator: 4 left mixed, 3 by moves). Moves alone win
+        # unless the mix is strictly better, so adding an operator never loses reach.
+        alone = plan(edges, comp, accept, width, depth)
+        if (alone["predicted_left"], len(alone["moves"])) <= (left, len(state)):
+            out = {**alone, "inversions": []}
     return out
 
 
