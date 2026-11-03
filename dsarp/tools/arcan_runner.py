@@ -364,6 +364,22 @@ def installed_jdks() -> List[str]:
     return found
 
 
+def select_jdk(repo_path: Path):
+    """Point JAVA_HOME and PATH at a JDK that can build this repository, for this process.
+
+    Maven builds inherit the environment, and 17 was fixed for every repository. OpenNLP declares
+    Java 21, so its checkstyle 13 failed to load under 17 (UnsupportedClassVersionError) and the
+    baseline read as `quality_gate_failed`. A newer source level gets the newest JDK installed.
+    """
+    from .spoon_runner import compliance_level
+    level = compliance_level(Path(repo_path))
+    home = jdk_home_for("jdk-17") if level <= 17 else jdk_home_for("jdk-26", "jdk-25", "jdk-21")
+    if home:
+        os.environ["JAVA_HOME"] = str(home)
+        os.environ["PATH"] = str(home / "bin") + os.pathsep + os.environ.get("PATH", "")
+    return level, home
+
+
 def jdk_home_for(*versions: str):
     """Absolute path of the first installed JDK whose name matches one of `versions`.
 

@@ -23,7 +23,7 @@ from .edge_measure import _changed_java, write_patch
 from ..refactoring import scc_planner, spoon_plan
 from ..refactoring.name_refs import rewrite_names, service_providers
 from ..refactoring.strategies import SourceFacts
-from ..tools import api_runner, archunit_runner as au, jdeps_runner
+from ..tools import api_runner, arcan_runner, archunit_runner as au, jdeps_runner
 from ..tools.arcan_runner import arcan_jar, compile_repo, detect_with_arcan, run_tests
 from ..openrewrite.runner import run_recipe, write_move_recipe
 from ..refactoring.facades import add_facades
@@ -348,6 +348,7 @@ def main() -> None:
     if not tree.exists():
         _copy_repo(a.repo, tree)
     a.repo = tree
+    print("java level %s, JDK %s" % arcan_runner.select_jdk(a.repo), flush=True)
     base = prepare(a.repo, a.out)
     tests = None
     if not a.no_tests:

@@ -26,6 +26,7 @@ from .scc_dissolve import PLAN_ATTEMPTS, prepare
 from ..refactoring import scc_planner, spoon_plan
 from ..refactoring.inversion_facts import InversionFacts
 from ..refactoring.strategies import SourceFacts
+from ..tools.arcan_runner import select_jdk
 from ..verification.effect_checker import _copy_repo
 
 MAX_SIZE = 4
@@ -56,6 +57,7 @@ def probe_repo(repo: Path, out: Path) -> List[Dict[str, Any]]:
     tree = out / "baseline_tree"
     if not tree.exists():
         _copy_repo(repo, tree)
+    select_jdk(tree)
     base = prepare(tree, out)
     facts = SourceFacts(tree)
     inv = InversionFacts(base["snapshot"], facts)
