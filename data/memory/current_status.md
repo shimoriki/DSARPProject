@@ -97,6 +97,14 @@ gate by re-applying each plan: all 8 pass; dispatch passes on the 6 that reached
 tests PASS. Post-hoc, labelled as such: 18 of 29 accepted, 10 of 29 dissolved (Wilson
 [0.20, 0.53], McNemar p = 0.0020).
 
+After the run (2026-11-04, auto-continued queue): `summarise` and `arm_compare` now count a
+dissolve only when the verdict accepted it (55fe77a; levels are evidence, not verdicts). A
+reactor-skipped module without test sources no longer makes a baseline partial (55fe77a):
+mina-sshd unlocks (only its Assembly was skipped); wicket, struts and karaf stay partial
+(tested modules skipped). Planner refuses public classes moving into `internal`/`impl`
+packages (8afbf74). mina-sshd is frozen and confirmed separately in `%TEMP%\hold_ext`, a
+post-hoc Holdout extension, not part of the result of record.
+
 Reading: on held-out Apache repos, class moves with facades dissolve about a third of small
 package cycles with tests passing and no new cycle, well above the placebo; most still break
 some binary API, 3 of 10 dissolved do not.
