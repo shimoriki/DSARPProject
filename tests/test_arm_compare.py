@@ -12,8 +12,11 @@ def test_mcnemar_exact_known_value():
 
 
 def test_missing_row_counts_as_failure_and_few_targets_get_no_mcnemar():
-    d = [{"repo": "r", "component": ["a", "b"], "level": "4c"}, {"repo": "r", "component": ["c", "d"], "level": "4b"}]
+    ok = {"accepted": True}
+    d = [{"repo": "r", "component": ["a", "b"], "level": "4c", "verdict": ok},
+         {"repo": "r", "component": ["c", "d"], "level": "4b", "verdict": ok},
+         {"repo": "r", "component": ["e", "f"], "level": "4c", "verdict": {"accepted": False}}]
     p = [{"repo": "r", "component": ["a", "b"], "level": "3"}]
     out = compare({"D": d, "P": p})
-    assert out["targets"] == 2 and out["arms"]["P"]["levels"] == {"3": 1, "missing": 1}
-    assert out["arms"]["D"]["dissolved"] == 1 and "mcnemar" not in out
+    assert out["targets"] == 3 and out["arms"]["P"]["levels"] == {"3": 1, "missing": 2}
+    assert out["arms"]["D"]["dissolved"] == 1 and "mcnemar" not in out    # the refused 4c is not

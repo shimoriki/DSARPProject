@@ -82,6 +82,19 @@ def test_a_class_built_through_a_hidden_constructor_in_its_package_does_not_move
     assert _hidden_ctor_used(facts, "a.Meta") and not _hidden_ctor_used(facts, "a.Open")
 
 
+def test_only_skipped_modules_with_tests_make_a_run_partial(tmp_path):
+    from dsarp.tools.arcan_runner import modules_with_tests
+    poms = {"core": "<project><parent><name>Root</name></parent><name>Core</name></project>",
+            "dist": "<project><name>Dist</name></project>",
+            "odd": "<project><name>${project.artifactId}</name></project>"}
+    for d, pom in poms.items():
+        (tmp_path / d).mkdir()
+        (tmp_path / d / "pom.xml").write_text(pom, encoding="utf-8")
+    (tmp_path / "core/src/test/java/a").mkdir(parents=True)
+    (tmp_path / "core/src/test/java/a/T.java").write_text("class T {}", encoding="utf-8")
+    assert modules_with_tests(tmp_path) == {"Core": True, "Dist": False}   # odd: unnamed, assumed tested
+
+
 def test_level_requires_passing_tests():
     assert sp.level({"a", "b"}, [{"a", "b"}], [], 1, "INVALID", True) == "2"
 

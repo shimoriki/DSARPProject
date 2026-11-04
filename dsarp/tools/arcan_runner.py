@@ -673,11 +673,29 @@ def run_tests(repo_path: Path, timeout: int = 3600,
                       failing_modules=failing_modules, failing_tests=failing_tests(out)[:200])
     result["outcomes"] = surefire_outcomes(repo_path)
     result["skipped_modules"] = reactor_skipped(out)
-    # A fail-fast run, one restricted to part of the reactor, or one that skipped modules has
-    # not seen the whole suite. Callers may reject on it; tests_no_worse refuses to accept on it.
-    result["partial"] = bool(fail_fast or result["skipped_modules"] or only
+    tested = modules_with_tests(repo_path)
+    # An assembly or distribution skipped after an upstream failure hides no test. A module
+    # this cannot name is assumed to have tests.
+    result["skipped_untested"] = [m for m in result["skipped_modules"] if tested.get(m) is False]
+    # A fail-fast run, one restricted to part of the reactor, or one that skipped a tested module
+    # has not seen the whole suite. Callers may reject on it; tests_no_worse refuses to accept on it.
+    result["partial"] = bool(fail_fast or only
+                             or set(result["skipped_modules"]) - set(result["skipped_untested"])
                              or [m for m in (modules or []) if m and m != "."])
     return result
+
+
+def modules_with_tests(repo_path: Path) -> Dict[str, bool]:
+    """Reactor display name (the pom's own <name>) -> whether the module has test sources."""
+    out: Dict[str, bool] = {}
+    for pom in Path(repo_path).glob("**/pom.xml"):
+        if "target" in pom.parts or "src" in pom.relative_to(repo_path).parts:
+            continue
+        text = re.sub(r"<parent>.*?</parent>", "", pom.read_text(encoding="utf-8", errors="replace"), flags=re.S)
+        m = re.search(r"<name>([^<$]+)</name>", text)
+        if m:
+            out[m.group(1).strip()] = any((pom.parent / "src" / "test").rglob("*.java"))
+    return out
 
 
 def reactor_skipped(out: str) -> List[str]:

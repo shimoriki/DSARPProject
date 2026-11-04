@@ -39,7 +39,9 @@ def compare(rows_by_arm: Dict[str, List[Dict]]) -> Dict:
     key = lambda r: (r.get("repo", ""), tuple(r["component"]))
     by = {arm: {key(r): r for r in rows} for arm, rows in rows_by_arm.items()}
     targets = sorted(set().union(*(set(m) for m in by.values())))
-    won = {arm: {t for t in targets if (m.get(t) or {}).get("level") == "4c"} for arm, m in by.items()}
+    # A level is the evidence a row reached, not its verdict: a row a gate refused can read 4c.
+    dissolved = lambda r: r.get("level") == "4c" and (r.get("verdict") or {}).get("accepted")
+    won = {arm: {t for t in targets if dissolved(m.get(t) or {})} for arm, m in by.items()}
     out = {"targets": len(targets), "arms": {}}
     for arm, m in by.items():
         levels: Dict[str, int] = {}
@@ -49,7 +51,7 @@ def compare(rows_by_arm: Dict[str, List[Dict]]) -> Dict:
         k = len(won[arm])
         out["arms"][arm] = {"levels": levels, "dissolved": k, "wilson_95": wilson(k, len(targets)),
                             "api_breaks": [(m[t].get("api") or {}).get("count") for t in targets
-                                           if t in m and m[t].get("level") == "4c"]}
+                                           if t in won[arm]]}
     arms = list(by)
     if len(targets) >= MIN_TARGETS:
         out["mcnemar"] = {"%s vs %s" % (a, b): mcnemar_exact(len(won[a] - won[b]), len(won[b] - won[a]))

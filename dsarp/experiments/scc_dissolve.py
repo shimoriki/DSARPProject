@@ -339,10 +339,12 @@ def summarise(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         levels[r.get("level", "?")] = levels.get(r.get("level", "?"), 0) + 1
         s = (r.get("verdict") or {}).get("state", "n/a")
         states[s] = states.get(s, 0) + 1
-    success = [r for r in rows if r.get("level") in ("4a", "4b", "4c", "5")]
+    # Levels say what evidence a row reached; only an accepted verdict makes it a success.
+    success = [r for r in rows if r.get("level") in ("4a", "4b", "4c", "5")
+               and (r.get("verdict") or {}).get("accepted")]
     no_break = [r for r in success if (r.get("api") or {}).get("ok")]
     return {"targets": len(rows), "levels": levels, "states": states,
-            "dissolved": levels.get("4c", 0), "success": len(success),
+            "dissolved": sum(r.get("level") == "4c" for r in success), "success": len(success),
             "success_without_api_break": len(no_break)}
 
 
