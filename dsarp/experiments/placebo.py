@@ -20,7 +20,7 @@ from typing import Any, Dict
 
 from .arcan_diff import diff
 from ..tools import archunit_runner as au
-from ..tools.arcan_runner import compile_repo, detect_with_arcan
+from ..tools.arcan_runner import compile_repo, detect_with_arcan, select_jdk
 from ..verification.effect_checker import _copy_repo
 
 
@@ -32,6 +32,7 @@ def run(repo: Path, out: Path) -> Dict[str, Any]:
     tree = out / "baseline_tree"
     if not tree.exists():
         _copy_repo(repo, tree)
+    select_jdk(tree)
     if not compile_repo(tree, log_path=out / "baseline_compile.log", goal="test-compile").get("ok"):
         return {"ok": False, "why": "the baseline copy did not compile"}
     repo = tree
