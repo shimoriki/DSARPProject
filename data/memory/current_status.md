@@ -73,6 +73,34 @@ not export; a facade in the exported `io` package extending them leaks a private
 bnd-maven-plugin refuses. That refusal is correct: a facade cannot expose a non-exported package.
 Also: the 13 breaks there are the classes leaving exported API entirely. OpenNLP baseline failed.
 
+## HOLDOUT CONFIRMATORY RESULT (2026-11-04), moves arm
+
+Arm fixed before any Holdout repo was examined (3400330): text engine, facades with fallback,
+`--max-size 15 --limit 5`, moves only, no repair; placebo per repo. 19 Holdout repos, run
+06:50-11:46, results in `data/holdout/`. Repos: 10 froze targets; configuration, imaging,
+dbutils froze none; shiro baseline does not compile; mina quality gate; mina-sshd and wicket
+refused (partial baselines). 29 targets.
+
+As run (frozen gates, the result of record):
+- 12 of 29 accepted (PASS), Wilson 95% [0.26, 0.59]. 8 of 29 dissolved and accepted (4c),
+  Wilson [0.15, 0.46]: math 4, jcs 2, exec 1, geometry 1.
+- Placebo: all 15 placebo runs clean (detector repeatable, comment edit changes no cycle), so
+  arm P dissolves 0 of 29. Exact McNemar D vs P: 8 discordant, p = 0.0078.
+- Rejections: reflection gate 8, build 4, no plan 5, others at level 2.
+- API breaks on the 4c rows: 28, 0, 12, 11, 17, 5, 0, 7 plus the 2 below (30, 0): 3 with no break.
+
+Defect found by this run, fixed after it (not used for the result of record): the reflection
+gate compared an edited file only with nothing, because `_changed_java` names only the copy's
+side of an edited file. Every edited file that already did a lookup read as adding one. All 8
+reflection rejections (johnzon, santuario, wss4j, geometry) were this. Re-checked with the fixed
+gate by re-applying each plan: all 8 pass; dispatch passes on the 6 that reached 4b/4c with
+tests PASS. Post-hoc, labelled as such: 18 of 29 accepted, 10 of 29 dissolved (Wilson
+[0.20, 0.53], McNemar p = 0.0020).
+
+Reading: on held-out Apache repos, class moves with facades dissolve about a third of small
+package cycles with tests passing and no new cycle, well above the placebo; most still break
+some binary API, 3 of 10 dissolved do not.
+
 ## REACH PROBE RESULT (2026-11-04): stop rule FAILED, mixed-operator Phases 2-4 stop
 
 Phase 1 over 38 Discovery repos (`data/probe/summary_discovery.json`, rows beside it), no tests,
