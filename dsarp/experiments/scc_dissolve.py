@@ -80,13 +80,30 @@ def _hidden_ctor_used(facts: SourceFacts, cls: str) -> bool:
                for other in facts.classes_in(pkg, production_only=False) if other != cls)
 
 
+_PRIVATE = {"internal", "impl"}
+
+
+def _into_private(facts: SourceFacts, cls: str, dest: str) -> bool:
+    """A public class moved from an exported package into one bnd keeps private by default.
+
+    Log4j2's ByteStreamLogger moved into `io.internal`: tests passed, but the class left the
+    bundle's exports, so every OSGi caller loses it, and no facade can re-export it.
+    """
+    import re
+    simple = cls.rsplit(".", 1)[1]
+    if _PRIVATE & set(cls.rsplit(".", 1)[0].split(".")) or not _PRIVATE & set(dest.split(".")):
+        return False
+    return bool(re.search(r"^public\s+(?:\w+\s+)*(?:class|interface|enum|record|@interface)\s+%s\b" % simple,
+                          facts.text_of(cls) or "", re.M))
+
+
 def move_accept(facts: SourceFacts, banned: set):
     """Which (class, package) moves the planner may consider."""
     def accept(cls: str, dest: str) -> bool:
         # No source here means nothing to move; another module's build cannot see the file.
         return cls not in banned and bool(facts.file_for(cls)) and \
             spoon_plan.source_root_of(facts, cls) == spoon_plan.package_root(facts, dest) and \
-            not _hidden_ctor_used(facts, cls)
+            not _hidden_ctor_used(facts, cls) and not _into_private(facts, cls, dest)
     return accept
 
 

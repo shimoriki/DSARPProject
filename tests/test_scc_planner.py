@@ -82,6 +82,21 @@ def test_a_class_built_through_a_hidden_constructor_in_its_package_does_not_move
     assert _hidden_ctor_used(facts, "a.Meta") and not _hidden_ctor_used(facts, "a.Open")
 
 
+def test_a_public_class_does_not_move_into_a_private_package(tmp_path):
+    from dsarp.experiments.scc_dissolve import _into_private
+    from dsarp.refactoring.strategies import SourceFacts
+    for rel, text in {"src/main/java/a/io/Api.java": "package a.io;\npublic final class Api {}\n",
+                      "src/main/java/a/io/Hid.java": "package a.io;\nclass Hid {}\n",
+                      "src/main/java/a/io/internal/In.java": "package a.io.internal;\npublic class In {}\n"}.items():
+        (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / rel).write_text(text, encoding="utf-8")
+    f = SourceFacts(tmp_path)
+    assert _into_private(f, "a.io.Api", "a.io.internal")
+    assert not _into_private(f, "a.io.Hid", "a.io.internal")        # not API
+    assert not _into_private(f, "a.io.internal.In", "a.impl")       # already private
+    assert not _into_private(f, "a.io.Api", "a.util")
+
+
 def test_only_skipped_modules_with_tests_make_a_run_partial(tmp_path):
     from dsarp.tools.arcan_runner import modules_with_tests
     poms = {"core": "<project><parent><name>Root</name></parent><name>Core</name></project>",
