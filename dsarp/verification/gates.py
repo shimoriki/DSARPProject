@@ -66,15 +66,24 @@ def reflection(repo_path: Path, work_copy: Path) -> Dict[str, Any]:
     original against copy, so a moved file that already did a lookup is not counted twice.
     """
     from ..experiments.edge_measure import _changed_java
-    changed = _changed_java(repo_path, work_copy)
-    root = Path(work_copy).resolve()
+    repo, root = Path(repo_path).resolve(), Path(work_copy).resolve()
+    after_files, before_files = [], []
+    for p in map(lambda q: Path(q).resolve(), _changed_java(repo_path, work_copy)):
+        if p.is_relative_to(root):
+            after_files.append(p)
+            # _changed_java names only the copy's side of an edited file; compare it with its
+            # own original, or every edited file that already did a lookup reads as adding one.
+            # That rejected 9 of 29 Holdout rows on 2026-11-04.
+            if (repo / p.relative_to(root)).exists():
+                before_files.append(repo / p.relative_to(root))
+        else:
+            before_files.append(p)
 
-    def count(in_copy: bool) -> Dict[str, int]:
-        texts = [p.read_text(encoding="utf-8", errors="replace") for p in changed
-                 if Path(p).resolve().is_relative_to(root) == in_copy]
+    def count(files: List[Path]) -> Dict[str, int]:
+        texts = [f.read_text(encoding="utf-8", errors="replace") for f in files]
         return {s: sum(t.count(s) for t in texts) for s in REFLECTIVE}
 
-    before, after = count(False), count(True)
+    before, after = count(before_files), count(after_files)
     added = [s for s in REFLECTIVE if after[s] > before[s]]
     return {"ok": not added, "added": added,
             "why": "adds reflective lookups: %s" % ", ".join(added) if added else None}

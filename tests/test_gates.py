@@ -47,6 +47,9 @@ def test_an_added_reflective_lookup_fails_and_a_moved_one_does_not(tmp_path):
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         (root / rel).write_text(text, encoding="utf-8")
     assert reflection(repo, copy)["ok"]                  # A moved with its lookup
+    (repo / "a/C.java").write_text("Class.forName(y);", encoding="utf-8")
+    (copy / "a/C.java").write_text("import c.A;\nClass.forName(y);", encoding="utf-8")
+    assert reflection(repo, copy)["ok"]                  # C edited, its lookup was already there
     (copy / "a/B.java").write_text("ServiceLoader.load(B.class);", encoding="utf-8")
     r = reflection(repo, copy)
     assert not r["ok"] and r["added"] == ["ServiceLoader"]
