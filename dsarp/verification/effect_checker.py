@@ -231,9 +231,29 @@ def _ignore_build_output(directory, names):
 COPY_MARKER = ".dsarp-copy-of"
 
 
+def remove_tree(path: Path, attempts: int = 5) -> None:
+    """rmtree that survives Windows: read-only files are made writable, and a file a scanner or
+    indexer briefly holds open is retried. `ignore_errors=True` left mina-sshd's copy half
+    deleted, and the next target's copytree died on the leftover directory."""
+    import os, stat, time
+
+    def writable(func, p, _exc):
+        os.chmod(p, stat.S_IWRITE)
+        func(p)
+
+    for i in range(attempts):
+        if not Path(path).exists():
+            return
+        try:
+            shutil.rmtree(path, onexc=writable)
+        except OSError:
+            time.sleep(2 * (i + 1))
+    if Path(path).exists():
+        raise OSError("could not remove %s" % path)
+
+
 def _copy_repo(repo_path: Path, dest: Path) -> Path:
-    if dest.exists():
-        shutil.rmtree(dest, ignore_errors=True)
+    remove_tree(dest)
     shutil.copytree(repo_path, dest, ignore=_ignore_build_output)
     dest.with_name(dest.name + COPY_MARKER).write_text(str(Path(repo_path).resolve()),
                                                       encoding="utf-8")
