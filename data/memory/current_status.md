@@ -194,8 +194,10 @@ not the Holdout claim.
       Not fixed: installing Maven 4 needs user approval.
     - guava: `guava-testlib` module-info cannot find `com.google.common` at test-compile; JPMS
       needs packaged jars. Not fixed.
-    - Open: struts and karaf baselines are partial (any run is INVALID until fixed); tika
-      text+facades run waits for the probe; Eclipse JDT and IntelliJ need an IDE runtime;
+    - tika text+facades (exploratory, 2026-11-05, ended 18:49): 5 targets, 4 PASS, 2 at 4c,
+      2 at 4b, 1 no_plan (size 3, 0 moves); 0 without an API break. Baseline has 1 failure and
+      2 errors, so tests are compared against it. Output in %TEMP%\tika_tf.
+    - Open: struts and karaf baselines are partial (any run is INVALID until fixed); Eclipse JDT and IntelliJ need an IDE runtime;
       public classes moved into bnd-private packages (`*.internal`) leave the OSGi exports.
     Original list: OpenNLP baseline `quality_gate_failed` (a plugin gate, likely skippable like
     checkstyle); pdfbox size 7 checkstyle partial run; OpenRewrite partial run on pdfbox size 4;
