@@ -197,6 +197,53 @@ not the Holdout claim.
     - tika text+facades (exploratory, 2026-11-05, ended 18:49): 5 targets, 4 PASS, 2 at 4c,
       2 at 4b, 1 no_plan (size 3, 0 moves); 0 without an API break. Baseline has 1 failure and
       2 errors, so tests are compared against it. Output in %TEMP%\tika_tf.
+    - Arcan smell tally (2026-11-06): each accepted target applied alone to its baseline,
+      Arcan after minus Arcan before, deltas summed, duplicate reruns dropped.
+      Holdout record, 12 accepted: Cyclic -28, Unstable -7, net -35; no row worse.
+      Exploratory (log4j2, text, io, lang, tika), 10 accepted: Cyclic -55, Unstable -9, net -64.
+      mina-sshd extension, 4 accepted: Cyclic +99, Unstable -2, net +97. Two 4c rows
+      (Int2IntFunction to common.util, AgentImpl to agent.unix) dissolved their target, and
+      ArchUnit saw no new package cycle, yet Arcan counted +55 and +52 Cyclic Dependency.
+      All 26 accepted: net -2.
+      Diagnosed (2026-11-06; rebuilt Int2IntFunction row in %TEMP%\diag_mina, arcan_diff by
+      identity). Arcan package cycles went from 253 to 310: 155 removed and 212 introduced.
+      Class cycles went from 274 to 272. None of the 212 new package cycles contains common.util
+      or common.util.functors, the only packages the move touched. Smallest new one: cipher <->
+      keyprovider. The baseline already had both edges (CipherInformation -> KeySizeIndicator,
+      KeyPairProvider -> ECCurves), but Arcan did not list that cycle before.
+      So Arcan's package-cycle list is a partial sample of the elementary cycles, and any change
+      to the graph reshuffles it across the whole SCC. The placebo (a re-run plus a comment-only
+      edit) leaves the graph unchanged, so it could not catch this.
+      Consequence: Arcan's Cyclic Dependency COUNT is not a smell-reduction measure, here or in
+      the -35 and -64 above. Trustworthy measures: the identity of the target cycle
+      (arcan_target_gone) and the ArchUnit/jdeps SCCs. Unstable Dependency counts are not affected.
+    - ARCAN RECOUNT, the smell figure of record (2026-11-06, tool-accountable). Each of the 26
+      accepted changes was re-applied alone to its baseline (text engine, with facades when the
+      row used them), compiled (26/26), and run through Arcan. Counted by what Arcan names:
+      packages in any Cyclic Dependency, classes in any Cyclic Dependency, Unstable Dependency
+      pairs, and Hub-Like classes. Not the cycle count. Output: %TEMP%\recount\recount.jsonl;
+      script in the session scratchpad.
+        Holdout record (12):   cyclic packages -20 +0, cyclic classes -5 +1, unstable -11 +4; net 31 fewer
+        Exploratory (10):      cyclic packages -21 +0, cyclic classes -26 +41, unstable -12 +3; net 15 fewer
+        mina-sshd ext (4):     cyclic packages -9 +0, cyclic classes -5 +2, unstable -5 +3; net 14 fewer
+        All 26:                cyclic packages -50 +0, cyclic classes -36 +44, unstable -28 +10; net 60 fewer
+        4c only (16):          cyclic packages -39 +0, cyclic classes -21 +26, unstable -17 +5; net 46 fewer
+      No change put a new package into a cycle. 38 of the 44 classes added to cycles come from
+      the three log4j2 rows (+20, +4, +14). Diagnosed (2026-11-06) as no new class cycle from our
+      changes. Each log4j2 row's joined classes are of two kinds only. (1) The moved classes
+      under their new names (JsonTemplateLayout and its nested types, ByteStreamLogger), which
+      appear in "left" under their old names: a rename, not a new cycle. (2) log4j-core classes
+      that no move touched (core.config, core.impl, core.appender). log4j-core does not depend on
+      layout-template-json, iostreams or 1.2-api, so no cycle through a moved class can include
+      them. The smallest such "new" cycle, AbstractConfiguration -> ReliabilityStrategyFactory ->
+      LoggerConfig -> AsyncLoggerContext -> DefaultConfiguration -> AbstractConfiguration, has
+      every edge in the baseline jdeps graph. So Arcan's class-cycle list is sampled too on
+      log4j-core's large class SCC. Class-membership counts on log4j2 are therefore not evidence.
+      Excluding log4j2's class figures: exploratory classes in cycles -10 +3. Package membership
+      stays the reliable Arcan measure. A rename-aware class count is still to do. Hub-Like is unchanged everywhere. cf2 and cf3 were originally written by
+      Spoon and here by the text engine (same moves).
+    - Engine bench of the 18 dissolved targets with Spoon and OpenRewrite, started 2026-11-06,
+      exploratory, `%TEMP%\engbench` (driver in the session scratchpad).
     - Open: struts and karaf baselines are partial (any run is INVALID until fixed); Eclipse JDT and IntelliJ need an IDE runtime;
       public classes moved into bnd-private packages (`*.internal`) leave the OSGi exports.
     Original list: OpenNLP baseline `quality_gate_failed` (a plugin gate, likely skippable like
