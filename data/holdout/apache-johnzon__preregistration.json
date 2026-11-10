@@ -1,0 +1,101 @@
+{
+ "selection": {
+  "max_size": 15,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "moves",
+  "repair": false
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.johnzon.jsonb",
+    "org.apache.johnzon.jsonb.cdi"
+   ],
+   "size": 2,
+   "predicted_left": 0,
+   "dissolves": true,
+   "moves": [
+    [
+     "org.apache.johnzon.jsonb.JohnzonJsonb",
+     "org.apache.johnzon.jsonb.cdi"
+    ]
+   ],
+   "candidates": 2,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.johnzon.jsonlogic",
+    "org.apache.johnzon.jsonlogic.spi"
+   ],
+   "size": 2,
+   "predicted_left": 0,
+   "dissolves": true,
+   "moves": [
+    [
+     "org.apache.johnzon.jsonlogic.JohnzonJsonLogic",
+     "org.apache.johnzon.jsonlogic.spi"
+    ]
+   ],
+   "candidates": 3,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.johnzon.jsonschema",
+    "org.apache.johnzon.jsonschema.spi",
+    "org.apache.johnzon.jsonschema.spi.builtin"
+   ],
+   "size": 3,
+   "predicted_left": 0,
+   "dissolves": true,
+   "moves": [
+    [
+     "org.apache.johnzon.jsonschema.JsonSchemaValidatorFactory",
+     "org.apache.johnzon.jsonschema.spi.builtin"
+    ]
+   ],
+   "candidates": 46,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.johnzon.mapper",
+    "org.apache.johnzon.mapper.access",
+    "org.apache.johnzon.mapper.converter",
+    "org.apache.johnzon.mapper.internal",
+    "org.apache.johnzon.mapper.map",
+    "org.apache.johnzon.mapper.reflection"
+   ],
+   "size": 6,
+   "predicted_left": 3,
+   "dissolves": false,
+   "moves": [
+    [
+     "org.apache.johnzon.mapper.internal.ConverterAdapter",
+     "org.apache.johnzon.mapper"
+    ],
+    [
+     "org.apache.johnzon.mapper.map.LazyConverterMap",
+     "org.apache.johnzon.mapper"
+    ],
+    [
+     "org.apache.johnzon.mapper.reflection.Converters",
+     "org.apache.johnzon.mapper"
+    ]
+   ],
+   "candidates": 101,
+   "refused": []
+  }
+ ]
+}

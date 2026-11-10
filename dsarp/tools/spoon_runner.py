@@ -171,7 +171,7 @@ def fix_references(repo_path: Path, moves: List[Dict[str, str]]) -> Dict[str, An
              if "/target/" not in str(f).replace("\\", "/")]
     for f in files:
         try:
-            txt = original = f.read_text(encoding="utf-8", errors="ignore")
+            txt = original = read_source(f)
         except OSError:
             continue
         pkg_m = re.search(r"^\s*package\s+([\w.]+)\s*;", txt, re.M)
@@ -200,15 +200,17 @@ def fix_references(repo_path: Path, moves: List[Dict[str, str]]) -> Dict[str, An
             # Left behind in the old package and still using the bare name.
             # Searched in CODE, not text. pdfbox's CompoundCharacterTokenizer only named the moved
             # class in a comment, gained an import it never used, and checkstyle failed the build:
-            # a refactoring scored as broken over a comment.
-            if (this_pkg == old_pkg and _IMPORT.format(new_fqn) not in txt
+            # a refactoring scored as broken over a comment. A wildcard of the old package
+            # stopped covering the name just the same.
+            if ((this_pkg == old_pkg or _IMPORT.format(old_pkg + ".*") in txt)
+                    and this_pkg != new_pkg and _IMPORT.format(new_fqn) not in txt
                     and re.search(rf"\b{re.escape(simple)}\b",
                                   re.sub(r"//[^\n]*|/\*.*?\*/", "", txt, flags=re.S))):
                 txt = re.sub(r"^(\s*package\s+[\w.]+\s*;\s*\n)",
                              rf"\1\n{_IMPORT.format(new_fqn)}\n", txt, count=1, flags=re.M)
                 added += 1
         if txt != original:
-            f.write_text(txt, encoding="utf-8")
+            write_source(f, txt)
             touched.append(str(f))
     return {"files_rewritten": len(touched), "imports_added": added}
 
@@ -216,6 +218,7 @@ def fix_references(repo_path: Path, moves: List[Dict[str, str]]) -> Dict[str, An
 # Import hygiene is shared with the OpenRewrite arm; refactoring/java_text.py carries
 # the reasoning, including why nothing in it uses a regex.
 from ..refactoring.java_text import idents as _idents
+from ..refactoring.java_text import read_source, write_source
 from ..refactoring.java_text import strip_unused_imports as _strip_unused_imports
 
 
@@ -329,7 +332,11 @@ def apply_edits(repo_path: Path, edits: List[Dict[str, str]],
                                      "conservative": conservative,
                                      "complianceLevel": level,
                                      "classpath": classpath or []}), encoding="utf-8")
-    cmd = [java, heap, "-jar", str(JAR), str(repo_path), str(plan_file), str(result_file)]
+    # Spoon prints in the JVM's default charset. On Windows that is cp1252, which silently turned
+    # log4j2's "…" default and commons-text's noncharacters into other text; only the latter
+    # failed a test.
+    cmd = [java, heap, "-Dfile.encoding=UTF-8", "-jar", str(JAR), str(repo_path), str(plan_file),
+           str(result_file)]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout,
                               env=dict(os.environ))

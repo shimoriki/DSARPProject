@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
+import tempfile
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -50,23 +52,48 @@ def parse(out: str) -> Set[Tuple[str, str]]:
 
 def package_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
     """Package edges as jdeps sees them, or why it could not say."""
-    dirs = [d for d in class_dirs if Path(d).is_dir()]
-    if not dirs:
-        return {"ok": False, "why": "no class directories"}
-    try:
-        p = subprocess.run([jdeps_exe(), "-verbose:package", *dirs],
-                           capture_output=True, text=True, timeout=timeout)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return {"ok": False, "why": f"jdeps unavailable: {exc}"}
-    out = (p.stdout or "") + "\n" + (p.stderr or "")
+    run = _each_directory("-verbose:package", class_dirs, timeout)
+    if not run["ok"]:
+        return run
+    out, returncode = run["out"], run["returncode"]
     edges = parse(out)
     # jdeps exits non-zero on unresolved external dependencies, which is normal here and says
     # nothing about the edges among our own packages. Read the edges, not the exit code --
     # but refuse to call an empty reading a success.
     if not edges:
         return {"ok": False, "why": "jdeps reported no internal package edges",
-                "returncode": p.returncode, "tail": out[-500:]}
-    return {"ok": True, "edges": sorted(edges), "returncode": p.returncode}
+                "returncode": returncode, "tail": out[-500:]}
+    return {"ok": True, "edges": sorted(edges), "returncode": returncode}
+
+
+def _each_directory(flag: str, class_dirs: List[str], timeout: int) -> Dict[str, Any]:
+    """jdeps output for every directory, read one at a time, without module descriptors.
+
+    A build leaves module-info.class in target/classes, and jdeps then resolves that directory
+    as a named module, dying with FindException on any requirement it cannot see. On log4j2
+    that lost 36 of 39 directories, and what survived still parsed: 665 edges instead of
+    12,778, a smaller graph with no error. So descriptors are left out of a staged copy, and a
+    directory jdeps could not read fails the whole reading. A partial graph is never a graph.
+    An edge into another directory is still reported, as "not found".
+    """
+    dirs = [d for d in class_dirs if Path(d).is_dir()]
+    if not dirs:
+        return {"ok": False, "why": "no class directories"}
+    chunks, returncode = [], 0
+    for d in dirs:
+        with tempfile.TemporaryDirectory() as tmp:
+            stage = Path(tmp) / "classes"
+            shutil.copytree(d, stage, ignore=shutil.ignore_patterns("module-info.class"))
+            try:
+                p = subprocess.run([jdeps_exe(), flag, str(stage)],
+                                   capture_output=True, text=True, timeout=timeout)
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                return {"ok": False, "why": f"jdeps unavailable: {exc}"}
+        if "Exception in thread" in (p.stderr or ""):
+            return {"ok": False, "why": "jdeps failed on %s: %s" % (d, p.stderr[:200])}
+        chunks += [p.stdout or "", p.stderr or ""]
+        returncode = returncode or p.returncode
+    return {"ok": True, "out": "\n".join(chunks), "returncode": returncode}
 
 
 def class_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
@@ -77,15 +104,10 @@ def class_edges(class_dirs: List[str], timeout: int = 900) -> Dict[str, Any]:
     tie to its former neighbours into a new package edge. ArchUnit drops them too, for the good
     reason that a package cannot be in a cycle with itself.
     """
-    dirs = [d for d in class_dirs if Path(d).is_dir()]
-    if not dirs:
-        return {"ok": False, "why": "no class directories"}
-    try:
-        p = subprocess.run([jdeps_exe(), "-verbose", *dirs],
-                           capture_output=True, text=True, timeout=timeout)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return {"ok": False, "why": f"jdeps unavailable: {exc}"}
-    out = (p.stdout or "") + "\n" + (p.stderr or "")
+    run = _each_directory("-verbose", class_dirs, timeout)
+    if not run["ok"]:
+        return run
+    out = run["out"]
     pairs = []
     for line in out.splitlines():
         m = _EDGE.match(line)

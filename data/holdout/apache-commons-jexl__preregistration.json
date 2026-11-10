@@ -1,0 +1,35 @@
+{
+ "selection": {
+  "max_size": 15,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "moves",
+  "repair": false
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.commons.jexl3",
+    "org.apache.commons.jexl3.internal",
+    "org.apache.commons.jexl3.internal.introspection",
+    "org.apache.commons.jexl3.introspection",
+    "org.apache.commons.jexl3.parser"
+   ],
+   "size": 5,
+   "predicted_left": 5,
+   "dissolves": false,
+   "moves": [],
+   "candidates": 110,
+   "refused": []
+  }
+ ]
+}

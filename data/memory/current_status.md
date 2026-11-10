@@ -2,6 +2,268 @@
 
 ## Last updated
 
+2026-11-03 — engine bench recorded below. Hour-by-hour log: `data/memory/hourly_log.md`.
+Held-out confirmatory run (arm text+facades, recorded in the freeze): OpenNLP baseline fails
+its build (`quality_gate_failed`), so nothing frozen; Log4j2 frozen, 5 targets, first is 4c. 2026-11-02 — SCC cycle repair pipeline piloted on branch `claude/cycle-repair-loop` (9f6b0bb).
+
+Pilot, exploratory, after tuning: commons-validator, pdfbox, tika. 10 targets, 7 accepted, 3
+dissolved, 0 without an API break. Log4j2: 3 of 3 accepted, 2 dissolved, also all with API breaks.
+Known misses: pdfbox XMPMetadata (test uses a non-public constructor, not modelled) and pdfbox
+size 7 (a moved file breaks the repo's checkstyle, tied to `skipTests` in its pom, so the run is
+partial and INVALID). Tika eval.app/reports is 4b only because Arcan never reported that cycle.
+Arm H (Abdeen annealing) is not implemented.
+
+Confirmatory, Arm D only, plans frozen on 756fbc2's code: struts 4 targets, karaf 5. Result 0 of 9
+accepted, 0 at level 3 or above. Four targets stopped at level 2 because each baseline was itself
+partial (struts skips 2 modules, karaf 10), so no candidate could be accepted; `--freeze` never
+checked this. Three failed the build, two had no plan. opennlp failed its baseline with
+`quality_gate_failed`; commons-collections froze no targets. Not a measure of repair quality,
+but it stands as the frozen outcome.
+
+Second confirmatory, Arm D only, code at 8369515, freeze now refuses a partial baseline. Of nine
+repos, maven and guava failed baseline compile; csv, email and codec froze no targets. cli, text,
+io and lang gave 4 targets: 2 accepted at 4b (io 8 to 7, lang 13 to 12), 1 rejected (text, 34
+tests stopped running, cause not diagnosed), 1 no plan. 0 dissolved, 0 without an API break
+(io 18, lang 85). Arcan confirmed neither accepted shrink. Defect seen: `rewrite_names` also
+edited historical text in RELEASE-NOTES.txt and src/changes/changes.xml.
+
+2026-11-03 — Fixes after those runs, exploratory, frozen results above unchanged. `rewrite_names`
+now skips release history. Spoon's printer wrote the JVM default charset (cp1252), which caused the
+text rejection and silently changed log4j2's "…" default to "" with all tests passing, so the first
+Log4j2 result was invalid. Fixed with `-Dfile.encoding=UTF-8`, at aa14712. Log4j2 rerun: 3 of 3
+accepted, 2 dissolved, 4b 15 to 11, patch keeps "…". Text rerun: 4c.
+
+Engine bench: same frozen plans, 8 targets on commons-text, io, lang, validator, pdfbox, full
+gates, `--engine`, Spoon still decides legality. Accepted: text mover 7, Spoon 6, OpenRewrite 6.
+All three fail XMPMetadata identically, a plan fault. Spoon loses pdfbox size 7 (partial run), and
+OpenRewrite loses pdfbox size 4 (partial run, tests stop at the PDFBox module, cause not
+diagnosed). Levels otherwise match. Only Spoon rewrote lines beyond the move (lang +1899 against
++1706), and its text patch still drops 7 `\u` lines. Text mover: `refactoring/text_move.py`, 0
+lost lines. Still 0 without an API break. Eclipse JDT and IntelliJ not tested: need an IDE runtime.
+Not run through the engines: Log4j2, tika, struts, karaf. Bench code is uncommitted.
+Decision (user, 2026-11-03): `scc_dissolve` now writes moves with the text engine by default;
+`--engine spoon` reproduces earlier runs. Plan legality still comes from a Spoon dry run.
+
+Facades (`--facades`, `refactoring/facades.py`, off by default): a deprecated type at each moved
+public class's old name, built from baseline `javap -public` and delegating to the new one.
+Same 8 frozen targets, text engine, japicmp breaks without -> with: io 18 -> 0, lang 85 -> 0
+(the first accepted repairs with NO API break), text 43 -> 7, validator 71 -> 9, pdfbox size 4
+27 -> 20, size 7 34 -> 5, levels unchanged. Cost: pdfbox size 2 was 4c, and with facades its
+cycle comes back (facade edge old -> new, left 2, level 2), so 6 accepted against 7. XMPMetadata
+still fails the build. Not measured: callers outside the repo casting library-made `new.X` objects
+to `old.X` (ClassCastException), which no API checker sees.
+
+Facade fallback (2026-11-03, `facade_first` in `scc_dissolve.py`): with `--facades`, a target
+whose facades fail the build or structural gate is measured again without them; the row keeps
+the first attempt under `facade_fallback`. Test failures do not trigger it. pdfbox rerun
+(`rows_fallback.jsonl`): size 2 back to 4c PASS (17 breaks, facades dropped, gate was
+structural), size 4 and 7 unchanged (4b, 20 and 5 breaks), size 3 still fails the build both
+ways. So facade-first gives 7 of 8 accepted, the same as without facades, with fewer breaks.
+By the mixed-operator spec's headline (4c only), that is 2 of 8 dissolved (text, pdfbox size 2).
+
+Log4j2 confirm, arm text+facades, frozen before the run (`%TEMP%\cf4\l4j`, done 21:36): 3 plans
+froze (limit 5), 3 of 3 PASS, 2 dissolved (4c), 1 at 4b (15 to 11). Same levels as the earlier
+exploratory Spoon run on the same targets. API breaks: 92, 13, 38 (Spoon run: 92, 13, 55). Facades
+held only on the size-15 target (4 interface facades). On both size-2 targets they broke the build
+and the fallback measured without them: (a) JsonTemplateLayout statics facade named the class's
+nested types by the old name, which the facade does not declare. Fixed after the run in
+`facades.py` (`retype`), and a rebuild of that target then compiled; not re-measured, so the
+frozen row stands. (b) ByteStreamLogger/CharStreamLogger moved into `io.internal`, which bnd does
+not export; a facade in the exported `io` package extending them leaks a private package, so
+bnd-maven-plugin refuses. That refusal is correct: a facade cannot expose a non-exported package.
+Also: the 13 breaks there are the classes leaving exported API entirely. OpenNLP baseline failed.
+
+## HOLDOUT CONFIRMATORY RESULT (2026-11-04), moves arm
+
+Arm fixed before any Holdout repo was examined (3400330): text engine, facades with fallback,
+`--max-size 15 --limit 5`, moves only, no repair; placebo per repo. 19 Holdout repos, run
+06:50-11:46, results in `data/holdout/`. Repos: 10 froze targets; configuration, imaging,
+dbutils froze none; shiro baseline does not compile; mina quality gate; mina-sshd and wicket
+refused (partial baselines). 29 targets.
+
+As run (frozen gates, the result of record):
+- 12 of 29 accepted (PASS), Wilson 95% [0.26, 0.59]. 8 of 29 dissolved and accepted (4c),
+  Wilson [0.15, 0.46]: math 4, jcs 2, exec 1, geometry 1.
+- Placebo: all 15 placebo runs clean (detector repeatable, comment edit changes no cycle), so
+  arm P dissolves 0 of 29. Exact McNemar D vs P: 8 discordant, p = 0.0078.
+- Rejections: reflection gate 8, build 4, no plan 5, others at level 2.
+- API breaks on the 4c rows: 28, 0, 12, 11, 17, 5, 0, 7 plus the 2 below (30, 0): 3 with no break.
+
+Defect found by this run, fixed after it (not used for the result of record): the reflection
+gate compared an edited file only with nothing, because `_changed_java` names only the copy's
+side of an edited file. Every edited file that already did a lookup read as adding one. All 8
+reflection rejections (johnzon, santuario, wss4j, geometry) were this. Re-checked with the fixed
+gate by re-applying each plan: all 8 pass; dispatch passes on the 6 that reached 4b/4c with
+tests PASS. Post-hoc, labelled as such: 18 of 29 accepted, 10 of 29 dissolved (Wilson
+[0.20, 0.53], McNemar p = 0.0020).
+
+After the run (2026-11-04, auto-continued queue): `summarise` and `arm_compare` now count a
+dissolve only when the verdict accepted it (55fe77a; levels are evidence, not verdicts). A
+reactor-skipped module without test sources no longer makes a baseline partial (55fe77a):
+mina-sshd unlocks (only its Assembly was skipped); wicket, struts and karaf stay partial
+(tested modules skipped). Planner refuses public classes moving into `internal`/`impl`
+packages (8afbf74). mina-sshd is frozen and confirmed separately in `%TEMP%\hold_ext`, a
+post-hoc Holdout extension, not part of the result of record.
+
+Reading: on held-out Apache repos, class moves with facades dissolve about a third of small
+package cycles with tests passing and no new cycle, well above the placebo; most still break
+some binary API, 3 of 10 dissolved do not.
+
+## REACH PROBE RESULT (2026-11-04): stop rule FAILED, mixed-operator Phases 2-4 stop
+
+Phase 1 over 38 Discovery repos (`data/probe/summary_discovery.json`, rows beside it), no tests,
+code at e67252d. 31 built; 7 baselines failed for environment reasons (opennlp JDK 21, fixed
+after and re-probed: 0 SCCs of size <=4; maven needs Maven 4; guava JPMS jars; commons-crypto
+needs `make`; httpcore and httpclient need a Maven toolchains.xml; parquet needs `thrift`).
+62 SCCs of size <=4, 37 reported by Arcan. Dissolvable (arithmetic 0 left AND Spoon dry-run
+legal), Arcan-reported: moves alone 22, mixed 24. The mix adds 2 (both xmlgraphics-fop), the
+pre-registered rule needed 10. Not Arcan-reported but dissolvable by the mix: 11 (cannot reach 4c).
+Diagnostics, not part of the rule:
+- Of 348 inversion pairs in the 15 hard SCCs, 80 are unblocked; the rest: already an interface 68,
+  no source 56, constructed 43, different source roots 43, declares nothing 41, enum 8, other 9.
+- Ignoring construction changes nothing (25 predicted dissolves either way).
+- Depth is not the limit: arithmetic dissolves of the 15 hard SCCs, mixed, depth 4/8/12 = 3/4/5;
+  moves alone at depth 12 = 3. Even unbounded search adds at most 2-5, under 10.
+Finding: consumer-owned interface extraction adds almost no whole-cycle reach on small Apache
+SCCs beyond class moves. Per the spec, the mixed arm stops here. Moves (text engine, facades,
+fallback) remain the operator; the Holdout pool is still untouched.
+
+## Task queue (remaining), 2026-11-03
+
+Main goal (user, 2026-11-03): architectural refactoring without breaking the software system.
+Every operator counts only after build, full tests, API report and the reflection gate.
+Progress on the queue below: reflection gate done (3369a1a); inversion blockers per planner
+state done (510aed4); planner mixing moves and inversions in progress. The spec's
+implementation plan is `docs/superpowers/plans/2026-11-03-mixed-operator-cycle-repair.md` on
+the research worktree; it is executed here on `claude/cycle-repair-loop`, keeping the split
+rule already fixed in `configs/repos_pool.yaml`.
+
+Spec adopted: `docs/superpowers/specs/2026-11-02-mixed-operator-cycle-repair-design.md` (copied
+from the research worktree). Its Phase 0 is done: release history skipped (31b9518), the
+commons-text 34-test loss was the cp1252 charset (aa14712, rerun 4c), log4j2 `-fae` partial runs
+now count as INVALID and the rerun was clean. How it fits the current loop: moves keep the text
+engine, inversions run as a second Spoon `invertEdge` pass on the moved tree; facades stay an
+orthogonal flag; arms D/M/R/P go into the freeze's `arm` field, which `--confirm` already enforces.
+The Log4j2 run below is Discovery by the spec's split, so it tests the engine and facade choice,
+not the Holdout claim.
+
+1. DONE: Log4j2 confirm, arm text+facades, 3 of 3 PASS, 2 dissolved (see above).
+   New follow-up: the planner should not move a public API class into a package the build does
+   not export (bnd `-exportcontents` / `module-info`), or should count that as a break.
+2. DONE (c01c20a): freeze `arm` records `operators` (moves) and `repair` (false); older
+   freezes read as moves, unrepaired. Flags arrive with the mixed and repair arms.
+   Also done 2026-11-03: reflection gate (3369a1a), inversion blockers per state (510aed4),
+   planner mixing moves and inversions (ecc0c4c), two-pass dry run (fa15af8), reach probe
+   (e67252d). Beam bug fixed in e67252d: ties fell to inversion states and crowded out moves
+   (validator mixed 4 left vs moves 3); moves alone now win unless the mix is strictly better.
+   Deviation from the plan: one invertEdge edit per implementation type, because Spoon's
+   `groupPartition` calls a group legal when any one type is invertible (hides partial groups).
+   Smoke: pdfbox 3 SCCs of size <=4, moves 1 dissolvable, mixed 1, so no gain there.
+   Reach probe over 38 Discovery repos running (`%TEMP%\probe`, list `data/probe/discovery.txt`).
+   Spoon `\u` audit (item 6): not a loss. On commons-text Spoon rewrote 7 escapes into
+   equivalent forms: "\u0008" -> "\b", "\u000c" -> "\f", "￾"/"￿" -> the raw
+   characters in UTF-8. Values are identical when the module compiles as UTF-8, which the
+   build and test gates verify; a non-UTF-8 module would change them (the cp1252 bug).
+3. Add the `reflection` hard gate: newly added `Class.forName`, `ServiceLoader` or string lookups
+   in changed files fail the candidate (spec 8.5).
+4. Repo pool and hash split into Discovery and Holdout, hash fixed before any repo is examined.
+   DONE 2026-11-03 (user approved cloning): `configs/repos_pool.yaml`, 40 new Maven Apache repos,
+   split by sha256('apache/<name>') first hex digit 0-7 discovery, else holdout, fixed before
+   cloning: 21 discovery (+17 already used = 38), 19 holdout. All 40 shallow-cloned (depth 1) into
+   data/raw/repos; HEAD SHAs in `configs/repos_pool_heads.json`. wss4j's GitHub name is
+   ws-wss4j; URL fixed, split kept. cassandra, lucene, solr, spark left out (too large).
+5. Phase 1 reach probe: inversion in `scc_planner` state (moves plus inverted pairs, blockers per
+   class, D4 signature edges), arithmetic screen, then Spoon dry-run on the moved tree. Stop rule:
+   continue only if the mix adds at least 10 dissolvable Arcan-reported SCCs over moves alone.
+6. Before Phase 2: Spoon's printer still drops 7 `\u` lines on commons-text. The `invertEdge`
+   pass prints through Spoon, so audit or fix that first.
+7. Phase 2: mixed plans through `_apply` (text moves, then Spoon inversions), exploratory on
+   pdfbox, tika, commons-validator; calibrate inversion prediction against measured edges.
+8. Phase 3 (only if compile failures dominate Phase 2): scoped LLM repair, Arm R, 5 rounds, plan
+   files only, no test or build edits. Confirm a capable model first (qwen2.5-coder:3b scored 0/6).
+9. Phase 4: freeze on Holdout repos with full baselines, arms D, M, (R), P, same targets; at least
+   20 targets or descriptive funnels only. Facade setting chosen before the freeze.
+10. Carried-over progress 2026-11-03:
+    - OpenNLP: cause found, it declares Java 21 and checkstyle 13 would not load on JDK 17
+      (UnsupportedClassVersionError). Fixed by per-repo JDK choice (`select_jdk`, 520c28e,
+      JDK 26 for levels above 17); not yet verified on OpenNLP (the running probe has old code).
+    - XMPMetadata: cause found, its protected constructor is called by a test in the old
+      package; Spoon checks method and field access, not constructors. Fixed in the planner's
+      accept rule (`_hidden_ctor_used`, 17df508); the real pdfbox tree now refuses it.
+    - maven: needs Maven 4 to build itself (`dependencies.dependency.version ... missing`).
+      Not fixed: installing Maven 4 needs user approval.
+    - guava: `guava-testlib` module-info cannot find `com.google.common` at test-compile; JPMS
+      needs packaged jars. Not fixed.
+    - tika text+facades (exploratory, 2026-11-05, ended 18:49): 5 targets, 4 PASS, 2 at 4c,
+      2 at 4b, 1 no_plan (size 3, 0 moves); 0 without an API break. Baseline has 1 failure and
+      2 errors, so tests are compared against it. Output in %TEMP%\tika_tf.
+    - Arcan smell tally (2026-11-06): each accepted target applied alone to its baseline,
+      Arcan after minus Arcan before, deltas summed, duplicate reruns dropped.
+      Holdout record, 12 accepted: Cyclic -28, Unstable -7, net -35; no row worse.
+      Exploratory (log4j2, text, io, lang, tika), 10 accepted: Cyclic -55, Unstable -9, net -64.
+      mina-sshd extension, 4 accepted: Cyclic +99, Unstable -2, net +97. Two 4c rows
+      (Int2IntFunction to common.util, AgentImpl to agent.unix) dissolved their target, and
+      ArchUnit saw no new package cycle, yet Arcan counted +55 and +52 Cyclic Dependency.
+      All 26 accepted: net -2.
+      Diagnosed (2026-11-06; rebuilt Int2IntFunction row in %TEMP%\diag_mina, arcan_diff by
+      identity). Arcan package cycles went from 253 to 310: 155 removed and 212 introduced.
+      Class cycles went from 274 to 272. None of the 212 new package cycles contains common.util
+      or common.util.functors, the only packages the move touched. Smallest new one: cipher <->
+      keyprovider. The baseline already had both edges (CipherInformation -> KeySizeIndicator,
+      KeyPairProvider -> ECCurves), but Arcan did not list that cycle before.
+      So Arcan's package-cycle list is a partial sample of the elementary cycles, and any change
+      to the graph reshuffles it across the whole SCC. The placebo (a re-run plus a comment-only
+      edit) leaves the graph unchanged, so it could not catch this.
+      Consequence: Arcan's Cyclic Dependency COUNT is not a smell-reduction measure, here or in
+      the -35 and -64 above. Trustworthy measures: the identity of the target cycle
+      (arcan_target_gone) and the ArchUnit/jdeps SCCs. Unstable Dependency counts are not affected.
+    - ARCAN RECOUNT, the smell figure of record (2026-11-06, tool-accountable). Each of the 26
+      accepted changes was re-applied alone to its baseline (text engine, with facades when the
+      row used them), compiled (26/26), and run through Arcan. Counted by what Arcan names:
+      packages in any Cyclic Dependency, classes in any Cyclic Dependency, Unstable Dependency
+      pairs, and Hub-Like classes. Not the cycle count. Output: %TEMP%\recount\recount.jsonl;
+      script in the session scratchpad.
+        Holdout record (12):   cyclic packages -20 +0, cyclic classes -5 +1, unstable -11 +4; net 31 fewer
+        Exploratory (10):      cyclic packages -21 +0, cyclic classes -26 +41, unstable -12 +3; net 15 fewer
+        mina-sshd ext (4):     cyclic packages -9 +0, cyclic classes -5 +2, unstable -5 +3; net 14 fewer
+        All 26:                cyclic packages -50 +0, cyclic classes -36 +44, unstable -28 +10; net 60 fewer
+        4c only (16):          cyclic packages -39 +0, cyclic classes -21 +26, unstable -17 +5; net 46 fewer
+      No change put a new package into a cycle. 38 of the 44 classes added to cycles come from
+      the three log4j2 rows (+20, +4, +14). Diagnosed (2026-11-06) as no new class cycle from our
+      changes. Each log4j2 row's joined classes are of two kinds only. (1) The moved classes
+      under their new names (JsonTemplateLayout and its nested types, ByteStreamLogger), which
+      appear in "left" under their old names: a rename, not a new cycle. (2) log4j-core classes
+      that no move touched (core.config, core.impl, core.appender). log4j-core does not depend on
+      layout-template-json, iostreams or 1.2-api, so no cycle through a moved class can include
+      them. The smallest such "new" cycle, AbstractConfiguration -> ReliabilityStrategyFactory ->
+      LoggerConfig -> AsyncLoggerContext -> DefaultConfiguration -> AbstractConfiguration, has
+      every edge in the baseline jdeps graph. So Arcan's class-cycle list is sampled too on
+      log4j-core's large class SCC. Class-membership counts on log4j2 are therefore not evidence.
+      Excluding log4j2's class figures: exploratory classes in cycles -10 +3. Package membership
+      stays the reliable Arcan measure. A rename-aware class count is still to do. Hub-Like is unchanged everywhere. cf2 and cf3 were originally written by
+      Spoon and here by the text engine (same moves).
+    - Engine bench of the 18 dissolved targets with Spoon and OpenRewrite, 2026-11-06, exploratory,
+      `%TEMP%\engbench`; paused by the user before tika OpenRewrite. Same plans, gates and facades
+      as the text engine. All 18 targets are at 4c under the text engine. It accepted 16/18 as run;
+      johnzon and wss4j were rejected only by the reflection-gate bug, and pass with the fix.
+      Spoon: 15/18 (jcs 0/2, model build failed on jakarta.servlet; johnzon 0/1, a module failed to
+      build). OpenRewrite: 15/17 run (geometry 0/1, test compile failed in PointSet1DTest; tika
+      target 1, Maven ran out of Java heap; tika target 2 not run). Corrected 2026-11-10 from the
+      engbench rows: the earlier note said OpenRewrite 15/16 and text 18/18. Every failure is in
+      the engine's write or build step; no engine changed a plan's outcome once its build succeeded.
+    - 2026-11-10 review of a teammate's proposal (operation-family classifier plus learned
+      candidate ranker trained on RefactoringMiner-matched developer moves): four-role review
+      judged the deterministic beam approach more likely to work. Reasons: developer moves are not
+      repair labels, too few positives, Stage 1 is at the majority-label baseline, and Recall@K
+      cannot replace the Holdout test. Worth adopting: Move Method as a deterministic operator.
+    - Open: struts and karaf baselines are partial (any run is INVALID until fixed); Eclipse JDT and IntelliJ need an IDE runtime;
+      public classes moved into bnd-private packages (`*.internal`) leave the OSGi exports.
+    Original list: OpenNLP baseline `quality_gate_failed` (a plugin gate, likely skippable like
+    checkstyle); pdfbox size 7 checkstyle partial run; OpenRewrite partial run on pdfbox size 4;
+    maven and guava baseline compile; tika, struts, karaf through text+facades; XMPMetadata plan
+    fault (non-public constructor not modelled); Arm H deferred by the spec; Eclipse JDT and IntelliJ
+    untested.
+
 2026-07-21 — Completed full MVP + multi-repository generalisation continuation.
 
 ## Current objective
