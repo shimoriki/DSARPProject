@@ -242,8 +242,17 @@ not the Holdout claim.
       Excluding log4j2's class figures: exploratory classes in cycles -10 +3. Package membership
       stays the reliable Arcan measure. A rename-aware class count is still to do. Hub-Like is unchanged everywhere. cf2 and cf3 were originally written by
       Spoon and here by the text engine (same moves).
-    - Engine bench of the 18 dissolved targets with Spoon and OpenRewrite, started 2026-11-06,
-      exploratory, `%TEMP%\engbench` (driver in the session scratchpad).
+    - Engine bench of the 18 dissolved targets with Spoon and OpenRewrite, 2026-11-06, exploratory,
+      `%TEMP%\engbench`; paused by the user before tika OpenRewrite. Same plans, gates and facades
+      as the text engine. Dissolved and accepted: text 18/18 (by selection); Spoon 15/18 (jcs 0/2,
+      model build failed on jakarta.servlet; johnzon 0/1, a module failed to build); OpenRewrite
+      15/16 run (geometry 0/1, test compile failed in PointSet1DTest). Every failure is in the
+      engine's write step; no engine changed a plan's outcome once its build succeeded.
+    - 2026-11-10 review of a teammate's proposal (operation-family classifier plus learned
+      candidate ranker trained on RefactoringMiner-matched developer moves): four-role review
+      judged the deterministic beam approach more likely to work. Reasons: developer moves are not
+      repair labels, too few positives, Stage 1 is at the majority-label baseline, and Recall@K
+      cannot replace the Holdout test. Worth adopting: Move Method as a deterministic operator.
     - Open: struts and karaf baselines are partial (any run is INVALID until fixed); Eclipse JDT and IntelliJ need an IDE runtime;
       public classes moved into bnd-private packages (`*.internal`) leave the OSGi exports.
     Original list: OpenNLP baseline `quality_gate_failed` (a plugin gate, likely skippable like
