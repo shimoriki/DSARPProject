@@ -244,10 +244,13 @@ not the Holdout claim.
       Spoon and here by the text engine (same moves).
     - Engine bench of the 18 dissolved targets with Spoon and OpenRewrite, 2026-11-06, exploratory,
       `%TEMP%\engbench`; paused by the user before tika OpenRewrite. Same plans, gates and facades
-      as the text engine. Dissolved and accepted: text 18/18 (by selection); Spoon 15/18 (jcs 0/2,
-      model build failed on jakarta.servlet; johnzon 0/1, a module failed to build); OpenRewrite
-      15/16 run (geometry 0/1, test compile failed in PointSet1DTest). Every failure is in the
-      engine's write step; no engine changed a plan's outcome once its build succeeded.
+      as the text engine. All 18 targets are at 4c under the text engine. It accepted 16/18 as run;
+      johnzon and wss4j were rejected only by the reflection-gate bug, and pass with the fix.
+      Spoon: 15/18 (jcs 0/2, model build failed on jakarta.servlet; johnzon 0/1, a module failed to
+      build). OpenRewrite: 15/17 run (geometry 0/1, test compile failed in PointSet1DTest; tika
+      target 1, Maven ran out of Java heap; tika target 2 not run). Corrected 2026-11-10 from the
+      engbench rows: the earlier note said OpenRewrite 15/16 and text 18/18. Every failure is in
+      the engine's write or build step; no engine changed a plan's outcome once its build succeeded.
     - 2026-11-10 review of a teammate's proposal (operation-family classifier plus learned
       candidate ranker trained on RefactoringMiner-matched developer moves): four-role review
       judged the deterministic beam approach more likely to work. Reasons: developer moves are not
