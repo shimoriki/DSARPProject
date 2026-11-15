@@ -558,6 +558,26 @@ git commit -m "Record the agentic arm against the beam arm on the frozen targets
 
 ---
 
+## How RefAgent itself refactors, and where this plan departs
+
+Source: Oueslati, Lamothe, Khomh, arXiv 2511.03153v2, sections 3 to 7, read 2026-11-15.
+
+| Step | RefAgent (paper) | This plan |
+|---|---|---|
+| Unit of work | One class at a time, picked at random, with its first-degree jdeps dependencies (§3.1, §3.2) | One package cycle, taken from the beam arm's frozen targets |
+| Planner input | jdeps class graph, DesigniteJava metrics only; smell detection is not used, to avoid bias (§3.2) | Package edges, the class edges that carry them, and the rules the validator enforces |
+| Plan | Code regions (method, field, variable) with refactoring instructions in prose | JSON operations from a two-entry catalogue: `moveClass`, `invertEdge` |
+| Check before writing | None | Names checked against the graph, effect simulated, Spoon dry run |
+| Generator | An LLM returns the improved class as Java source (§3.3) | Deterministic engines (text engine, Spoon); the LLM writes no new code |
+| Compiler agent | Maven compile; an LLM summarises the log with fix instructions and sends it back to the generator; up to 20 rounds (§3.4) | Maven test-compile; the LLM proposes search/replace edits limited to files the plan touched; up to 5 rounds |
+| Tester agent | Developer tests found via jdeps plus EvoSuite tests generated on the original class; failures go back to the generator; up to 20 rounds; a class that still fails is left unchanged (§3.5) | The project's own full suite, flake reruns, repair under the same scope rules; EvoSuite deferred |
+| Acceptance | Compiles and tests pass (§7) | The existing gates: structure (ArchUnit), reflection, services, tests; Arcan and japicmp reported |
+| Refactorings | 23 types found by RefactoringMiner 3.0, mostly inside classes: Extract Method, Invert Condition, Rename Attribute and others (§5.1.3) | Architectural only: move class between packages, invert an edge through an interface |
+| Reported results | 8 Apache projects; median 90% unit-test pass, 87-88% compile, 52.5% smell reduction with GPT-4o (Table 3); pass rates level off after about 12 rounds (§5.3.5) | Measured against the beam arm and the teammate pipeline on the same Tika commit |
+| Stated limits | Class level only; no claim about package or architectural refactoring (§7, §8) | Package cycles only; class-internal refactorings need a Spoon operator first |
+
+Consequence for the comparison: RefAgent's headline numbers come from class-level refactorings judged by compile and tests. They are a reference point, not a like-for-like result. Only the Tika runs here use the same commit, the same gates and the same Arcan count.
+
 ## Not in this plan
 
 - **EvoSuite regression tests:** RefAgent's tester generates them; this plan uses the projects' own suites with flake reruns. Add them when a repaired change passes the project tests but a reviewer finds a behaviour change.
