@@ -30,6 +30,12 @@ def test_reflective_workaround_refused(tmp_path):
     assert res["refused"] == [["X.java", "adds a reflective lookup"]]
 
 
+def test_non_utf8_file_is_refused_not_raised(tmp_path):
+    (tmp_path / "X.java").write_bytes("// Jörg\nbad".encode("latin-1"))
+    res = apply_edits(tmp_path, [{"path": "X.java", "search": "bad", "replace": "good"}], {"X.java"})
+    assert res["refused"] == [["X.java", "not utf-8"]]
+
+
 def test_repair_stops_on_success_and_on_budget(tmp_path):
     (tmp_path / "X.java").write_text("bad")
     fix = '{"edits":[{"path":"X.java","search":"bad","replace":"good"}]}'

@@ -59,8 +59,13 @@ def apply_edits(copy: Path, edits: List[Dict[str, str]], allowed: Set[str]) -> D
         why = _why_not(copy, rel, allowed)
         if not why and any(t in e["replace"] and t not in e["search"] for t in REFLECTIVE):
             why = "adds a reflective lookup"
+        text = ""
         if not why:
-            text = (copy / rel).read_text(encoding="utf-8")
+            try:
+                text = (copy / rel).read_text(encoding="utf-8")
+            except UnicodeDecodeError:          # old Apache sources carry Latin-1 author names
+                why = "not utf-8"
+        if not why:
             n = text.count(e["search"]) if e["search"] else 0
             if n != 1:
                 why = "search matched %d times" % n

@@ -217,6 +217,13 @@ def _build_with_repair(copy: Path, work: Path, repair_hook) -> Tuple[Dict[str, A
     return compile_repo(copy, log_path=work / "compile.log", goal="test-compile"), rec
 
 
+def _repair_overreach(row: Dict[str, Any], plan_: Dict[str, Any]) -> bool:
+    """A repair that leaves fewer packages cycling than the plan predicted most likely deleted a
+    dependency instead of moving it: the plan's operations, not the repair, must break the cycle."""
+    edited = any((r or {}).get("edited") for r in (row.get("repair") or {}).values())
+    return edited and row.get("measured_left", plan_["predicted_left"]) < plan_["predicted_left"]
+
+
 def arm_matches(frozen: Dict[str, Any], arm: Dict[str, Any]) -> bool:
     """Older freezes named no arm, or only engine and facades: they were all moves, unrepaired."""
     return {"operators": "moves", "repair": False, **frozen} == arm
@@ -267,7 +274,7 @@ def _patch_row(row: Dict[str, Any], moves: List[List[str]]) -> Dict[str, Any]:
 def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
             baseline_tests: Optional[Dict[str, Any]], engine: str = "text",
             facades: bool = False,
-            repair_hook: Optional[Callable[[Path, str, str], Dict[str, Any]]] = None) -> Dict[str, Any]:
+            repair_hook: Optional[Callable[[Path, str, str, set], Dict[str, Any]]] = None) -> Dict[str, Any]:
     comp, moves = set(plan_["component"]), plan_["moves"]
     row: Dict[str, Any] = {"engine": engine, "component": plan_["component"],
                            "size": plan_["size"], "moves": moves,
@@ -308,27 +315,35 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
                     "why": (build.get("javac_errors") or [""])[0][:300],
                     "verdict": {"accepted": False, "state": "FAIL", "failed_gate": "build"}}
         snap = base["snapshot"]
-        after = au.cycles(copy, log_path=work / "cycles.log")
-        comparable = gates.comparable(snap, after)
-        before_sets, after_sets = au.cycle_set(snap), au.cycle_set(after)
-        still = [c for c in after_sets if c & comp]
-        gone = {"%s -> %s" % (a, b): au.edge_verdict(snap, after, a, b).get("edge_removed")
-                for a in comp for b in comp
-                if a != b and (a, b) in {tuple(k) for k in au.edge_map(snap)}}
-        row.update(measured_left=sum(len(c & comp) for c in still), edge_gone=gone,
-                   novel_cycles=[sorted(c) for c in au.novel_cycles(before_sets, after_sets)])
         renames = {c: "%s.%s" % (d, c.rsplit(".", 1)[1]) for c, d in moves}
-        dispatch = gates.dispatch(base.get("services") or {}, service_providers(copy), renames)
-        structural = {"ok": bool(comparable["ok"] and not row["novel_cycles"]
-                                 and row["measured_left"] < plan_["size"]),
-                      "why": comparable.get("why") or ("nothing left the cycle"
-                                                       if row["measured_left"] >= plan_["size"]
-                                                       else "a new cycle appeared")}
-        arcan = detect_with_arcan(copy, work / "arcan_after")
-        target_gone = _arcan_target_gone(plan_["component"], out / "arcan_before" / "arcan",
-                                         work / "arcan_after" / "arcan")
-        row.update(arcan_after=arcan.get("by_type"), arcan_target_gone=target_gone)
-        row["api"] = api_runner.report(repo, copy, _modules(changed, repo, copy))
+
+        def judge() -> Tuple[Dict[str, Any], Dict[str, Any], list, list, Dict[str, Any], Any]:
+            """Structure, dispatch, Arcan and API on the tree as it stands; re-run after a repair."""
+            after = au.cycles(copy, log_path=work / "cycles.log")
+            comparable = gates.comparable(snap, after)
+            before_sets, after_sets = au.cycle_set(snap), au.cycle_set(after)
+            still = [c for c in after_sets if c & comp]
+            gone = {"%s -> %s" % (a, b): au.edge_verdict(snap, after, a, b).get("edge_removed")
+                    for a in comp for b in comp
+                    if a != b and (a, b) in {tuple(k) for k in au.edge_map(snap)}}
+            row.update(measured_left=sum(len(c & comp) for c in still), edge_gone=gone,
+                       novel_cycles=[sorted(c) for c in au.novel_cycles(before_sets, after_sets)])
+            dispatch = gates.dispatch(base.get("services") or {}, service_providers(copy), renames)
+            structural = {"ok": bool(comparable["ok"] and not row["novel_cycles"]
+                                     and row["measured_left"] < plan_["size"]),
+                          "why": comparable.get("why") or ("nothing left the cycle"
+                                                           if row["measured_left"] >= plan_["size"]
+                                                           else "a new cycle appeared")}
+            if _repair_overreach(row, plan_):
+                structural = {"ok": False, "why": "repair removed a dependency the plan kept"}
+            arcan = detect_with_arcan(copy, work / "arcan_after")
+            target_gone = _arcan_target_gone(plan_["component"], out / "arcan_before" / "arcan",
+                                             work / "arcan_after" / "arcan")
+            row.update(arcan_after=arcan.get("by_type"), arcan_target_gone=target_gone)
+            row["api"] = api_runner.report(repo, copy, _modules(_changed_java(repo, copy), repo, copy))
+            return structural, dispatch, before_sets, after_sets, gone, target_gone
+
+        structural, dispatch, before_sets, after_sets, gone, target_gone = judge()
         behavioural = None
         if structural["ok"] and bad["ok"] and dispatch["ok"] and baseline_tests is not None:
             t = run_tests(copy, timeout=4 * 3600, log_path=work / "tests.log")
@@ -340,6 +355,13 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
                 behavioural = gates.settle_flakes(behavioural, *_rerun(repo, copy, suspects, work))
             if hook is not None and behavioural.get("newly_failing"):
                 row["repair"]["tests"] = hook(copy, "tests", "\n".join(behavioural["newly_failing"]))
+                if (row["repair"]["tests"] or {}).get("edited"):
+                    # The shipped tree changed: judge it again, not the tree before repair.
+                    rebuilt = compile_repo(copy, log_path=work / "compile_repaired.log", goal="test-compile")
+                    if not rebuilt.get("ok"):
+                        return {**row, "stage": "build", "level": "1", "compile": rebuilt.get("status"),
+                                "verdict": {"accepted": False, "state": "FAIL", "failed_gate": "build"}}
+                    structural, dispatch, before_sets, after_sets, gone, target_gone = judge()
                 t = run_tests(copy, timeout=4 * 3600, log_path=work / "tests_repaired.log")
                 row["tests"] = {k: t.get(k) for k in ("status", "tests_run", "failures", "errors",
                                                       "partial", "skipped_modules")}

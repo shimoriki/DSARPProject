@@ -42,11 +42,17 @@ def _accept_for(repo: Path, banned: set) -> Callable[[str, str], bool]:
 def make_llm_plans(repo: Path, base: Dict[str, Any], model, targets: List[List[str]], work: Path,
                    rounds: int = 3) -> List[Dict[str, Any]]:
     edges = top_level_edges(tuple(e) for e in base["edges"])
-    blocked = InversionFacts(base.get("snapshot") or {}, SourceFacts(repo)).blocked
+    inv_facts = InversionFacts(base.get("snapshot") or {}, SourceFacts(repo))
     plans = []
     for comp in targets:
         banned: set = set()
         found: Dict[str, Any] = {}
+
+        def blocked(consumer: str, impl: str, moved: Dict[str, str]):
+            # Spoon names a refused inversion by the impl's name after the plan's moves.
+            new = "%s.%s" % (moved[impl], impl.rsplit(".", 1)[1]) if impl in moved else impl
+            return "refused by Spoon" if impl in banned or new in banned else \
+                inv_facts.blocked(consumer, impl, moved)
         for _ in range(PLAN_ATTEMPTS):
             found = llm_plan(model, edges, set(comp), _accept_for(repo, banned), blocked, rounds=rounds)
             if not found["moves"] and not found["inversions"]:
