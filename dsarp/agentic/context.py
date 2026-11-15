@@ -18,7 +18,7 @@ FORMAT = """Answer with one JSON object and nothing else:
 
 RULES = """Rules (a plan that breaks one is rejected and you get the reason):
 - Name classes by top-level fully qualified name only; no nested (A$B) or simple names.
-- The destination must be a package that already exists.
+- The destination must be one of the packages in this cycle (listed below).
 - Do not move a class into another Maven module.
 - Do not move a public class into an internal or impl package.
 - A plan that pulls any package outside this cycle into a cycle is rejected.
