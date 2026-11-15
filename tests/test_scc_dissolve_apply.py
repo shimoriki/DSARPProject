@@ -25,3 +25,17 @@ def test_arm_matches_fills_old_defaults():
     assert not sd.arm_matches({"engine": "spoon", "facades": True}, arm)
     llm = {**arm, "operators": "mixed", "planner": "llm", "model": "m"}
     assert not sd.arm_matches(arm, llm)
+
+
+def test_build_repair_hook_reruns_compile(monkeypatch, tmp_path):
+    builds = iter([{"ok": False, "status": "compile_failed", "javac_errors": ["e"]}, {"ok": True, "status": "compiled"}])
+    monkeypatch.setattr(sd, "compile_repo", lambda *a, **k: next(builds))
+    hook = lambda copy, stage, text: {"ok": True, "rounds": [{}], "edited": ["X.java"], "stage": stage}
+    build, rec = sd._build_with_repair(tmp_path, tmp_path, hook)
+    assert build["ok"] and rec["stage"] == "build"
+
+
+def test_no_hook_keeps_old_behaviour(monkeypatch, tmp_path):
+    monkeypatch.setattr(sd, "compile_repo", lambda *a, **k: {"ok": False, "status": "compile_failed"})
+    build, rec = sd._build_with_repair(tmp_path, tmp_path, None)
+    assert not build["ok"] and rec is None

@@ -16,7 +16,7 @@ import json
 import shutil
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .arcan_diff import cycle_sets
 from .edge_measure import _changed_java, write_patch
@@ -208,6 +208,15 @@ def _apply_plan(copy: Path, plan_: Dict[str, Any], work: Path, engine: str) -> D
     return _apply_inversions(copy, edits, work) if edits else {"applied": True}
 
 
+def _build_with_repair(copy: Path, work: Path, repair_hook) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    """Compile; on failure with a hook, let it repair, then compile once more as the record of truth."""
+    build = compile_repo(copy, log_path=work / "compile.log", goal="test-compile")
+    if build.get("ok") or repair_hook is None:
+        return build, None
+    rec = repair_hook(copy, "build", "\n".join(build.get("javac_errors") or []))
+    return compile_repo(copy, log_path=work / "compile.log", goal="test-compile"), rec
+
+
 def arm_matches(frozen: Dict[str, Any], arm: Dict[str, Any]) -> bool:
     """Older freezes named no arm, or only engine and facades: they were all moves, unrepaired."""
     return {"operators": "moves", "repair": False, **frozen} == arm
@@ -257,7 +266,8 @@ def _patch_row(row: Dict[str, Any], moves: List[List[str]]) -> Dict[str, Any]:
 
 def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
             baseline_tests: Optional[Dict[str, Any]], engine: str = "text",
-            facades: bool = False) -> Dict[str, Any]:
+            facades: bool = False,
+            repair_hook: Optional[Callable[[Path, str, str], Dict[str, Any]]] = None) -> Dict[str, Any]:
     comp, moves = set(plan_["component"]), plan_["moves"]
     row: Dict[str, Any] = {"engine": engine, "component": plan_["component"],
                            "size": plan_["size"], "moves": moves,
@@ -283,7 +293,15 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
             row["facades"] = add_facades(repo, copy, moves)
         changed = _changed_java(repo, copy)
         row["changed_files"] = len(changed)
-        build = compile_repo(copy, log_path=work / "compile.log", goal="test-compile")
+        hook = None
+        if repair_hook is not None:
+            # Main-source files the plan changed, relative to the copy; deleted files are not in it.
+            scope = {Path(p).relative_to(copy).as_posix() for p in changed
+                     if Path(copy) in Path(p).parents}
+            scope = {p for p in scope if "src/test/" not in p}
+            hook = lambda c, stage, text: repair_hook(c, stage, text, scope)
+        row["repair"] = {"build": None, "tests": None}
+        build, row["repair"]["build"] = _build_with_repair(copy, work, hook)
         row["compile"] = build.get("status")
         if not build.get("ok"):
             return {**row, "stage": "build", "level": "1",
@@ -320,6 +338,15 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
             suspects = behavioural.get("newly_failing") or []
             if suspects and behavioural.get("extra_failures", 0) <= len(suspects):
                 behavioural = gates.settle_flakes(behavioural, *_rerun(repo, copy, suspects, work))
+            if hook is not None and behavioural.get("newly_failing"):
+                row["repair"]["tests"] = hook(copy, "tests", "\n".join(behavioural["newly_failing"]))
+                t = run_tests(copy, timeout=4 * 3600, log_path=work / "tests_repaired.log")
+                row["tests"] = {k: t.get(k) for k in ("status", "tests_run", "failures", "errors",
+                                                      "partial", "skipped_modules")}
+                behavioural = gates.behavioural(baseline_tests, t)
+                suspects = behavioural.get("newly_failing") or []
+                if suspects and behavioural.get("extra_failures", 0) <= len(suspects):
+                    behavioural = gates.settle_flakes(behavioural, *_rerun(repo, copy, suspects, work))
             row["behavioural"] = {k: behavioural.get(k) for k in ("state", "newly_failing", "flaky",
                                                                   "appeared")}
         row["reflection"] = gates.reflection(repo, copy)

@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from dsarp.agentic import run
 from dsarp.agentic.run import targets_from
 
@@ -24,3 +26,11 @@ def test_spoon_refusal_bans_and_replans(monkeypatch, tmp_path):
     plans = run.make_llm_plans(tmp_path, {"edges": [["a.X", "b.Y"], ["b.Y", "a.Z"]], "snapshot": {}},
                                object(), [["a", "b"]], tmp_path)
     assert seen == [True, False] and plans[0]["refused"] == ["b.Y"]
+
+
+def test_confirm_refuses_other_arm(tmp_path):
+    (tmp_path / "preregistration.json").write_text(json.dumps(
+        {"arm": {"engine": "text", "facades": True, "operators": "moves", "repair": False}, "plans": []}))
+    with pytest.raises(SystemExit, match="frozen for"):
+        run.check_frozen(tmp_path, {"engine": "text", "facades": True, "operators": "mixed",
+                                    "repair": False, "planner": "llm", "model": "m"})

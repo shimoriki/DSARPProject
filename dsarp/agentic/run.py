@@ -13,17 +13,22 @@ import argparse
 import json
 import os
 import shutil
+import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
 from ..experiments.mixed_plan import dry_run
-from ..experiments.scc_dissolve import (PLAN_ATTEMPTS, cannot_freeze, freeze, move_accept, prepare)
+from ..experiments.scc_dissolve import (PLAN_ATTEMPTS, arm_matches, cannot_freeze, facade_first, freeze,
+                                        measure, move_accept, prepare, summarise)
 from ..models.providers import DEFAULT_BASE_URL, LocalProvider
 from ..refactoring.inversion_facts import InversionFacts
 from ..refactoring.scc_planner import top_level_edges
 from ..refactoring.strategies import SourceFacts
 from ..tools import arcan_runner
+from ..tools.arcan_runner import compile_repo, run_tests
+from ..verification import gates
 from .planner import llm_plan
+from .repair import repair
 
 
 def targets_from(path: Path) -> List[List[str]]:
@@ -59,6 +64,31 @@ def make_llm_plans(repo: Path, base: Dict[str, Any], model, targets: List[List[s
     return plans
 
 
+def check_frozen(out: Path, arm: Dict[str, Any]) -> Dict[str, Any]:
+    pre = json.loads((out / "preregistration.json").read_text(encoding="utf-8"))
+    if not arm_matches(pre.get("arm", arm), arm):
+        raise SystemExit("frozen for %s, not %s" % (pre.get("arm"), arm))
+    return pre
+
+
+def make_hook(model, budget: int, baseline_tests: Dict[str, Any]) -> Callable:
+    """measure's repair hook: (copy, stage, failure, scope). Build stage rebuilds by test-compile;
+    test stage rebuilds and reruns the suite, ok when nothing fails that passed at baseline."""
+    def hook(copy: Path, stage: str, failure: str, scope) -> Dict[str, Any]:
+        log = copy.parent / ("repair_%s.log" % stage)
+
+        def rebuild() -> Dict[str, Any]:
+            b = compile_repo(copy, log_path=log, goal="test-compile")
+            text = log.read_text(encoding="utf-8", errors="replace") if log.exists() else ""
+            if not b.get("ok") or stage == "build":
+                return {"ok": bool(b.get("ok")), "log": text}
+            t = run_tests(copy, timeout=4 * 3600, log_path=copy.parent / "repair_tests.log")
+            beh = gates.behavioural(baseline_tests, t)
+            return {"ok": not beh.get("newly_failing"), "log": "\n".join(beh.get("newly_failing") or [])}
+        return {"stage": stage, "scope": sorted(scope), **repair(model, copy, set(scope), failure, rebuild, budget)}
+    return hook
+
+
 def arm_for(model: str, engine: str, facades: bool) -> Dict[str, Any]:
     return {"engine": engine, "facades": facades, "operators": "mixed", "repair": False,
             "planner": "llm", "model": model}
@@ -76,21 +106,45 @@ def main() -> None:
     ap.add_argument("--engine", choices=("spoon", "text", "rewrite"), default="text")
     ap.add_argument("--facades", action="store_true")
     ap.add_argument("--freeze", action="store_true")
+    ap.add_argument("--confirm", action="store_true")
+    ap.add_argument("--repair-budget", type=int, default=0)
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     model = LocalProvider(a.model, a.base_url, api_key=os.environ.get(a.api_key_env) or "dsarp-local")
     print("java level %s, JDK %s" % arcan_runner.select_jdk(a.repo), flush=True)
     base = prepare(a.repo, a.out)
     targets = targets_from(a.targets_from)
+    tests_file = a.targets_from.parent / "baseline_tests.json"
+    tests = json.loads(tests_file.read_text(encoding="utf-8")) if tests_file.exists() else None
+    arm = arm_for(a.model, a.engine, a.facades)
+    if a.confirm:
+        pre = check_frozen(a.out, arm)
+        hook = make_hook(model, a.repair_budget, tests) if a.repair_budget else None
+        rows = []
+        name = "rows_repair.jsonl" if a.repair_budget else "rows.jsonl"
+        with (a.out / name).open("a", encoding="utf-8") as f:
+            for p in pre["plans"]:
+                t0 = time.time()
+                once = lambda p_, fac: {**measure(a.repo, p_, base, a.out, tests, a.engine, fac, hook),
+                                        "repair_budget": a.repair_budget}
+                r = {**(facade_first(once, p) if a.facades else once(p, False)), "secs": round(time.time() - t0)}
+                rows.append(r)
+                f.write(json.dumps(r, default=str) + "\n")
+                f.flush()
+                print("%s: stage=%s level=%s left=%s" % (p["component"], r.get("stage"), r.get("level"),
+                                                         r.get("measured_left")), flush=True)
+        summary = summarise(rows)
+        (a.out / name.replace("rows", "summary").replace(".jsonl", ".json")).write_text(
+            json.dumps(summary, indent=1), encoding="utf-8")
+        print(json.dumps(summary, indent=1), flush=True)
+        return
     if a.freeze:
-        tests_file = a.targets_from.parent / "baseline_tests.json"
-        tests = json.loads(tests_file.read_text(encoding="utf-8")) if tests_file.exists() else None
         why = cannot_freeze(tests)
         if why:
             raise SystemExit("not frozen: " + why)
         plans = make_llm_plans(a.repo, base, model, targets, a.out / "work", a.rounds)
-        print("frozen:", freeze(a.repo, a.out, plans, max(len(t) for t in targets), len(targets),
-                                arm_for(a.model, a.engine, a.facades)), flush=True)
+        print("frozen:", freeze(a.repo, a.out, plans, max(len(t) for t in targets), len(targets), arm),
+              flush=True)
 
 
 if __name__ == "__main__":
