@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional
 
 from .arcan_diff import cycle_sets
 from .edge_measure import _changed_java, write_patch
+from .mixed_plan import to_edits
 from ..refactoring import scc_planner, spoon_plan
 from ..refactoring.name_refs import rewrite_names, service_providers
 from ..refactoring.strategies import SourceFacts
@@ -176,6 +177,42 @@ def _apply(copy: Path, moves: List[List[str]], work: Path, engine: str = "spoon"
     return {"applied": True}
 
 
+def _apply_inversions(copy: Path, edits: List[Dict[str, Any]], work: Path) -> Dict[str, Any]:
+    """Spoon invertEdge edits, grouped by source root as `_apply`'s Spoon branch groups moves."""
+    facts = SourceFacts(copy)
+    by_root: Dict[str, List[Dict[str, Any]]] = {}
+    for e in edits:
+        root = spoon_plan.source_root_of(facts, e["type"])
+        if not root:
+            return {"applied": False, "why": "no source root for %s" % e["type"]}
+        by_root.setdefault(str(Path(root).relative_to(copy)), []).append(e)
+    for rel, group in by_root.items():
+        cp = module_classpath(copy, copy / rel)
+        res = apply_edits(copy, group, source_roots=[rel], classpath=cp.get("entries"),
+                          log_path=work / "spoon_invert.log")
+        if len(res.get("applied") or []) != len(group):
+            first = (res.get("skipped") or [{}])[0]
+            return {"applied": False, "refused": (first.get("edit") or {}).get("type"),
+                    "why": str(first.get("why", res.get("status")))[:300]}
+    return {"applied": True}
+
+
+def _apply_plan(copy: Path, plan_: Dict[str, Any], work: Path, engine: str) -> Dict[str, Any]:
+    """Moves with the chosen engine, then the plan's inversions (by the moved names) through Spoon."""
+    moves = plan_.get("moves") or []
+    if moves:
+        done = _apply(copy, moves, work, engine)
+        if not done["applied"]:
+            return done
+    edits = to_edits(plan_.get("inversions") or [], moves)
+    return _apply_inversions(copy, edits, work) if edits else {"applied": True}
+
+
+def arm_matches(frozen: Dict[str, Any], arm: Dict[str, Any]) -> bool:
+    """Older freezes named no arm, or only engine and facades: they were all moves, unrepaired."""
+    return {"operators": "moves", "repair": False, **frozen} == arm
+
+
 def _modules(changed: List[Path], repo: Path, copy: Path) -> List[str]:
     """The build modules touched: the nearest directory with classes, nested or at the root."""
     out = set()
@@ -227,14 +264,14 @@ def measure(repo: Path, plan_: Dict[str, Any], base: Dict[str, Any], out: Path,
                            "predicted_left": plan_["predicted_left"],
                            "success_criterion": "%d of %d packages stay in a cycle"
                                                 % (plan_["predicted_left"], plan_["size"])}
-    if not moves:
+    if not moves and not plan_.get("inversions"):
         return {**row, "stage": "no_plan", "level": "0"}
     work = out / "work"
     shutil.rmtree(work, ignore_errors=True)
     copy = _copy_repo(repo, work / "copy")
     try:
         row["before_apply"] = [gates.before_apply(repo, c) for c, _ in moves]
-        applied = _apply(copy, moves, work, engine)
+        applied = _apply_plan(copy, plan_, work, engine)
         if not applied["applied"]:
             return {**row, **applied, "stage": "apply", "level": "1",
                     "verdict": {"accepted": False, "state": "FAIL", "failed_gate": "apply"}}
@@ -412,8 +449,7 @@ def main() -> None:
     arm = {"engine": a.engine, "facades": a.facades, "operators": "moves", "repair": False}
     if a.confirm:
         pre = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))
-        # Older freezes named no arm, or only engine and facades: they were all moves, unrepaired.
-        if {"operators": "moves", "repair": False, **pre.get("arm", arm)} != arm:
+        if not arm_matches(pre.get("arm", arm), arm):
             raise SystemExit("frozen for %s, not %s" % (pre["arm"], arm))
         plans = pre["plans"]
     else:
