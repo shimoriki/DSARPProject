@@ -1,5 +1,6 @@
 """LocalProvider against a stub OpenAI-compatible server: 429 retry and uncapped output."""
 import json
+import socket
 import threading
 import time
 from email.utils import formatdate
@@ -20,6 +21,10 @@ def serve(statuses):
         def do_POST(self):
             seen.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
             entry = statuses[min(len(seen), len(statuses)) - 1]
+            if entry == "reset":   # drop the connection without answering, as a flaky host does
+                self.close_connection = True
+                self.connection.shutdown(socket.SHUT_RDWR)
+                return
             code, headers = entry if isinstance(entry, tuple) else (entry, None)
             body = (json.dumps({"choices": [{"message": {"content": "ok"}}]}) if code == 200
                     else '{"error": "rate limited"}').encode()
@@ -91,6 +96,26 @@ def test_gives_up_at_once_when_the_limit_resets_too_late(slept):
         assert len(seen) == 1
     finally:
         srv.shutdown()
+
+
+def test_retries_a_dropped_connection(slept):
+    srv, seen, url = serve(["reset", "reset", 200])
+    try:
+        assert LocalProvider("m", url).generate("hi").text == "ok"
+        assert len(seen) == 3
+    finally:
+        srv.shutdown()
+
+
+def test_does_not_retry_a_refused_connection(slept):
+    # Nothing listening is a server that is down, not a flaky one: fail at once.
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    with pytest.raises(RuntimeError, match="unreachable"):
+        LocalProvider("m", "http://127.0.0.1:%d" % port).generate("hi")
+    assert slept == []
 
 
 def test_throttles_calls_to_min_interval(slept):

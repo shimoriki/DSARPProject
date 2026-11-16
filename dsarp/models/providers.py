@@ -152,8 +152,17 @@ class LocalProvider:
                 print(f"429 from {self.model}: waiting {wait:.0f}s ({limit})",
                       file=sys.stderr, flush=True)
                 time.sleep(wait)
-            except urllib.error.URLError as e:
-                raise RuntimeError(f"local model at {self.base_url} unreachable: {e}") from e
+            except (urllib.error.URLError, ConnectionResetError, ConnectionAbortedError) as e:
+                # A dropped connection mid-call (WinError 10054, RemoteDisconnected) is a flaky
+                # host: retry with backoff. Refused means nothing is listening: fail at once.
+                reason = getattr(e, "reason", e)
+                if (not isinstance(reason, (ConnectionResetError, ConnectionAbortedError))
+                        or attempt == self.retries):
+                    raise RuntimeError(f"local model at {self.base_url} unreachable: {e}") from e
+                wait = min(60, 2 ** (attempt + 1))
+                print(f"connection dropped by {self.model}: retrying in {wait}s ({e})",
+                      file=sys.stderr, flush=True)
+                time.sleep(wait)
         try:
             text = body["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as e:
