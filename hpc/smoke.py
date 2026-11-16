@@ -33,10 +33,14 @@ ap.add_argument("repos", type=Path)
 ap.add_argument("out", type=Path)
 ap.add_argument("--base-url", default=DEFAULT_BASE_URL)
 ap.add_argument("--api-key-env", default="DSARP_LLM_KEY")
+# Hosted free tiers: seconds between calls (60/limit-per-minute), and the longest 429 wait to sit out.
+ap.add_argument("--min-interval", type=float, default=0)
+ap.add_argument("--max-wait", type=float, default=300)
 a = ap.parse_args()
 # Uncapped: the check measures planning, not whether a reasoning model fits its answer in 800 tokens.
 model = LocalProvider(a.model, a.base_url, timeout=1800, uncapped=True,
-                      api_key=os.environ.get(a.api_key_env) or "dsarp-local")
+                      api_key=os.environ.get(a.api_key_env) or "dsarp-local",
+                      min_interval=a.min_interval, max_wait=a.max_wait)
 passed, total = 0, 0
 for repo, targets in CASES:
     out = a.out / repo
