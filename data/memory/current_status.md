@@ -73,6 +73,27 @@ not export; a facade in the exported `io` package extending them leaks a private
 bnd-maven-plugin refuses. That refusal is correct: a facade cannot expose a non-exported package.
 Also: the 13 breaks there are the classes leaving exported API entirely. OpenNLP baseline failed.
 
+## THREE-WAY TIKA COMPARISON (2026-11-16): teammate DSARP vs our beam vs agentic RefAgent arm
+
+Workbook: `docs/pipeline_comparison_tika.xlsx` (Summary formulas over Patches; built by a
+scratchpad script, numbers cross-checked in Python; no LibreOffice here, Excel computes on open).
+Tika 697d7c0, one shared gate for all three (git apply, Maven test-compile, Arcan sets
+[before, after, removed, added], japicmp), full suite (2,324 tests) for tests.
+SAFE = builds, tests PASS, removes >= 1 package from Arcan cycles, adds none.
+- Teammate DSARP 0.10.0: 130 patches, 27 empty, 57 build, 46 broken; 45 claimed compiles=True
+  but Maven broke (its javac check ignores library errors). 21 tested: 3 PASS (none removes a
+  package cycle), 6 FAIL, 12 INVALID (suite stopped part way). SAFE 0. Smells added 50.
+- Our beam (text+facades): 4 patches, all build and PASS; SAFE 3, 6 packages out of cycles,
+  1 unstable smell added, 15 API breaks. TikaEvalCLI: jdeps dissolved, Arcan unchanged.
+- Agentic arm, qwen2.5-coder:7b (failed model check): 1 of 5 accepted (config.loader, 4b, where
+  the beam had no plan), Arcan 1 package out, 9 API breaks; 0 dissolved. geo.topic build fails,
+  repair budget 5 made 0 usable edits. server.core: nothing left the cycle. Model timeout once.
+- Model check (bar 2 of 3), all 7 local Ollama models fail: qwen2.5-coder:7b 1, granite3.3 1,
+  phi4-mini 1, qwen2.5-coder:3b 1, qwen3 0, llama3.2 0, nemotron-mini 0. Holdout step not run.
+Verdict: our beam is the only arm fit for "refactor without breaking"; teammate = candidate source
+only, never the gate; agentic = complementary planner once a model passes the check.
+OPEN POINT (user, last): hosted OpenAI-compatible model (OpenCode) for the agentic arm.
+
 ## HOLDOUT CONFIRMATORY RESULT (2026-11-04), moves arm
 
 Arm fixed before any Holdout repo was examined (3400330): text engine, facades with fallback,
