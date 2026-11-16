@@ -93,6 +93,7 @@ SAFE = builds, tests PASS, removes >= 1 package from Arcan cycles, adds none.
 Verdict: our beam is the only arm fit for "refactor without breaking"; teammate = candidate source
 only, never the gate; agentic = complementary planner once a model passes the check.
 OPEN POINT (user, last): hosted OpenAI-compatible model (OpenCode) for the agentic arm.
+HPC bundle (2026-11-16): `hpc/` serves the paper's open models (DeepSeek-Coder-33B, StarCoder2-15B) plus Qwen2.5-Coder-32B with vLLM, runs the model check, then freeze/confirm/repair (budget 20) on the five Tika targets. Not yet run; Arcan must be copied by hand. See hpc/README.md.
 
 ## HOLDOUT CONFIRMATORY RESULT (2026-11-04), moves arm
 

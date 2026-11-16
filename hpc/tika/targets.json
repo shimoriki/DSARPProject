@@ -1,0 +1,38 @@
+{
+ "source": "ours_tika rows.jsonl (beam, --max-size 15 --limit 5, unfrozen exploratory)",
+ "plans": [
+  {
+   "component": [
+    "org.apache.tika.eval.app",
+    "org.apache.tika.eval.app.reports"
+   ]
+  },
+  {
+   "component": [
+    "org.apache.tika.parser.geo.topic",
+    "org.apache.tika.parser.geo.topic.gazetteer"
+   ]
+  },
+  {
+   "component": [
+    "org.apache.tika.config.loader",
+    "org.apache.tika.serialization",
+    "org.apache.tika.serialization.serdes"
+   ]
+  },
+  {
+   "component": [
+    "org.apache.tika.server.core",
+    "org.apache.tika.server.core.resource",
+    "org.apache.tika.server.core.writer"
+   ]
+  },
+  {
+   "component": [
+    "org.apache.tika.eval.core.langid",
+    "org.apache.tika.eval.core.textstats",
+    "org.apache.tika.eval.core.tokens"
+   ]
+  }
+ ]
+}
