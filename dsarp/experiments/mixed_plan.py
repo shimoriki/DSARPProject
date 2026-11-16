@@ -47,3 +47,26 @@ def dry_run(repo: Path, plan: Dict[str, Any], work: Path) -> Dict[str, Any]:
         return {"ok": True, "refused": None, "why": None}
     finally:
         shutil.rmtree(work, ignore_errors=True)
+
+
+def arcan_verdict(repo: Path, plan: Dict[str, Any], arcan_before: Path, work: Path) -> Dict[str, Any]:
+    """Arcan's word on a plan: applied to a copy by Spoon (no facades), compiled, Arcan rerun, and
+    the target judged by `cycles_dissolved` against the baseline's Arcan output. The dry run says
+    a plan can be applied; only this says the smell Arcan reported is gone."""
+    from ..tools.arcan_runner import detect_with_arcan
+    from .arcan_diff import cycles_dissolved
+    from .scc_dissolve import _apply_plan
+    shutil.rmtree(work, ignore_errors=True)
+    try:
+        copy = _copy_repo(repo, work / "copy")
+        applied = _apply_plan(copy, plan, work, "spoon")
+        if not applied.get("applied"):
+            return {"dissolved": False, "why": "apply failed: %s" % applied.get("why")}
+        arcan = detect_with_arcan(copy, work / "arcan_after", compile_log=work / "compile.log")
+        if not arcan.get("measured"):
+            return {"dissolved": False, "why": "Arcan unmeasured: %s" % arcan.get("status")}
+        verdict = cycles_dissolved(plan["component"], arcan_before, work / "arcan_after" / "arcan")
+        return {**verdict, "by_type": arcan.get("by_type"),
+                "why": None if verdict["dissolved"] else "Arcan still reports %s" % verdict["left"]}
+    finally:
+        shutil.rmtree(work, ignore_errors=True)

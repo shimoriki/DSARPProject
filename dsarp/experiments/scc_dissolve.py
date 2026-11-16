@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from .arcan_diff import cycle_sets
+from .arcan_diff import cycle_clusters, cycle_sets
 from .edge_measure import _changed_java, write_patch
 from .mixed_plan import to_edits
 from ..refactoring import scc_planner, spoon_plan
@@ -108,12 +108,22 @@ def move_accept(facts: SourceFacts, banned: set):
     return accept
 
 
+def plan_targets(edges, max_size: int, limit: int, arcan_dir: Optional[Path] = None) -> List[set]:
+    """The package cycles to plan for: Arcan's own cycle clusters when `arcan_dir` is given, so
+    the planner works on smells Arcan reports and is judged on; else the class graph's SCCs."""
+    if arcan_dir is not None:
+        comps = [set(c) for c in cycle_clusters(arcan_dir)]
+    else:
+        top = scc_planner.top_level_edges(tuple(e) for e in edges)
+        comps = scc_planner.components(scc_planner.package_edges(top, {}))
+    return [c for c in comps if len(c) <= max_size][:limit]
+
+
 def make_plans(repo: Path, base: Dict[str, Any], max_size: int, limit: int,
-               work: Path) -> List[Dict[str, Any]]:
+               work: Path, arcan_dir: Optional[Path] = None) -> List[Dict[str, Any]]:
     facts = SourceFacts(repo)
     edges = scc_planner.top_level_edges(tuple(e) for e in base["edges"])
-    comps = [c for c in scc_planner.components(scc_planner.package_edges(edges, {}))
-             if len(c) <= max_size][:limit]
+    comps = plan_targets(base["edges"], max_size, limit, arcan_dir)
 
     def legal(comp: set) -> Dict[str, Any]:
         """Plan, dry-run on a copy, ban what Spoon refuses and plan again.
@@ -467,6 +477,8 @@ def main() -> None:
     ap.add_argument("--facades", action="store_true",
                     help="leave a deprecated delegating type at each moved public class's old name; "
                          "measured again without them when they break the build or the cycle")
+    ap.add_argument("--arcan-targets", action="store_true",
+                    help="plan for Arcan's package cycle clusters instead of the class graph's SCCs")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     # Measure the baseline on a fresh copy, built exactly as candidates are. A comment-only
@@ -496,13 +508,16 @@ def main() -> None:
     # Operators and repair are fixed until the mixed and repair arms land; they are recorded now
     # so a later freeze cannot be confirmed by a run with other operators.
     arm = {"engine": a.engine, "facades": a.facades, "operators": "moves", "repair": False}
+    if a.arcan_targets:
+        arm["targets"] = "arcan"   # absent on older freezes, which all planned for jdeps SCCs
     if a.confirm:
         pre = json.loads((a.out / "preregistration.json").read_text(encoding="utf-8"))
         if not arm_matches(pre.get("arm", arm), arm):
             raise SystemExit("frozen for %s, not %s" % (pre["arm"], arm))
         plans = pre["plans"]
     else:
-        plans = make_plans(a.repo, base, a.max_size, a.limit, a.out / "work")
+        plans = make_plans(a.repo, base, a.max_size, a.limit, a.out / "work",
+                           a.out / "arcan_before" / "arcan" if a.arcan_targets else None)
     if a.freeze:
         print("frozen:", freeze(a.repo, a.out, plans, a.max_size, a.limit, arm))
         return

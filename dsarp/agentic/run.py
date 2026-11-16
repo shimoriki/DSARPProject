@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List
 
 from ..experiments.mixed_plan import dry_run
 from ..experiments.scc_dissolve import (PLAN_ATTEMPTS, arm_matches, cannot_freeze, facade_first, freeze,
+                                        plan_targets,
                                         measure, move_accept, prepare, summarise)
 from ..models.providers import DEFAULT_BASE_URL, LocalProvider
 from ..refactoring.inversion_facts import InversionFacts
@@ -114,15 +115,29 @@ def main() -> None:
     ap.add_argument("--freeze", action="store_true")
     ap.add_argument("--confirm", action="store_true")
     ap.add_argument("--repair-budget", type=int, default=0)
+    # Hosted models, as in hpc/smoke.py: seconds between calls, longest 429 wait to sit out,
+    # per-call timeout, and no output cap so a reasoning model can finish its answer.
+    ap.add_argument("--min-interval", type=float, default=0)
+    ap.add_argument("--max-wait", type=float, default=300)
+    ap.add_argument("--timeout", type=int, default=300)
+    ap.add_argument("--uncapped", action="store_true")
+    # Plan for Arcan's package cycle clusters (beam defaults: size <= 15, first 10) instead of
+    # the targets file; the file still locates baseline_tests.json.
+    ap.add_argument("--arcan-targets", action="store_true")
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
-    model = LocalProvider(a.model, a.base_url, api_key=os.environ.get(a.api_key_env) or "dsarp-local")
+    model = LocalProvider(a.model, a.base_url, timeout=a.timeout, uncapped=a.uncapped,
+                          api_key=os.environ.get(a.api_key_env) or "dsarp-local",
+                          min_interval=a.min_interval, max_wait=a.max_wait)
     print("java level %s, JDK %s" % arcan_runner.select_jdk(a.repo), flush=True)
     base = prepare(a.repo, a.out)
-    targets = targets_from(a.targets_from)
+    targets = ([sorted(c) for c in plan_targets(base["edges"], 15, 10, a.out / "arcan_before" / "arcan")]
+               if a.arcan_targets else targets_from(a.targets_from))
     tests_file = a.targets_from.parent / "baseline_tests.json"
     tests = json.loads(tests_file.read_text(encoding="utf-8")) if tests_file.exists() else None
     arm = arm_for(a.model, a.engine, a.facades)
+    if a.arcan_targets:
+        arm["targets"] = "arcan"   # absent on older freezes, which took the beam's jdeps targets
     if a.confirm:
         pre = check_frozen(a.out, arm)
         hook = make_hook(model, a.repair_budget, tests) if a.repair_budget else None

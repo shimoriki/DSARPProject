@@ -2,11 +2,14 @@
 
     python hpc/smoke.py MODEL REPOS OUT [--base-url URL] [--api-key-env VAR]
 
-LLM plans for three cycles the beam arm dissolved (Commons Exec's one, Commons Math's first two;
-Commons Text's first by the beam's own selection rule), each dry-run by Spoon. A case passes when
-the plan dissolves the cycle in the simulated graph and the Spoon dry run succeeds. Bar: 2 of 3.
-The last line is `MODEL CHECK <model>: <passed> of <total> (bar 2)`; run_refagent.slurm reads it.
-REPOS holds apache-commons-exec, apache-commons-math and apache-commons-text (see setup.sh).
+LLM plans for three package cycles Arcan reports on the baseline and the beam arm dissolved
+(Commons Exec's one tangle, Commons Math's stat.descriptive pair, Commons Text's one cycle). Each
+target must be one of Arcan's cycle clusters, or the check stops: it measures Arcan smells only.
+A plan that passes the Spoon dry run is applied to a copy (Spoon, no facades), compiled, and Arcan
+runs again. A case passes only when Arcan no longer reports a cycle holding two or more of the
+target's packages (arcan_diff.cycles_dissolved). The graph prediction is printed beside it.
+Bar: 2 of 3. The last line is `MODEL CHECK <model>: <passed> of <total> (bar 2)`;
+run_refagent.slurm reads it. REPOS holds apache-commons-exec, -math and -text (see setup.sh).
 """
 import argparse
 import json
@@ -15,17 +18,18 @@ import time
 from pathlib import Path
 
 from dsarp.agentic.run import make_llm_plans
+from dsarp.experiments.arcan_diff import cycle_clusters
+from dsarp.experiments.mixed_plan import arcan_verdict
 from dsarp.experiments.scc_dissolve import prepare
 from dsarp.models.providers import DEFAULT_BASE_URL, LocalProvider
-from dsarp.refactoring import scc_planner
 from dsarp.tools import arcan_runner
 from dsarp.verification.effect_checker import _copy_repo
 
-CASES = [("apache-commons-exec", [["org.apache.commons.exec", "org.apache.commons.exec.environment",
-                                   "org.apache.commons.exec.launcher"]]),
-         ("apache-commons-math", [["org.apache.commons.math4.legacy.stat.descriptive",
-                                   "org.apache.commons.math4.legacy.stat.descriptive.moment"]]),
-         ("apache-commons-text", None)]
+CASES = [("apache-commons-exec", ["org.apache.commons.exec", "org.apache.commons.exec.environment",
+                                  "org.apache.commons.exec.launcher"]),
+         ("apache-commons-math", ["org.apache.commons.math4.legacy.stat.descriptive",
+                                  "org.apache.commons.math4.legacy.stat.descriptive.moment"]),
+         ("apache-commons-text", ["org.apache.commons.text", "org.apache.commons.text.lookup"])]
 
 ap = argparse.ArgumentParser()
 ap.add_argument("model")
@@ -52,15 +56,19 @@ for repo, targets in CASES:
     t0 = time.time()
     base = prepare(tree, out)
     print("  prepared in %ds" % (time.time() - t0), flush=True)
-    if targets is None:
-        edges = scc_planner.top_level_edges(tuple(e) for e in base["edges"])
-        targets = [sorted(scc_planner.components(scc_planner.package_edges(edges, {}))[0])]
-    plans = make_llm_plans(tree, base, model, targets, out / "work", rounds=3)
-    (out / "llm_plans.json").write_text(json.dumps(plans, indent=1, default=str), encoding="utf-8")
+    clusters = cycle_clusters(out / "arcan_before" / "arcan")
+    if sorted(targets) not in clusters:
+        raise SystemExit("%s: target %s is not an Arcan cycle cluster; Arcan reports %s"
+                         % (repo, targets, clusters))
+    plans = make_llm_plans(tree, base, model, [targets], out / "work", rounds=3)
     for p in plans:
-        ok = bool(p.get("dissolves")) and (p.get("dry_run") or {}).get("ok", False)
+        if (p.get("dry_run") or {}).get("ok"):
+            p["arcan"] = arcan_verdict(tree, p, out / "arcan_before" / "arcan", out / "arcan_check")
+        ok = bool((p.get("arcan") or {}).get("dissolved"))
         passed += ok
         total += 1
-        print("  %s dissolves=%s dry_run=%s rounds=%d" % (p["component"], p.get("dissolves"),
-              (p.get("dry_run") or {}).get("ok"), len(p.get("rounds") or [])), flush=True)
-print("MODEL CHECK %s: %d of %d (bar 2)" % (a.model, passed, total), flush=True)
+        print("  %s predicted=%s dry_run=%s arcan_dissolved=%s rounds=%d %s" % (
+            p["component"], p.get("dissolves"), (p.get("dry_run") or {}).get("ok"), ok,
+            len(p.get("rounds") or []), (p.get("arcan") or {}).get("why") or ""), flush=True)
+    (out / "llm_plans.json").write_text(json.dumps(plans, indent=1, default=str), encoding="utf-8")
+print("MODEL CHECK %s: %d of %d (bar 2, Arcan-verified)" % (a.model, passed, total), flush=True)
