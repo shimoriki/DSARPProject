@@ -10,12 +10,14 @@ The interface is whatever `refactoring/ai_recipes.propose()` already duck-types 
     provider.generate(prompt, max_tokens=..., temperature=..., json_mode=...) -> .text
 
 Nothing more. Kept deliberately small — a provider that can also stream, count tokens or
-retry is a provider with three more ways to be wrong at 3am.
+retry is a provider with three more ways to be wrong at 3am. The one exception: HTTP 429 is
+retried with backoff, because hosted free tiers rate-limit and a lost call reads as a weak model.
 """
 from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -60,21 +62,29 @@ class LocalProvider:
     """Any OpenAI-compatible endpoint served from this machine."""
 
     def __init__(self, model: str, base_url: str = DEFAULT_BASE_URL,
-                 timeout: int = 300, system: str = "", api_key: str = "dsarp-local"):
+                 timeout: int = 300, system: str = "", api_key: str = "dsarp-local",
+                 retries: int = 6, uncapped: bool = False):
         self.model = model
         self.name = model
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.system = system
         self.api_key = api_key
+        # Hosted free tiers answer 429 when their shared pool is busy; a call that gave up at
+        # once read as a model that could not plan (Gemma 4 on OpenRouter, 0 rounds of 3).
+        self.retries = retries
+        # Reasoning models spend hidden tokens before the answer: Cohere's code model used all
+        # 800 thinking and returned nothing. Uncapped leaves the limit to the server's capacity.
+        self.uncapped = uncapped
 
     def generate(self, prompt: str, max_tokens: int = 600, temperature: float = 0.1,
                  json_mode: bool = False) -> Completion:
         messages = ([{"role": "system", "content": self.system}] if self.system else [])
         messages.append({"role": "user", "content": prompt})
         payload: Dict[str, Any] = {"model": self.model, "messages": messages,
-                                   "max_tokens": max_tokens, "temperature": temperature,
-                                   "stream": False}
+                                   "temperature": temperature, "stream": False}
+        if not self.uncapped:
+            payload["max_tokens"] = max_tokens
         if json_mode:
             # Ollama, vLLM and llama.cpp all honour this; a server that does not simply
             # ignores it and the caller's own JSON extraction still runs.
@@ -84,11 +94,19 @@ class LocalProvider:
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json",
                      "Authorization": f"Bearer {self.api_key}"})
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                body = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.URLError as e:
-            raise RuntimeError(f"local model at {self.base_url} unreachable: {e}") from e
+        for attempt in range(self.retries + 1):
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    body = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as e:
+                if e.code != 429 or attempt == self.retries:
+                    raise RuntimeError(f"local model at {self.base_url} unreachable: {e}") from e
+                # Retry-After when the server sends one, else 2, 4, 8 ... capped at a minute.
+                wait = e.headers.get("Retry-After") if e.headers else None
+                time.sleep(float(wait) if wait and wait.isdigit() else min(60, 2 ** (attempt + 1)))
+            except urllib.error.URLError as e:
+                raise RuntimeError(f"local model at {self.base_url} unreachable: {e}") from e
         try:
             text = body["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as e:

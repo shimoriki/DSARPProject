@@ -34,7 +34,8 @@ ap.add_argument("out", type=Path)
 ap.add_argument("--base-url", default=DEFAULT_BASE_URL)
 ap.add_argument("--api-key-env", default="DSARP_LLM_KEY")
 a = ap.parse_args()
-model = LocalProvider(a.model, a.base_url, timeout=1800,
+# Uncapped: the check measures planning, not whether a reasoning model fits its answer in 800 tokens.
+model = LocalProvider(a.model, a.base_url, timeout=1800, uncapped=True,
                       api_key=os.environ.get(a.api_key_env) or "dsarp-local")
 passed, total = 0, 0
 for repo, targets in CASES:
