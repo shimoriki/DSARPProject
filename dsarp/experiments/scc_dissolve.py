@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from .arcan_diff import cycle_clusters, cycle_sets
+from .arcan_diff import cycle_clusters, cycle_sets, cycles_dissolved
 from .edge_measure import _changed_java, write_patch
 from .mixed_plan import to_edits
 from ..refactoring import scc_planner, spoon_plan
@@ -251,9 +251,8 @@ def _modules(changed: List[Path], repo: Path, copy: Path) -> List[str]:
 
 
 def _arcan_target_gone(comp: List[str], before: Path, after: Path) -> bool:
-    members = set(comp)
-    return not any(members <= c for c in cycle_sets(after, "package")) and \
-        any(members <= c for c in cycle_sets(before, "package"))
+    # Strict: a surviving sub-cycle of the target is the smell still there (cycles_dissolved).
+    return cycles_dissolved(comp, before, after)["dissolved"]
 
 
 def _regressions(row: Dict[str, Any], plan_: Dict[str, Any]) -> List[str]:

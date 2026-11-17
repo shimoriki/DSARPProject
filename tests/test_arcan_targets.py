@@ -72,3 +72,11 @@ def test_a_target_arcan_never_saw_is_not_dissolved(tmp_path):
     after = table(tmp_path / "a", [])
     r = cycles_dissolved(["a", "b"], before, after)
     assert not r["in_before"] and not r["dissolved"]
+
+
+def test_gate_does_not_call_a_target_gone_while_a_sub_cycle_survives(tmp_path):
+    # The beam's level 4c needs Arcan's word; {a, b} still cycling is the smell still there.
+    from dsarp.experiments.scc_dissolve import _arcan_target_gone
+    before = table(tmp_path / "b", [{"a", "b", "c"}])
+    after = table(tmp_path / "a", [{"a", "b"}])
+    assert not _arcan_target_gone(["a", "b", "c"], before, after)

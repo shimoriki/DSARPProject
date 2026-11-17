@@ -2174,3 +2174,23 @@ reports 274 architecture, 1,775 design and 4,711 implementation smell instances.
 Deck corrected in two places: the capability table now reads "licensed, Professional", and the
 future-work bullet "Extend the measured corpus beyond the repositories the current licence
 allows" is replaced with running the source-level analysis across all three systems.
+
+## 2026-11-17 - OpenRouter free models: Arcan-verified model check and Tika agentic runs
+
+Commits 0ca7afa, aaa1c5d, 4a2a90a (pushed to cycle-repair-loop and refagent-hpc): 429 throttling
+that honours Retry-After / X-RateLimit-Reset, retry on dropped connections, Arcan-verified smoke
+check (hpc/smoke.py), strict `cycles_dissolved`, and `--arcan-targets` for beam and agentic arms.
+
+Model check (Arcan-verified, bar 2 of 3): Nemotron Ultra 550B 1 of 3, Ling 3.2 Flash 1 of 3 (both
+commons-text only). Their earlier 2-of-3 runs hold under the Arcan recheck; the drop is run-to-run
+planner variance. Cohere, Nemotron Super VL, ERNIE, Gemma 26B and Gemma 31B are NOT MEASURED: the
+free key's 50 requests/day cap ran out. A rerun of those five is queued after the reset.
+
+Tika agentic arm, same 5 targets and settings as qwen: Nemotron 0 of 5 accepted, Ling 1 of 5
+(geo.topic, level 4c, the same GeoParserConfig move the beam made). Nemotron proposed that move too
+but its test run was partial, so INVALID. Repair arm fixed every build failure it was given; none
+of the repaired plans dissolved its cycle.
+
+Workbook docs/pipeline_comparison_tika.xlsx updated (not committed): N and L columns on
+"Targets O vs A", hosted rows on "Model check", accepted-targets row on Summary (O 4, A 1, N 0,
+L 1). Formulas are uncached until Excel recalculates (no LibreOffice here).
