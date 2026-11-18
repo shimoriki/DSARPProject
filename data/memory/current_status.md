@@ -2,6 +2,7 @@
 
 ## Last updated
 
+2026-11-18 - Beam on Arcan targets (text+facades, 4 repos) done; sheet "Beam on Arcan targets" in docs/pipeline_comparison_tika.xlsx. Log4j2: 4 targets, 2 dissolved at 4c (test.junit cycle with 0 API breaks; template.json with 73), log4j-1.2 bridge 4a, io no plan. PDFBox 1 dissolved (API break). Compress build fail. Struts unfrozen, invalid. AI arm (ERNIE 5.5 Flash) queued on same targets.
 2026-11-03 — engine bench recorded below. Hour-by-hour log: `data/memory/hourly_log.md`.
 Held-out confirmatory run (arm text+facades, recorded in the freeze): OpenNLP baseline fails
 its build (`quality_gate_failed`), so nothing frozen; Log4j2 frozen, 5 targets, first is 4c. 2026-11-02 — SCC cycle repair pipeline piloted on branch `claude/cycle-repair-loop` (9f6b0bb).
