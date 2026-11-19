@@ -2,6 +2,7 @@
 
 ## Last updated
 
+2026-11-19 - AI arm (ERNIE 5.5 Flash, text+facades, 3 rounds, repair budget 5) on the beam Arcan targets done; sheet "AI arm on Arcan targets". 0 dissolved on PDFBox, Compress, Log4j2 (beam: 3). Best: PDFBox fontbox 4b after repair. Log4j2: same moves as beam but structural FAIL (new cycle). Root cause: duplicate class util.internal.SerializationUtil (log4j-api vs log4j-api-java9 stub); ArchUnit keeps one depending on the copy absolute path, so the core cycle is 49 or 50 by path alone. Oracle artefact. Fixed in Cycles.java: class dirs sorted, first copy of a duplicate class wins, duplicates reported as duplicateClasses (tests/test_cycle_oracle_duplicates.py); Log4j2 now gives 49 under both paths. Re-judge of the two AI Log4j2 plans running (agentic/arcan_rejudge_apache-logging-log4j2).
 2026-11-18 - Beam on Arcan targets (text+facades, 4 repos) done; sheet "Beam on Arcan targets" in docs/pipeline_comparison_tika.xlsx. Log4j2: 4 targets, 2 dissolved at 4c (test.junit cycle with 0 API breaks; template.json with 73), log4j-1.2 bridge 4a, io no plan. PDFBox 1 dissolved (API break). Compress build fail. Struts unfrozen, invalid. AI arm (ERNIE 5.5 Flash) queued on same targets.
 2026-11-03 — engine bench recorded below. Hour-by-hour log: `data/memory/hourly_log.md`.
 Held-out confirmatory run (arm text+facades, recorded in the freeze): OpenNLP baseline fails

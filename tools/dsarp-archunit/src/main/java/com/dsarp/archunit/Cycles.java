@@ -72,13 +72,37 @@ public final class Cycles {
         // classes means no cycles, which makes "the cycle is gone" vacuously true for every
         // candidate. Compiled on this JDK 26 box, javac emits major version 70 and ArchUnit
         // 1.3.0 read exactly none of it while reporting success.
+        //
+        // A class compiled into two roots (log4j2's util.internal.SerializationUtil lives in
+        // log4j-api and, as a stub, in log4j-api-java9) is kept once, from the first root in
+        // sorted order. Left to ArchUnit, which copy won depended on the working copy's
+        // absolute path: the same class files gave a 49-package cycle in one directory and 50
+        // in another, and the structural gate failed plans for a cycle no move had made.
+        roots.sort(java.util.Comparator.comparing(Path::toString));
         long onDisk = 0;
+        Map<String, Path> firstRoot = new HashMap<>();
+        Set<String> skipped = new HashSet<>();
+        Set<String> duplicates = new TreeSet<>();
         for (Path r : roots) {
+            List<Path> files;
             try (java.util.stream.Stream<Path> s = java.nio.file.Files.walk(r)) {
-                onDisk += s.filter(p -> p.toString().endsWith(".class")).count();
+                files = s.filter(p -> p.toString().endsWith(".class")).sorted()
+                         .collect(java.util.stream.Collectors.toList());
+            }
+            onDisk += files.size();
+            for (Path f : files) {
+                String rel = r.relativize(f).toString().replace(File.separatorChar, '/');
+                if (rel.startsWith("META-INF/")) continue;   // multi-release copies, not on the class path
+                if (firstRoot.putIfAbsent(rel, r) != null) {
+                    skipped.add(f.toAbsolutePath().normalize().toString());
+                    duplicates.add(rel.substring(0, rel.length() - ".class".length()).replace('/', '.'));
+                }
             }
         }
-        JavaClasses classes = new ClassFileImporter().importPaths(roots);
+        JavaClasses classes = new ClassFileImporter()
+                .withImportOption(loc -> !skipped.contains(
+                        Paths.get(loc.asURI()).toAbsolutePath().normalize().toString()))
+                .importPaths(roots);
         if (onDisk > 0 && classes.size() == 0) {
             result.put("ok", false);
             result.put("why", "found " + onDisk + " .class files but imported 0 — the class"
@@ -204,6 +228,8 @@ public final class Cycles {
         result.put("classFilesOnDisk", onDisk);
         result.put("packages", pkgs.size());
         result.put("classes", classes.size());
+        ArrayNode dup = result.putArray("duplicateClasses");
+        duplicates.forEach(dup::add);
         result.put("cycleCount", arr.size());
         result.put("largestCycle", biggest);
         om.writerWithDefaultPrettyPrinter().writeValue(out.toFile(), result);
