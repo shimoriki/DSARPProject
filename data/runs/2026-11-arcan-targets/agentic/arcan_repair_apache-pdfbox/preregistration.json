@@ -1,0 +1,119 @@
+{
+ "selection": {
+  "max_size": 6,
+  "limit": 4,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "baidu/ernie-5.5-flash-preview:free"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.fontbox.cff",
+    "org.apache.fontbox.ttf",
+    "org.apache.fontbox.ttf.gsub",
+    "org.apache.fontbox.type1"
+   ],
+   "size": 4,
+   "moves": [
+    [
+     "org.apache.fontbox.type1.Type1CharStringReader",
+     "org.apache.fontbox.cff"
+    ]
+   ],
+   "inversions": [
+    [
+     "org.apache.fontbox.cff",
+     "org.apache.fontbox.ttf.FontHeaders"
+    ]
+   ],
+   "predicted_left": 2,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.fontbox.type1.Type1CharStringReader\",\"to\":\"org.apache.fontbox.cff\"},{\"op\":\"moveClass\",\"class\":\"org.apache.fontbox.cff.CFFParser\",\"to\":\"org.apache.fontbox.ttf\"},{\"op\":\"moveClass\",\"class\":\"org.apache.fontbox.ttf.GlyphSubstitutionTable\",\"to\":\"org.apache.fontbox.ttf.gsub\"}],\"rationale\":\"Moving Type1CharStringReader to cff removes the cff-to-type1 edges, moving CFFParser to ttf removes the cff-to-ttf edge, and moving GlyphSubstitutionTable to gsub removes the ttf-to-gsub edge, leaving the remaining package graph acyclic.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.fontbox.cff.CFFParser",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.fontbox.ttf.GlyphSubstitutionTable",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.fontbox.type1.Type1CharStringReader",
+       "org.apache.fontbox.cff"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1831,
+     "completion_tokens": 18748
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.fontbox.cff\", \"impl\": \"org.apache.fontbox.ttf.FontHeaders\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.fontbox.type1.Type1CharStringReader\", \"to\": \"org.apache.fontbox.cff\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.fontbox.ttf\", \"impl\": \"org.apache.fontbox.ttf.gsub.GlyphSubstitutionDataExtractor\"}], \"rationale\": \"Inverting the single cff\u2192ttf and ttf\u2192gsub edges and moving Type1CharStringReader into cff eliminates all three 2-cycles with the minimum three operations.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.fontbox.ttf org.apache.fontbox.ttf.gsub.GlyphSubstitutionDataExtractor",
+       "the consumer declares nothing of that type"
+      ]
+     ],
+     "kept": [
+      [
+       "invert",
+       "org.apache.fontbox.cff",
+       "org.apache.fontbox.ttf.FontHeaders"
+      ],
+      [
+       "move",
+       "org.apache.fontbox.type1.Type1CharStringReader",
+       "org.apache.fontbox.cff"
+      ]
+     ],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1895,
+     "completion_tokens": 23505
+    },
+    {
+     "text": "",
+     "parse_errors": [
+      "no JSON object in the answer"
+     ],
+     "rejected": [],
+     "kept": [],
+     "predicted_left": 4,
+     "pulled_in": 0,
+     "prompt_tokens": 1830,
+     "completion_tokens": 123584
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": [
+    "org.apache.fontbox.cff.CFFParser"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+﻿py.exe : 429 from google/gemma-4-31b-it:free: waiting 2s (limit None, remaining None)
+At C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\agentic\sm
+oke_arcan_after_reset.ps1:18 char:5
++     & py hpc\smoke.py $m $repos "$s\agentic\arc_$tag" --base-url http ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (429 from google...remaining None):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+429 from google/gemma-4-31b-it:free: waiting 4s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 8s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 16s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 32s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 60s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 2s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 4s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 8s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 16s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 32s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 60s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 2s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 4s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 8s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 16s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 32s (limit None, remaining None)
+429 from google/gemma-4-31b-it:free: waiting 60s (limit None, remaining None)

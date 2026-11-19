@@ -1,0 +1,13 @@
+﻿apache-commons-exec jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 24s
+['org.apache.commons.exec', 'org.apache.commons.exec.environment', 'org.apache.commons.exec.launcher']: 0 moves, 0 inversions, predicted left 3
+  ['org.apache.commons.exec', 'org.apache.commons.exec.environment', 'org.apache.commons.exec.launcher'] dissolves=False dry_run=None rounds=3
+apache-commons-math jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 89s
+['org.apache.commons.math4.legacy.stat.descriptive', 'org.apache.commons.math4.legacy.stat.descriptive.moment']: 0 moves, 0 inversions, predicted left 2 (model call failed: baidu/ernie-5.5-flash-preview:free rate limit resets in 9863s, over max_wait 300s (limit 50, remaining 0))
+  ['org.apache.commons.math4.legacy.stat.descriptive', 'org.apache.commons.math4.legacy.stat.descriptive.moment'] dissolves=False dry_run=None rounds=0
+apache-commons-text jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 43s
+['org.apache.commons.text', 'org.apache.commons.text.lookup']: 0 moves, 0 inversions, predicted left 2 (model call failed: baidu/ernie-5.5-flash-preview:free rate limit resets in 9814s, over max_wait 300s (limit 50, remaining 0))
+  ['org.apache.commons.text', 'org.apache.commons.text.lookup'] dissolves=False dry_run=None rounds=0
+MODEL CHECK baidu/ernie-5.5-flash-preview:free: 0 of 3 (bar 2)

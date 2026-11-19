@@ -1,0 +1,3 @@
+﻿java level 8, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+baseline tests: {'tests_run': 11075, 'failures': 233, 'errors': 98, 'partial': False, 'skipped_modules': []}
+frozen: C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\beam_arcan\apache-logging-log4j2\preregistration.json

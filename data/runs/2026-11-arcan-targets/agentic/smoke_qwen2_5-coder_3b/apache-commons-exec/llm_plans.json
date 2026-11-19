@@ -1,0 +1,53 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.DefaultExecutor\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.DefaultExecuteResultHandler\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ExecuteException\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ExecuteResultHandler\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ExecuteStreamHandler\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ExecuteWatchdog\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.Executor\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.InputStreamPumper\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.OS\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ProcessDestroyer\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.PumpStreamHandler\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ShutdownHookProcessDestroyer\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.StreamPumper\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ThreadUtil\",\n      \"to\": \"org.ap",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 898,
+    "completion_tokens": 800
+   },
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.DefaultExecutor\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.DefaultExecuteResultHandler\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ExecuteException\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ExecuteResultHandler\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ExecuteStreamHandler\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ExecuteWatchdog\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.Executor\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.InputStreamPumper\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.OS\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ProcessDestroyer\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.PumpStreamHandler\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ShutdownHookProcessDestroyer\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.StreamPumper\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.ThreadUtil\",\n      \"to\": \"org.ap",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 925,
+    "completion_tokens": 800
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"Move DefaultExecutor to org.apache.commons.exec.launcher to break the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 925,
+    "completion_tokens": 55
+   }
+  ],
+  "refused": []
+ }
+]

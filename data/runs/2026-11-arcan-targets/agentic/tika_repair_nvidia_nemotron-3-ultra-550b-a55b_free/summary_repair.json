@@ -1,0 +1,13 @@
+{
+ "targets": 3,
+ "levels": {
+  "2": 3
+ },
+ "states": {
+  "INVALID": 1,
+  "FAIL": 2
+ },
+ "dissolved": 0,
+ "success": 0,
+ "success_without_api_break": 0
+}

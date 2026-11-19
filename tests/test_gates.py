@@ -39,6 +39,23 @@ def test_a_candidate_is_accepted_only_when_every_gate_ran_and_passed():
     assert d["why"] == "3 new failures"
 
 
+def test_an_added_reflective_lookup_fails_and_a_moved_one_does_not(tmp_path):
+    from dsarp.verification.gates import reflection
+    repo, copy = tmp_path / "repo", tmp_path / "copy"
+    for root, rel, text in ((repo, "a/A.java", "Class.forName(x);"), (repo, "a/B.java", "class B {}"),
+                            (copy, "c/A.java", "Class.forName(x);"), (copy, "a/B.java", "class B {}")):
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_text(text, encoding="utf-8")
+    assert reflection(repo, copy)["ok"]                  # A moved with its lookup
+    (repo / "a/C.java").write_text("Class.forName(y);", encoding="utf-8")
+    (copy / "a/C.java").write_text("import c.A;\nClass.forName(y);", encoding="utf-8")
+    assert reflection(repo, copy)["ok"]                  # C edited, its lookup was already there
+    (copy / "a/B.java").write_text("ServiceLoader.load(B.class);", encoding="utf-8")
+    r = reflection(repo, copy)
+    assert not r["ok"] and r["added"] == ["ServiceLoader"]
+    assert not decide(reflection=r, structural={"ok": True}, behavioural={"ok": True})["accepted"]
+
+
 def test_text_references_warn_but_do_not_refuse():
     # pdfbox's pom named the moved class; the answer was to rewrite the pom, not to give up
     d = decide(before_apply={"ok": False, "why": "1 file names this class as text"},

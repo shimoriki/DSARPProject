@@ -1,0 +1,47 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\n  \"operations\": [\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.Builder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.CharacterPredicate\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.CharacterPredicates\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.ExtendedMessageFormat\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.FormatFactory\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.RandomStringGenerator\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrBuilder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrMatcher\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrTokenizer\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringEscapeUtils\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringTokenizer\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.TextRandomProvider\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.TextStringBuilder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.AbstractPathFencedLookup\", \"to\": \"org.apache.",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 791,
+    "completion_tokens": 800
+   },
+   {
+    "text": "{\n  \"operations\": [\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.Builder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.CharacterPredicate\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.CharacterPredicates\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.ExtendedMessageFormat\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.FormatFactory\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.RandomStringGenerator\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrBuilder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrMatcher\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrTokenizer\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringEscapeUtils\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringTokenizer\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.TextRandomProvider\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.TextStringBuilder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.AbstractPathFencedLookup\", \"to\": \"org.apache.",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 811,
+    "completion_tokens": 800
+   },
+   {
+    "text": "{\n  \"operations\": [\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.Builder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.CharacterPredicate\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.CharacterPredicates\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.ExtendedMessageFormat\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.FormatFactory\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.RandomStringGenerator\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrBuilder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrMatcher\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrTokenizer\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringEscapeUtils\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringTokenizer\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.TextRandomProvider\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.TextStringBuilder\", \"to\": \"org.apache.commons.text.lookup\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.AbstractPathFencedLookup\", \"to\": \"org.apache.",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 811,
+    "completion_tokens": 800
+   }
+  ],
+  "refused": []
+ }
+]

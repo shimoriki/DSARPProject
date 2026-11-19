@@ -1,0 +1,63 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text\", \"impl\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\"}], \"rationale\": \"Breaks the cycle by making the consumer package depend on the implementation class\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "invert",
+      "org.apache.commons.text",
+      "org.apache.commons.text.lookup.XmlDecoderStringLookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 811,
+    "completion_tokens": 55
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text.lookup\", \"impl\": \"org.apache.commons.text.StringEscapeUtils\"}], \"rationale\": \"invert the dependency to break the cycle\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text.lookup org.apache.commons.text.StringEscapeUtils",
+      "5 public instance methods, 45 statics, utility-shaped name"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 831,
+    "completion_tokens": 47
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text\", \"impl\": \"org.apache.commons.text.lookup.StringLookup\"}], \"rationale\": \"Invert the edge to break the cycle by making the consumer package depend on the implementation class\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text org.apache.commons.text.lookup.StringLookup",
+      "already an interface"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 861,
+    "completion_tokens": 57
+   }
+  ],
+  "refused": []
+ }
+]

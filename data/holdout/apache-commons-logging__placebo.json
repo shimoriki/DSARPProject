@@ -1,0 +1,21 @@
+{
+ "ok": true,
+ "detector_repeatable": {
+  "smells_removed": 0,
+  "smells_introduced": 0,
+  "net": 0
+ },
+ "neutral_edit": {
+  "smells_removed": 0,
+  "smells_introduced": 0,
+  "net": 0
+ },
+ "oracle_unchanged": true,
+ "edited": "AvalonLogger.java",
+ "oracle_only_before": [],
+ "oracle_only_after": [],
+ "class_counts": [
+  28,
+  28
+ ]
+}

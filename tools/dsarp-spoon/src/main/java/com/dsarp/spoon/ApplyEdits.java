@@ -312,6 +312,7 @@ public final class ApplyEdits {
                 if (Files.isDirectory(testRoot)) launcher.addInputResource(testRoot.toString());
             }
         }
+        launcher.getEnvironment().setEncoding(java.nio.charset.StandardCharsets.UTF_8);
         launcher.getEnvironment().setCommentEnabled(true);
         launcher.getEnvironment().setComplianceLevel(compliance);
         // One unparseable file must not cost the whole module. log4j-core returned
@@ -455,6 +456,9 @@ public final class ApplyEdits {
         // package-info.java. Two launcher configurations that can drift apart is the real
         // defect here; this keeps them in step until they share one builder.
         launcher.getEnvironment().setIgnoreSyntaxErrors(true);
+        // Read as UTF-8 here. Spoon's printer ignores this and writes the JVM's default charset,
+        // so spoon_runner also sets file.encoding.
+        launcher.getEnvironment().setEncoding(java.nio.charset.StandardCharsets.UTF_8);
         launcher.getEnvironment().setAutoImports(true);       // emit imports for moved types
         launcher.getEnvironment().setCommentEnabled(true);    // keep javadoc and comments
         launcher.getEnvironment().setComplianceLevel(compliance);
@@ -478,6 +482,15 @@ public final class ApplyEdits {
                          + t.getClass().getSimpleName() + ": "
                          + String.valueOf(t.getMessage()));
             return;
+        }
+
+        // The precheck judges a group together; judging it alone here refuses what it allowed.
+        java.util.Map<String, java.util.Set<String>> groups = new java.util.HashMap<>();
+        for (JsonNode e : candidates) {
+            String g = e.path("group").asText("");
+            if (!g.isEmpty())
+                groups.computeIfAbsent(g, k -> new java.util.LinkedHashSet<>())
+                      .add(e.path("type").asText());
         }
 
         Set<Path> removals = new LinkedHashSet<>();
@@ -526,7 +539,9 @@ public final class ApplyEdits {
                 continue;
             }
 
-            String why = classpath.length > 0 ? illegalReason(type, to) : null;
+            java.util.Set<String> moving =
+                groups.getOrDefault(edit.path("group").asText(""), java.util.Collections.emptySet());
+            String why = classpath.length > 0 ? illegalReason(type, to, moving) : null;
             if (why != null) {
                 ObjectNode sk = skipped.addObject();
                 sk.set("edit", edit);

@@ -1,0 +1,17 @@
+{
+ "targets": 5,
+ "levels": {
+  "0": 2,
+  "1": 1,
+  "4b": 1,
+  "2": 1
+ },
+ "states": {
+  "n/a": 2,
+  "FAIL": 2,
+  "PASS": 1
+ },
+ "dissolved": 0,
+ "success": 1,
+ "success_without_api_break": 0
+}

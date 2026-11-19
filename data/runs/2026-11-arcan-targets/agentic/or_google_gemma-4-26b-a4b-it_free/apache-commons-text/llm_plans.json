@@ -1,0 +1,17 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [],
+  "why": "model call failed: google/gemma-4-26b-a4b-it:free rate limit resets in 9616s, over max_wait 300s (limit 50, remaining 0)",
+  "refused": []
+ }
+]

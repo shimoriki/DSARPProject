@@ -1,0 +1,112 @@
+{
+ "selection": {
+  "max_size": 15,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "moves",
+  "repair": false
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.wss4j.common.saml",
+    "org.apache.wss4j.common.saml.builder"
+   ],
+   "size": 2,
+   "predicted_left": 0,
+   "dissolves": true,
+   "moves": [
+    [
+     "org.apache.wss4j.common.saml.builder.SAML1ComponentBuilder",
+     "org.apache.wss4j.common.saml"
+    ],
+    [
+     "org.apache.wss4j.common.saml.builder.SAML2ComponentBuilder",
+     "org.apache.wss4j.common.saml"
+    ]
+   ],
+   "candidates": 4,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.wss4j.common",
+    "org.apache.wss4j.common.crypto",
+    "org.apache.wss4j.common.util"
+   ],
+   "size": 3,
+   "predicted_left": 0,
+   "dissolves": true,
+   "moves": [
+    [
+     "org.apache.wss4j.common.WSS4JConstants",
+     "org.apache.wss4j.common.util"
+    ]
+   ],
+   "candidates": 15,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.wss4j.stax.ext",
+    "org.apache.wss4j.stax.impl.securityToken",
+    "org.apache.wss4j.stax.securityEvent",
+    "org.apache.wss4j.stax.securityToken",
+    "org.apache.wss4j.stax.utils",
+    "org.apache.wss4j.stax.validate"
+   ],
+   "size": 6,
+   "predicted_left": 0,
+   "dissolves": true,
+   "moves": [
+    [
+     "org.apache.wss4j.stax.validate.Validator",
+     "org.apache.wss4j.stax.ext"
+    ]
+   ],
+   "candidates": 120,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.wss4j.dom",
+    "org.apache.wss4j.dom.action",
+    "org.apache.wss4j.dom.callback",
+    "org.apache.wss4j.dom.engine",
+    "org.apache.wss4j.dom.handler",
+    "org.apache.wss4j.dom.message",
+    "org.apache.wss4j.dom.message.token",
+    "org.apache.wss4j.dom.processor",
+    "org.apache.wss4j.dom.saml",
+    "org.apache.wss4j.dom.str",
+    "org.apache.wss4j.dom.transform",
+    "org.apache.wss4j.dom.util",
+    "org.apache.wss4j.dom.validate"
+   ],
+   "size": 13,
+   "predicted_left": 11,
+   "dissolves": false,
+   "moves": [
+    [
+     "org.apache.wss4j.dom.WSDocInfo",
+     "org.apache.wss4j.dom.action"
+    ],
+    [
+     "org.apache.wss4j.dom.callback.DOMCallbackLookup",
+     "org.apache.wss4j.dom.engine"
+    ]
+   ],
+   "candidates": 306,
+   "refused": []
+  }
+ ]
+}

@@ -1,0 +1,9 @@
+﻿java level 8, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+{
+ "targets": 0,
+ "levels": {},
+ "states": {},
+ "dissolved": 0,
+ "success": 0,
+ "success_without_api_break": 0
+}

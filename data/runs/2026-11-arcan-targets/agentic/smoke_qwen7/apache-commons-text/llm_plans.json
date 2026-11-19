@@ -1,0 +1,79 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\",\n      \"to\": \"org.apache.commons.text\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.text.lookup.XmlEncoderStringLookup\",\n      \"to\": \"org.apache.commons.text\"\n    }\n  ],\n  \"rationale\": \"Move XmlDecoderStringLookup and XmlEncoderStringLookup to org.apache.commons.text to break the cycle.\"\n}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.text.lookup.XmlDecoderStringLookup",
+      "refused: move rule"
+     ],
+     [
+      "moveClass org.apache.commons.text.lookup.XmlEncoderStringLookup",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 815,
+    "completion_tokens": 110
+   },
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\",\n      \"to\": \"org.apache.commons.text\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.text.lookup.XmlEncoderStringLookup\",\n      \"to\": \"org.apache.commons.text\"\n    }\n  ],\n  \"rationale\": \"Moving XmlDecoderStringLookup and XmlEncoderStringLookup to org.apache.commons.text breaks the cycle.\"\n}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.text.lookup.XmlDecoderStringLookup",
+      "refused: move rule"
+     ],
+     [
+      "moveClass org.apache.commons.text.lookup.XmlEncoderStringLookup",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 869,
+    "completion_tokens": 109
+   },
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"invertEdge\",\n      \"consumer\": \"org.apache.commons.text\",\n      \"impl\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\"\n    },\n    {\n      \"op\": \"invertEdge\",\n      \"consumer\": \"org.apache.commons.text\",\n      \"impl\": \"org.apache.commons.text.lookup.XmlEncoderStringLookup\"\n    }\n  ],\n  \"rationale\": \"Inverting the dependency from org.apache.commons.text to org.apache.commons.text.lookup for XmlDecoderStringLookup and XmlEncoderStringLookup breaks the cycle.\"\n}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "invert",
+      "org.apache.commons.text",
+      "org.apache.commons.text.lookup.XmlDecoderStringLookup"
+     ],
+     [
+      "invert",
+      "org.apache.commons.text",
+      "org.apache.commons.text.lookup.XmlEncoderStringLookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 869,
+    "completion_tokens": 119
+   }
+  ],
+  "refused": [
+   "org.apache.commons.text.lookup.XmlDecoderStringLookup",
+   "org.apache.commons.text.lookup.XmlEncoderStringLookup"
+  ]
+ }
+]

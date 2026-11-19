@@ -1,0 +1,54 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.text.StringEscapeUtils",
+    "org.apache.commons.text.lookup"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringEscapeUtils\", \"to\": \"org.apache.commons.text.lookup\"}], \"rationale\": \"Moving StringEscapeUtils into org.apache.commons.text.lookup turns both lookup \u2192 text dependencies into intra-package dependencies, removing the org.apache.commons.text.lookup \u2192 org.apache.commons.text edge and breaking the cycle in a single operation.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StringEscapeUtils",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 855,
+    "completion_tokens": 5293
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": [],
+  "arcan": {
+   "measured": true,
+   "in_before": true,
+   "left": [],
+   "added": [],
+   "dissolved": true,
+   "by_type": {
+    "Cyclic Dependency": 32
+   },
+   "why": null
+  }
+ }
+]

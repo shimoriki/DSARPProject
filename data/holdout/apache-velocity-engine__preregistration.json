@@ -1,0 +1,56 @@
+{
+ "selection": {
+  "max_size": 15,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "moves",
+  "repair": false
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.velocity",
+    "org.apache.velocity.app.event",
+    "org.apache.velocity.context",
+    "org.apache.velocity.exception",
+    "org.apache.velocity.runtime",
+    "org.apache.velocity.runtime.directive",
+    "org.apache.velocity.runtime.parser",
+    "org.apache.velocity.runtime.parser.node",
+    "org.apache.velocity.runtime.resource",
+    "org.apache.velocity.runtime.resource.loader",
+    "org.apache.velocity.runtime.resource.util",
+    "org.apache.velocity.util",
+    "org.apache.velocity.util.introspection"
+   ],
+   "size": 13,
+   "predicted_left": 11,
+   "dissolves": false,
+   "moves": [
+    [
+     "org.apache.velocity.Template",
+     "org.apache.velocity.context"
+    ],
+    [
+     "org.apache.velocity.VelocityContext",
+     "org.apache.velocity.context"
+    ],
+    [
+     "org.apache.velocity.runtime.resource.loader.StringResourceLoader",
+     "org.apache.velocity.runtime.resource.util"
+    ]
+   ],
+   "candidates": 629,
+   "refused": []
+  }
+ ]
+}

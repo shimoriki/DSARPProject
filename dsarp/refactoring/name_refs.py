@@ -22,13 +22,16 @@ _TEXT_SUFFIXES = (".xml", ".properties", ".json", ".yaml", ".yml", ".cfg", ".con
                   ".txt", ".MF", ".factories", ".handlers", ".schemas", ".tld")
 _SKIP_DIRS = {"target", "build", ".git", "node_modules"}
 _MAX_BYTES = 2_000_000
+# Release history names classes as they were. Rewriting it falsifies the record, and commons-io's
+# RELEASE-NOTES.txt and changes.xml were rewritten until these were left out.
+_HISTORY = re.compile(r"^(release-notes|changelog|changes|history|news)\b", re.IGNORECASE)
 
 
 def _candidate_files(repo_path: Path):
     for p in Path(repo_path).rglob("*"):
         if not p.is_file():
             continue
-        if _SKIP_DIRS & set(p.parts):
+        if _SKIP_DIRS & set(p.parts) or _HISTORY.match(p.name):
             continue
         if p.suffix in _TEXT_SUFFIXES or "META-INF/services" in p.as_posix() \
                 or p.suffix == ".java":
@@ -88,6 +91,43 @@ def declared_public(repo_path: Path, fqn: str) -> bool:
     return False
 
 
+def service_providers(repo_path: Path) -> Dict[str, List[str]]:
+    """Providers listed in every source META-INF/services file, in file order."""
+    out: Dict[str, List[str]] = {}
+    for p in Path(repo_path).rglob("src/*/resources/META-INF/services/*"):
+        if not p.is_file():
+            continue
+        lines = (ln.split("#")[0].strip() for ln in
+                 p.read_text(encoding="utf-8", errors="ignore").splitlines())
+        out[p.relative_to(repo_path).as_posix()] = [ln for ln in lines if ln]
+    return out
+
+
+def rewrite_names(repo_path: Path, renames: Dict[str, str]) -> List[str]:
+    """Rewrite what a move left behind as text, and name the files so a reviewer can see them.
+
+    commons-validator names Arg, Msg and Var in digester-rules.xml, and pdfbox's debugger-app
+    pom names PDFDebugger as its mainClass. Neither is reachable by the compiler, and both
+    made a sound move fail on its old name.
+    """
+    repo_path = Path(repo_path)
+    patterns = [(re.compile(r"(?<![\w$])" + re.escape(old) + r"(?![\w$])"), new)
+                for old, new in renames.items()]
+    touched: List[str] = []
+    for p in _candidate_files(repo_path):
+        try:
+            raw = p.read_bytes().decode("utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        text = raw
+        for named, new in patterns:
+            text = named.sub(new, text)
+        if text != raw:
+            p.write_bytes(text.encode("utf-8"))
+            touched.append(p.relative_to(repo_path).as_posix())
+    return sorted(touched)
+
+
 def residual(repo_path: Path, fqn: str) -> Dict[str, Any]:
     """Files that still mention `fqn` after it was supposed to have moved away.
 
@@ -102,9 +142,11 @@ def residual(repo_path: Path, fqn: str) -> Dict[str, Any]:
     """
     repo_path = Path(repo_path)
     hits: List[str] = []
+    # A bare substring test fails valid moves: com.app.Thing is inside com.app.ThingDefaults.
+    named = re.compile(r"(?<![\w$])" + re.escape(fqn) + r"(?![\w$])")
     for p in _candidate_files(repo_path):
         try:
-            if fqn in p.read_text(encoding="utf-8", errors="ignore"):
+            if named.search(p.read_text(encoding="utf-8", errors="ignore")):
                 hits.append(p.relative_to(repo_path).as_posix())
         except OSError:
             continue

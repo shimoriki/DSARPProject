@@ -1,0 +1,54 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 879,
+    "completion_tokens": 800
+   },
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 913,
+    "completion_tokens": 800
+   },
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 913,
+    "completion_tokens": 800
+   }
+  ],
+  "refused": []
+ }
+]

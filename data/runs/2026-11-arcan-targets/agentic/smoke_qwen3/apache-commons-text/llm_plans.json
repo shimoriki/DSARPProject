@@ -1,0 +1,53 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 796,
+    "completion_tokens": 800
+   },
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 823,
+    "completion_tokens": 800
+   },
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 823,
+    "completion_tokens": 800
+   }
+  ],
+  "refused": []
+ }
+]

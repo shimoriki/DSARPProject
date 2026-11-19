@@ -1,0 +1,364 @@
+{
+ "selection": {
+  "max_size": 14,
+  "limit": 4,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "baidu/ernie-5.5-flash-preview:free"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.logging.log4j.io",
+    "org.apache.logging.log4j.io.internal"
+   ],
+   "size": 2,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 2,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\":[{\"op\":\"invertEdge\",\"consumer\":\"org.apache.logging.log4j.io.internal\",\"impl\":\"org.apache.logging.log4j.io.ByteStreamLogger\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.logging.log4j.io.internal\",\"impl\":\"org.apache.logging.log4j.io.CharStreamLogger\"}],\"rationale\":\"Inverting the internal package's dependencies on ByteStreamLogger and CharStreamLogger removes all edges from internal to io, breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.logging.log4j.io.internal org.apache.logging.log4j.io.ByteStreamLogger",
+       "constructed by org.apache.logging.log4j.io.internal.InternalFilterOutputStream"
+      ],
+      [
+       "invertEdge org.apache.logging.log4j.io.internal org.apache.logging.log4j.io.CharStreamLogger",
+       "constructed by org.apache.logging.log4j.io.internal.InternalFilterWriter"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1020,
+     "completion_tokens": 12567
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.io.internal.InternalFilterOutputStream\",\"to\":\"org.apache.logging.log4j.io\"},{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.io.internal.InternalFilterWriter\",\"to\":\"org.apache.logging.log4j.io\"},{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.io.internal.InternalInputStream\",\"to\":\"org.apache.logging.log4j.io\"},{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.io.internal.InternalLoggerReader\",\"to\":\"org.apache.logging.log4j.io\"},{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.io.internal.InternalOutputStream\",\"to\":\"org.apache.logging.log4j.io\"},{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.io.internal.InternalReader\",\"to\":\"org.apache.logging.log4j.io\"},{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.io.internal.InternalWriter\",\"to\":\"org.apache.logging.log4j.io\"}],\"rationale\":\"Moving all seven internal classes that depend on the io package into io eliminates every internal-to-io edge, breaking the cycle with the minimum seven operations.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.logging.log4j.io.internal.InternalFilterOutputStream",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.logging.log4j.io.internal.InternalFilterWriter",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.logging.log4j.io.internal.InternalInputStream",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.logging.log4j.io.internal.InternalLoggerReader",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.logging.log4j.io.internal.InternalOutputStream",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.logging.log4j.io.internal.InternalReader",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.logging.log4j.io.internal.InternalWriter",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1116,
+     "completion_tokens": 11461
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"invertEdge\",\"consumer\":\"org.apache.logging.log4j.io.internal\",\"impl\":\"org.apache.logging.log4j.io.ByteStreamLogger\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.logging.log4j.io.internal\",\"impl\":\"org.apache.logging.log4j.io.CharStreamLogger\"}],\"rationale\":\"Inverting the two dependencies from the internal package to ByteStreamLogger and CharStreamLogger removes all edges from internal back to io, breaking the cycle with the fewest operations.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.logging.log4j.io.internal org.apache.logging.log4j.io.ByteStreamLogger",
+       "constructed by org.apache.logging.log4j.io.internal.InternalFilterOutputStream"
+      ],
+      [
+       "invertEdge org.apache.logging.log4j.io.internal org.apache.logging.log4j.io.CharStreamLogger",
+       "constructed by org.apache.logging.log4j.io.internal.InternalFilterWriter"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1175,
+     "completion_tokens": 11569
+    }
+   ],
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.logging.log4j.layout.template.json",
+    "org.apache.logging.log4j.layout.template.json.resolver"
+   ],
+   "size": 2,
+   "moves": [
+    [
+     "org.apache.logging.log4j.layout.template.json.JsonTemplateLayout",
+     "org.apache.logging.log4j.layout.template.json.resolver"
+    ],
+    [
+     "org.apache.logging.log4j.layout.template.json.JsonTemplateLayoutDefaults",
+     "org.apache.logging.log4j.layout.template.json.resolver"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.logging.log4j.layout.template.json.JsonTemplateLayout\", \"to\": \"org.apache.logging.log4j.layout.template.json.resolver\"}], \"rationale\": \"JsonTemplateLayout is the sole source of all seven json\u2192resolver edges and the target of two resolver\u2192json edges, so relocating it into the resolver package internalizes those nine edges, leaving only resolver\u2192json dependencies (TemplateResolverConfig/TimestampResolver \u2192 JsonTemplateLayoutDefaults) and breaking the cycle in one move.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.logging.log4j.layout.template.json.JsonTemplateLayout",
+       "org.apache.logging.log4j.layout.template.json.resolver"
+      ]
+     ],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1768,
+     "completion_tokens": 5593
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.layout.template.json.JsonTemplateLayout\",\"to\":\"org.apache.logging.log4j.layout.template.json.resolver\"},{\"op\":\"moveClass\",\"class\":\"org.apache.logging.log4j.layout.template.json.JsonTemplateLayoutDefaults\",\"to\":\"org.apache.logging.log4j.layout.template.json.resolver\"}],\"rationale\":\"Moving JsonTemplateLayout and JsonTemplateLayoutDefaults into the resolver package removes all resolver-to-json dependencies, breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.logging.log4j.layout.template.json.JsonTemplateLayout",
+       "org.apache.logging.log4j.layout.template.json.resolver"
+      ],
+      [
+       "move",
+       "org.apache.logging.log4j.layout.template.json.JsonTemplateLayoutDefaults",
+       "org.apache.logging.log4j.layout.template.json.resolver"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 1799,
+     "completion_tokens": 11560
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.logging.log4j.test",
+    "org.apache.logging.log4j.test.junit"
+   ],
+   "size": 2,
+   "moves": [
+    [
+     "org.apache.logging.log4j.test.junit.SerialUtil",
+     "org.apache.logging.log4j.test"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\":[{\"op\":\"invertEdge\",\"consumer\":\"org.apache.logging.log4j.test\",\"impl\":\"org.apache.logging.log4j.test.junit.SerialUtil\"}],\"rationale\":\"Inverting the sole edge from org.apache.logging.log4j.test to org.apache.logging.log4j.test.junit removes the only dependency in that direction, leaving only the reverse edges and thus no cycle.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.logging.log4j.test org.apache.logging.log4j.test.junit.SerialUtil",
+       "the consumer declares nothing of that type"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1035,
+     "completion_tokens": 3891
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.logging.log4j.test.junit.SerialUtil\", \"to\": \"org.apache.logging.log4j.test\"}], \"rationale\": \"Moving SerialUtil into the test package removes the only dependency from test to test.junit, breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.logging.log4j.test.junit.SerialUtil",
+       "org.apache.logging.log4j.test"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 1089,
+     "completion_tokens": 9798
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.log4j",
+    "org.apache.log4j.bridge",
+    "org.apache.log4j.builders",
+    "org.apache.log4j.builders.appender",
+    "org.apache.log4j.builders.filter",
+    "org.apache.log4j.builders.layout",
+    "org.apache.log4j.builders.rewrite",
+    "org.apache.log4j.builders.rolling",
+    "org.apache.log4j.config",
+    "org.apache.log4j.helpers",
+    "org.apache.log4j.or",
+    "org.apache.log4j.rewrite",
+    "org.apache.log4j.spi",
+    "org.apache.log4j.xml"
+   ],
+   "size": 14,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 14,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.log4j.PropertyConfigurator\", \"to\": \"org.apache.log4j.config\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.log4j.or.RendererMap\", \"to\": \"org.apache.log4j.spi\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.or\", \"impl\": \"org.apache.log4j.Layout\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.rewrite\", \"impl\": \"org.apache.log4j.bridge.LogEventAdapter\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.builders\", \"impl\": \"org.apache.log4j.builders.appender.AppenderBuilder\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.builders\", \"impl\": \"org.apache.log4j.builders.filter.FilterBuilder\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.builders\", \"impl\": \"org.apache.log4j.builders.layout.LayoutBuilder\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.builders\", \"impl\": \"org.apache.log4j.builders.rewrite.RewritePolicyBuilder\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.builders\", \"impl\": \"org.apache.log4j.builders.rolling.TriggeringPolicyBuilder\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.config\", \"impl\": \"org.apache.log4j.builders.BuilderManager\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.log4j.xml\", \"impl\": \"org.apache.log4j.builders.BuilderManager\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.log4j.spi.LoggingEvent\", \"to\": \"org.apache.log4j\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.log4j.spi.RootLogger\", \"to\": \"org.apache.log4j\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.log4j.helpers.OptionConverter\", \"to\": \"org.apache.log4j\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.log4j.spi.NOPLogger\", \"to\": \"org.apache.log4j\"}], \"rationale\": \"Detach every builders sub-package and the builders/config/xml packages from the core, sink the or package, and fold the remaining spi/helpers leaf classes into org.apache.log4j so the reduced core forms a DAG.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.log4j.PropertyConfigurator",
+       "refused: move rule"
+      ],
+      [
+       "invertEdge org.apache.log4j.or org.apache.log4j.Layout",
+       "the consumer declares nothing of that type"
+      ],
+      [
+       "invertEdge org.apache.log4j.rewrite org.apache.log4j.bridge.LogEventAdapter",
+       "the consumer declares nothing of that type"
+      ],
+      [
+       "invertEdge org.apache.log4j.builders org.apache.log4j.builders.appender.AppenderBuilder",
+       "already an interface"
+      ],
+      [
+       "invertEdge org.apache.log4j.builders org.apache.log4j.builders.filter.FilterBuilder",
+       "already an interface"
+      ],
+      [
+       "invertEdge org.apache.log4j.builders org.apache.log4j.builders.layout.LayoutBuilder",
+       "already an interface"
+      ],
+      [
+       "invertEdge org.apache.log4j.builders org.apache.log4j.builders.rewrite.RewritePolicyBuilder",
+       "already an interface"
+      ],
+      [
+       "invertEdge org.apache.log4j.builders org.apache.log4j.builders.rolling.TriggeringPolicyBuilder",
+       "already an interface"
+      ],
+      [
+       "invertEdge org.apache.log4j.config org.apache.log4j.builders.BuilderManager",
+       "consumer and implementation in different source roots"
+      ],
+      [
+       "invertEdge org.apache.log4j.xml org.apache.log4j.builders.BuilderManager",
+       "the consumer declares nothing of that type"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.log4j.or.RendererMap",
+       "org.apache.log4j.spi"
+      ],
+      [
+       "move",
+       "org.apache.log4j.spi.LoggingEvent",
+       "org.apache.log4j"
+      ],
+      [
+       "move",
+       "org.apache.log4j.spi.RootLogger",
+       "org.apache.log4j"
+      ],
+      [
+       "move",
+       "org.apache.log4j.helpers.OptionConverter",
+       "org.apache.log4j"
+      ],
+      [
+       "move",
+       "org.apache.log4j.spi.NOPLogger",
+       "org.apache.log4j"
+      ]
+     ],
+     "predicted_left": 14,
+     "pulled_in": 0,
+     "prompt_tokens": 4531,
+     "completion_tokens": 80445
+    },
+    {
+     "text": "",
+     "parse_errors": [
+      "no JSON object in the answer"
+     ],
+     "rejected": [],
+     "kept": [],
+     "predicted_left": 14,
+     "pulled_in": 0,
+     "prompt_tokens": 4621,
+     "completion_tokens": 71087
+    },
+    {
+     "text": "",
+     "parse_errors": [
+      "no JSON object in the answer"
+     ],
+     "rejected": [],
+     "kept": [],
+     "predicted_left": 14,
+     "pulled_in": 0,
+     "prompt_tokens": 4354,
+     "completion_tokens": 76233
+    }
+   ],
+   "refused": []
+  }
+ ]
+}

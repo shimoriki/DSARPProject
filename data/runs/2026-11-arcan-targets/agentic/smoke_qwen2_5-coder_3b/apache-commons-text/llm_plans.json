@@ -1,0 +1,70 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\",\n      \"to\": \"org.apache.commons.text.lookup\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.text.lookup.XmlEncoderStringLookup\",\n      \"to\": \"org.apache.commons.text.lookup\"\n    }\n  ],\n  \"rationale\": \"Moves the XmlDecoderStringLookup and XmlEncoderStringLookup classes to the org.apache.commons.text.lookup package to break the cycle.\"\n}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.text.lookup.XmlDecoderStringLookup",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.lookup.XmlEncoderStringLookup",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 815,
+    "completion_tokens": 117
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text\", \"impl\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\"}], \"rationale\": \"Inverting the edge from org.apache.commons.text.lookup.XmlDecoderStringLookup to org.apache.commons.text will break the cycle by allowing org.apache.commons.text to depend on org.apache.commons.text.lookup without directly depending on XmlDecoderStringLookup.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text org.apache.commons.text.lookup.XmlDecoderStringLookup",
+      "refused by Spoon"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 852,
+    "completion_tokens": 87
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\", \"to\": \"org.apache.commons.text\"}], \"rationale\": \"Move XmlDecoderStringLookup to org.apache.commons.text to break the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.text.lookup.XmlDecoderStringLookup",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 855,
+    "completion_tokens": 56
+   }
+  ],
+  "refused": [
+   "org.apache.commons.text.lookup.XmlDecoderStringLookup"
+  ]
+ }
+]

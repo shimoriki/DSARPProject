@@ -1,0 +1,184 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [
+   [
+    "org.apache.commons.exec.launcher.CommandLauncher",
+    "org.apache.commons.exec.environment"
+   ],
+   [
+    "org.apache.commons.exec.launcher.CommandLauncherFactory",
+    "org.apache.commons.exec.environment"
+   ],
+   [
+    "org.apache.commons.exec.launcher.CommandLauncherImpl",
+    "org.apache.commons.exec.environment"
+   ],
+   [
+    "org.apache.commons.exec.launcher.CommandLauncherProxy",
+    "org.apache.commons.exec.environment"
+   ],
+   [
+    "org.apache.commons.exec.launcher.Java13CommandLauncher",
+    "org.apache.commons.exec.environment"
+   ],
+   [
+    "org.apache.commons.exec.launcher.OS2CommandLauncher",
+    "org.apache.commons.exec.environment"
+   ],
+   [
+    "org.apache.commons.exec.launcher.VmsCommandLauncher",
+    "org.apache.commons.exec.environment"
+   ],
+   [
+    "org.apache.commons.exec.launcher.WinNTCommandLauncher",
+    "org.apache.commons.exec.environment"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherImpl\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherProxy\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.Java13CommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.OS2CommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.VmsCommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.WinNTCommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec.environment\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncher\"}\n],\n\"rationale\": \"This plan breaks the cycle by moving all launcher-related classes into the environment package and inverting the edge between them, ensuring that the environment package depends on the launcher package's interfaces rather than its implementations.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.exec.environment org.apache.commons.exec.launcher.CommandLauncher",
+      "already an interface"
+     ]
+    ],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherImpl",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherProxy",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.Java13CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.OS2CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.VmsCommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.WinNTCommandLauncher",
+      "org.apache.commons.exec.environment"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1204,
+    "completion_tokens": 418
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\", \"to\": \"org.apache.commons.exec.environment\"}], \"rationale\": \"Move CommandLauncher and CommandLauncherFactory from org.apache.commons.exec.launcher to org.apache.commons.exec.environment to break the cycle, as CommandLauncher already implements an interface for its dependency on org.apache.commons.exec.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "org.apache.commons.exec.environment"
+     ]
+    ],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 1263,
+    "completion_tokens": 138
+   },
+   {
+    "text": "{\"operations\": [\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherImpl\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.EnvironmentUtils\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.Java13CommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.OS2CommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.VmsCommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.WinNTCommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"}\n],\n\"rationale\": \"By moving the implementation classes and utilities from org.apache.commons.exec.launcher to org.apache.commons.exec.environment, we break the cycle as the environment package will no longer directly depend on the launcher package, and the launcher package will only depend on the environment package.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.launcher.EnvironmentUtils",
+      "unknown class"
+     ]
+    ],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherImpl",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.Java13CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.OS2CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.VmsCommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.WinNTCommandLauncher",
+      "org.apache.commons.exec.environment"
+     ]
+    ],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 1245,
+    "completion_tokens": 395
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": []
+ }
+]

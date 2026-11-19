@@ -1,0 +1,69 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.text.StringEscapeUtils",
+    "org.apache.commons.text.lookup"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text.lookup\", \"impl\": \"org.apache.commons.text.StringEscapeUtils\"}], \"rationale\": \"Inverting the lookup package's dependency on StringEscapeUtils flips both XmlDecoder/XmlEncoderStringLookup edges to point from text toward lookup, leaving only org.apache.commons.text -> org.apache.commons.text.lookup edges and breaking the cycle in one operation.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text.lookup org.apache.commons.text.StringEscapeUtils",
+      "5 public instance methods, 45 statics, utility-shaped name"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 853,
+    "completion_tokens": 4882
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringEscapeUtils\", \"to\": \"org.apache.commons.text.lookup\"}], \"rationale\": \"Moving StringEscapeUtils into org.apache.commons.text.lookup turns both XmlDecoderStringLookup/XMLEncoderStringLookup dependencies into intra-package edges, leaving only org.apache.commons.text -> org.apache.commons.text.lookup edges and thus no cycle, in a single operation.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StringEscapeUtils",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 907,
+    "completion_tokens": 2998
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": [],
+  "arcan": {
+   "measured": true,
+   "in_before": true,
+   "left": [],
+   "added": [],
+   "dissolved": true,
+   "by_type": {
+    "Cyclic Dependency": 32
+   },
+   "why": null
+  }
+ }
+]

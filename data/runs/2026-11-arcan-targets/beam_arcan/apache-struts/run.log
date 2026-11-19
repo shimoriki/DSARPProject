@@ -1,0 +1,26 @@
+﻿java level 17, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+baseline tests: {'tests_run': 3576, 'failures': 2, 'errors': 0, 'partial': True, 'skipped_modules': ['Struts 2 Showcase Webapp', 'Struts 2 Assembly']}
+target size 2: 1 moves, predicted left 0
+  stage=build level=1 left=None [ERROR] /C:/Users/Rohit/AppData/Local/Temp/claude/7c1264f4a932da85/b84a0f2f-f4e0-4fcd-9594-7acbff568f0e/scratchpad/beam_arcan/apache-struts/work/copy/plugins/json/src/test/java/org/apache/struts2/json/JSONResultTest.java:[703,31] getEncoding() has protected access in org.apache.struts2.json.smd.JSON
+target size 2: 1 moves, predicted left 0
+  stage=judged level=2 left=0 the baseline itself was a partial run
+target size 2: 1 moves, predicted left 0
+  stage=judged level=2 left=0 the baseline itself was a partial run
+target size 2: 0 moves, predicted left 2
+  stage=no_plan level=0 left=None 
+{
+ "targets": 4,
+ "levels": {
+  "1": 1,
+  "2": 2,
+  "0": 1
+ },
+ "states": {
+  "FAIL": 1,
+  "INVALID": 2,
+  "n/a": 1
+ },
+ "dissolved": 0,
+ "success": 0,
+ "success_without_api_break": 0
+}

@@ -1,0 +1,38 @@
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-pdfbox C:\Users\Rohit\AppData\Local\Temp\ec\apache-pdfbox
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-tika
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-validator C:\Users\Rohit\AppData\Local\Temp\ec\apache-commons-validator
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-logging-log4j2 C:\Users\Rohit\AppData\Local\Temp\cf4\l4j
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-struts C:\Users\Rohit\AppData\Local\Temp\cf\apache-struts
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-karaf C:\Users\Rohit\AppData\Local\Temp\cf\apache-karaf
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-opennlp
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-collections C:\Users\Rohit\AppData\Local\Temp\cf\apache-commons-collections
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-maven
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\google-guava
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-csv C:\Users\Rohit\AppData\Local\Temp\cf2\apache-commons-csv
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-email C:\Users\Rohit\AppData\Local\Temp\cf2\apache-commons-email
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-codec C:\Users\Rohit\AppData\Local\Temp\cf2\apache-commons-codec
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-cli C:\Users\Rohit\AppData\Local\Temp\cf2\apache-commons-cli
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-text C:\Users\Rohit\AppData\Local\Temp\ec\apache-commons-text
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-io C:\Users\Rohit\AppData\Local\Temp\ec\apache-commons-io
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-lang C:\Users\Rohit\AppData\Local\Temp\ec\apache-commons-lang
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-beanutils
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-compress
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-dbcp
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-pool
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-net
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-vfs
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-fileupload
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-jxpath
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-numbers
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-statistics
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-crypto
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-digester
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-scxml
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-commons-bcel
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-httpcomponents-core
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-httpcomponents-client
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-curator
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-maven-resolver
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-parquet-java
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-xmlgraphics-fop
+C:\Users\Rohit\PycharmProjects\dsarp-project\data\raw\repos\apache-xmlgraphics-batik

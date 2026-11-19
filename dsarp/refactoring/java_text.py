@@ -72,6 +72,15 @@ def package_of(text: str) -> str:
     return ""
 
 
+def read_source(path) -> str:
+    """Text that writes back byte for byte: line endings and undecodable bytes both survive."""
+    return Path(path).read_bytes().decode("utf-8", "surrogateescape")
+
+
+def write_source(path, text: str) -> None:
+    Path(path).write_bytes(text.encode("utf-8", "surrogateescape"))
+
+
 def strip_unused_imports(text: str) -> Tuple[str, List[str]]:
     """Drop single-type imports whose name appears nowhere else in the file.
 
@@ -262,7 +271,7 @@ def add_origin_imports(repo_path, moves) -> Dict[str, List[str]]:
         if not origin_dir.is_dir():
             continue
         left_behind = {q.stem for q in origin_dir.glob("*.java")} - {simple, "package-info"}
-        txt = target.read_text(encoding="utf-8", errors="ignore")
+        txt = read_source(target)
         body = "".join(ln for ln in txt.splitlines(keepends=True) if import_fqn(ln) is None)
         used = idents(body)
         need = sorted(n for n in left_behind
@@ -270,14 +279,15 @@ def add_origin_imports(repo_path, moves) -> Dict[str, List[str]]:
         if not need:
             continue
         lines, new_lines, done = txt.splitlines(keepends=True), [], False
+        eol = chr(13) + chr(10) if chr(13) + chr(10) in txt else chr(10)
         for ln in lines:
             new_lines.append(ln)
             s = ln.strip()
             if not done and s.startswith("package ") and s.endswith(";"):
                 for n in need:
-                    new_lines.append("import " + origin_pkg + "." + n + ";" + chr(10))
+                    new_lines.append("import " + origin_pkg + "." + n + ";" + eol)
                 done = True
-        target.write_text("".join(new_lines), encoding="utf-8")
+        write_source(target, "".join(new_lines))
         out[target.as_posix()] = need
     return out
 

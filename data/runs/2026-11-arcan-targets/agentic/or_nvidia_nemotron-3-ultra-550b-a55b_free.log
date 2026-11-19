@@ -1,0 +1,13 @@
+﻿apache-commons-exec jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 29s
+['org.apache.commons.exec', 'org.apache.commons.exec.environment', 'org.apache.commons.exec.launcher']: 0 moves, 0 inversions, predicted left 3 (model call failed: [WinError 10054] An existing connection was forcibly closed by the remote host)
+  ['org.apache.commons.exec', 'org.apache.commons.exec.environment', 'org.apache.commons.exec.launcher'] dissolves=False dry_run=None rounds=0
+apache-commons-math jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 92s
+['org.apache.commons.math4.legacy.stat.descriptive', 'org.apache.commons.math4.legacy.stat.descriptive.moment']: 1 moves, 0 inversions, predicted left 0
+  ['org.apache.commons.math4.legacy.stat.descriptive', 'org.apache.commons.math4.legacy.stat.descriptive.moment'] dissolves=True dry_run=True rounds=2
+apache-commons-text jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 41s
+['org.apache.commons.text', 'org.apache.commons.text.lookup']: 1 moves, 0 inversions, predicted left 0
+  ['org.apache.commons.text', 'org.apache.commons.text.lookup'] dissolves=True dry_run=True rounds=1
+MODEL CHECK nvidia/nemotron-3-ultra-550b-a55b:free: 2 of 3 (bar 2)

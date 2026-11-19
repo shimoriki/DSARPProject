@@ -1,0 +1,17 @@
+﻿java level 8, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.commons.compress.harmony.internal', 'org.apache.commons.compress.harmony.pack200']: stage=no_plan level=0 left=None
+['org.apache.commons.compress.harmony.unpack200', 'org.apache.commons.compress.harmony.unpack200.bytecode', 'org.apache.commons.compress.harmony.unpack200.bytecode.forms']: stage=build level=1 left=None
+{
+ "targets": 2,
+ "levels": {
+  "0": 1,
+  "1": 1
+ },
+ "states": {
+  "n/a": 1,
+  "FAIL": 1
+ },
+ "dissolved": 0,
+ "success": 0,
+ "success_without_api_break": 0
+}

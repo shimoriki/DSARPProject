@@ -25,6 +25,7 @@ import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
+from xml.etree import ElementTree
 
 from .arcan import ArcanAdapter
 
@@ -363,6 +364,22 @@ def installed_jdks() -> List[str]:
     return found
 
 
+def select_jdk(repo_path: Path):
+    """Point JAVA_HOME and PATH at a JDK that can build this repository, for this process.
+
+    Maven builds inherit the environment, and 17 was fixed for every repository. OpenNLP declares
+    Java 21, so its checkstyle 13 failed to load under 17 (UnsupportedClassVersionError) and the
+    baseline read as `quality_gate_failed`. A newer source level gets the newest JDK installed.
+    """
+    from .spoon_runner import compliance_level
+    level = compliance_level(Path(repo_path))
+    home = jdk_home_for("jdk-17") if level <= 17 else jdk_home_for("jdk-26", "jdk-25", "jdk-21")
+    if home:
+        os.environ["JAVA_HOME"] = str(home)
+        os.environ["PATH"] = str(home / "bin") + os.pathsep + os.environ.get("PATH", "")
+    return level, home
+
+
 def jdk_home_for(*versions: str):
     """Absolute path of the first installed JDK whose name matches one of `versions`.
 
@@ -423,6 +440,32 @@ def run_arcan(classes_dir: Path, out_dir: Path, timeout: int = 2400,
             "tail": out[-1500:]}
 
 
+def _stage_classes(dirs: List[Path], stage: Path) -> Path:
+    """Copy every module's classes under ONE root so Arcan builds ONE graph.
+
+    Arcan takes a single `-p` folder and recurses it, so running it once per module can never
+    see a smell that crosses modules. Measured on log4j2 (39 modules, 3194 classes): one
+    merged run found 599 package cycles and 184 unstable dependencies, against 535 and 131
+    for the same 39 modules run separately and summed. 104 of the merged findings span
+    modules with disjoint ownership - a cycle between `...log4j.spi` (log4j-api) and
+    `...log4j.core.context.internal` (log4j-core), for instance, is unreachable from either
+    module alone. Merging is also faster: 95s against 162s, one JVM start instead of 39.
+
+    The repo root is NOT handed to Arcan directly. `_class_dirs` deliberately selects
+    `target/classes` only, and the root would also sweep test-classes, generated and shaded
+    output, so a before/after pair would stop counting the same set of code.
+    """
+    # ponytail: plain copy. Class trees are small (log4j2 is 3194 files); switch to
+    # os.link if the I/O ever shows up next to Arcan's own runtime.
+    shutil.rmtree(stage, ignore_errors=True)
+    for i, d in enumerate(dirs):
+        # <module>/target/classes -> stage/<i>_<module>. The index keeps two same-named
+        # modules in a nested reactor from overwriting each other's classes.
+        name = d.parts[-3] if len(d.parts) >= 3 else d.name
+        shutil.copytree(d, stage / f"{i}_{name}")
+    return stage
+
+
 def detect_with_arcan(repo_path: Path, out_dir: Path, compile_log: Optional[Path] = None,
                       arcan_log: Optional[Path] = None) -> Dict[str, Any]:
     """Compile + Arcan in one call. Merges every module's classes into one result."""
@@ -435,20 +478,24 @@ def detect_with_arcan(repo_path: Path, out_dir: Path, compile_log: Optional[Path
                 "smells": None, "by_type": {}, "findings": [],
                 "note": "Arcan needs compiled bytecode; the build did not produce classes "
                         f"({comp['status']}). Smell counts are UNMEASURABLE, not zero."}
-    findings: List[Dict[str, Any]] = []
-    runs = []
-    for i, d in enumerate(dirs):
-        sub = Path(out_dir) / (f"module_{i}" if len(dirs) > 1 else "arcan")
-        r = run_arcan(d, sub, log_path=(arcan_log if i == 0 else None))
-        runs.append({"classes": str(d), "status": r["status"], "smells": r.get("smells", 0)})
-        findings.extend(r.get("findings", []))
+    # ONE run over every module's classes rather than one run per module - see _stage_classes
+    # for why, and for what the per-module version could not detect.
+    stage = Path(out_dir) / "_stage" if len(dirs) > 1 else None
+    target = _stage_classes(dirs, stage) if stage else dirs[0]
+    try:
+        r = run_arcan(target, Path(out_dir) / "arcan", log_path=arcan_log)
+    finally:
+        if stage:
+            shutil.rmtree(stage, ignore_errors=True)
+    findings: List[Dict[str, Any]] = r.get("findings", [])
     counts = collections.Counter(f["smell_type"] for f in findings)
-    measured = any(r["status"] == "ok" for r in runs)
-    return {"ok": measured, "status": "ok" if measured else "failed", "measured": measured,
+    measured = r["status"] == "ok"
+    return {"ok": measured, "status": r["status"], "measured": measured,
             "smells": len(findings) if measured else None,
             "by_type": dict(counts), "findings": findings,
             "compile": {k: v for k, v in comp.items() if k != "tail"},
-            "modules": runs, "tool": "Arcan 1.2.1"}
+            "merged": bool(stage), "modules": [{"classes": str(d)} for d in dirs],
+            "tool": "Arcan 1.2.1"}
 
 
 def _test_counts(line: str):
@@ -523,8 +570,11 @@ def modules_for(repo_path: Path, changed: Iterable[Path]) -> List[str]:
 def run_tests(repo_path: Path, timeout: int = 3600,
               log_path: Optional[Path] = None,
               modules: Optional[List[str]] = None,
-              fail_fast: bool = False) -> Dict[str, Any]:
+              fail_fast: bool = False,
+              only: Optional[List[str]] = None) -> Dict[str, Any]:
     """Run the project's OWN test suite against the refactored code.
+
+    `only` narrows Maven to those test classes, for rerunning a suspect; such a run is partial.
 
     `modules` restricts the reactor to those paths and what they depend on (`-pl ... -am`).
     That is a FILTER, not a verdict: a module that uses the moved type reflectively is not in
@@ -565,8 +615,19 @@ def run_tests(repo_path: Path, timeout: int = 3600,
     # the counts are a lower bound taken mid-run -- and it is exactly right for rejecting one,
     # because a single genuine failure is enough. tika spends 2186 seconds proving a broken
     # candidate broken with -fae. The result is marked partial so nothing can accept on it.
+    #
+    # -fae alone is not enough: it still skips every module depending on a failed one. log4j2's
+    # log4j-api-test is red before any change, so 27 of 42 modules were skipped, no layout test
+    # ran, and a move of a layout class "passed" on 948 tests. failure.ignore keeps the reactor
+    # going past a red test module; anything still SKIPPED is reported and makes the run partial.
+    keep_going = [] if fail_fast else ["-Dmaven.test.failure.ignore=true"]
+    for stale in repo_path.glob("**/target/surefire-reports/TEST-*.xml"):
+        stale.unlink(missing_ok=True)
     cmd = [mvn, "-B", "-ntp", "-ff" if fail_fast else "-fae",
-           "-f", str(repo_path / "pom.xml"), "test", *skips]
+           "-f", str(repo_path / "pom.xml"), "test", *skips, *keep_going]
+    if only:
+        cmd += ["-Dtest=" + ",".join(only), "-Dsurefire.failIfNoSpecifiedTests=false",
+                "-DfailIfNoTests=false"]
     scoped = [m for m in (modules or []) if m and m != "."]
     if scoped:
         # -am makes the scoped reactor resolvable without installing anything; -amd is the
@@ -603,17 +664,76 @@ def run_tests(repo_path: Path, timeout: int = 3600,
         skipped += counts[3]
         if counts[1] or counts[2]:
             failing_modules.append(ln.strip()[:160])
-    ok = proc.returncode == 0
+    ok = proc.returncode == 0 and not fails and not errs
     result = {"ok": ok, "status": "passed" if ok else "failed",
               "returncode": proc.returncode, "command": " ".join(cmd),
               "tail": out[-2500:]}
     if run or fails or errs:
         result.update(tests_run=run, failures=fails, errors=errs, skipped=skipped,
                       failing_modules=failing_modules, failing_tests=failing_tests(out)[:200])
-    # A fail-fast run, or one restricted to part of the reactor, has not seen the whole suite.
-    # Callers may reject on it; tests_no_worse refuses to accept on it.
-    result["partial"] = bool(fail_fast or [m for m in (modules or []) if m and m != "."])
+    result["outcomes"] = surefire_outcomes(repo_path)
+    result["skipped_modules"] = reactor_skipped(out)
+    tested = modules_with_tests(repo_path)
+    # An assembly or distribution skipped after an upstream failure hides no test. A module
+    # this cannot name is assumed to have tests.
+    result["skipped_untested"] = [m for m in result["skipped_modules"] if tested.get(m) is False]
+    # A fail-fast run, one restricted to part of the reactor, or one that skipped a tested module
+    # has not seen the whole suite. Callers may reject on it; tests_no_worse refuses to accept on it.
+    result["partial"] = bool(fail_fast or only
+                             or set(result["skipped_modules"]) - set(result["skipped_untested"])
+                             or [m for m in (modules or []) if m and m != "."])
     return result
+
+
+def modules_with_tests(repo_path: Path) -> Dict[str, bool]:
+    """Reactor display name (the pom's own <name>) -> whether the module has test sources."""
+    out: Dict[str, bool] = {}
+    for pom in Path(repo_path).glob("**/pom.xml"):
+        if "target" in pom.parts or "src" in pom.relative_to(repo_path).parts:
+            continue
+        text = re.sub(r"<parent>.*?</parent>", "", pom.read_text(encoding="utf-8", errors="replace"), flags=re.S)
+        m = re.search(r"<name>([^<$]+)</name>", text)
+        if m:
+            out[m.group(1).strip()] = any((pom.parent / "src" / "test").rglob("*.java"))
+    return out
+
+
+def reactor_skipped(out: str) -> List[str]:
+    """Modules Maven's reactor summary lists as SKIPPED: tests that never ran."""
+    return [m.group(1).strip() for m in
+            re.finditer(r"^\[INFO\] (.+?) \.*\s*SKIPPED\s*$", out, re.MULTILINE)]
+
+
+_XML_ILLEGAL = re.compile("[^\t\n\r\x20-퟿-�\U00010000-\U0010ffff]"
+                          r"|&#0*(?:[0-8]|1[124-9]|2\d|3[01]|6553[45]);"
+                          r"|&#[xX]0*(?:[0-8bBcCeEfF]|1[0-9a-fA-F]|[fF]{3}[eEfF]);")
+
+
+def surefire_outcomes(repo_path: Path) -> Dict[str, str]:
+    """Outcome per test ID from surefire's XML, which no console format change can break."""
+    out: Dict[str, str] = {}
+    for path in Path(repo_path).glob("**/target/surefire-reports/TEST-*.xml"):
+        try:
+            cases = list(ElementTree.parse(path).getroot().iter("testcase"))
+        except ElementTree.ParseError:
+            # A failure message can quote what XML forbids: commons-text's two failures reported
+            # U+FFFE and hid the other 32 tests of their class as "stopped running".
+            text = path.read_text(encoding="utf-8", errors="replace")
+            try:
+                cases = list(ElementTree.fromstring(_XML_ILLEGAL.sub("", text)).iter("testcase"))
+            except ElementTree.ParseError:
+                continue
+        for case in cases:
+            state = "passed"
+            for tag in ("failure", "error", "skipped"):
+                if case.find(tag) is not None:
+                    state = tag
+            # Parameterised runs share an ID: log4j2 has 10794 runs and 10588 IDs. A later pass
+            # must not hide an earlier failure.
+            test = "%s#%s" % (case.get("classname"), case.get("name"))
+            if out.get(test) not in ("failure", "error"):
+                out[test] = state
+    return out
 
 
 def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str, Any]:
@@ -625,6 +745,22 @@ def tests_no_worse(baseline: Dict[str, Any], after: Dict[str, Any]) -> Dict[str,
     these repositories are red before anything is changed (log4j2: 6 failures, 29 errors), so
     the comparison has to be against the baseline rather than against zero.
     """
+    if baseline.get("partial"):
+        return {"ok": False, "partial": True, "why": "the baseline itself was a partial run"}
+    before_ids, after_ids = baseline.get("outcomes"), after.get("outcomes")
+    if before_ids and after_ids is not None and not after.get("partial"):
+        # By identity when surefire's XML exists: a red baseline, and one test dropping out
+        # while another appears, cannot hide behind matching totals.
+        stopped = sorted(t for t, s in before_ids.items() if s == "passed" and t not in after_ids)
+        newly = sorted(t for t, s in before_ids.items() if s == "passed"
+                       and after_ids.get(t) in ("failure", "error"))
+        return {"ok": not stopped and not newly, "tests_not_run": len(stopped),
+                "stopped_running": stopped[:20], "newly_failing": newly[:20],
+                "appeared": sorted(set(after_ids) - set(before_ids))[:20],
+                "extra_failures": len(newly), "extra_errors": 0,
+                "why": ("%d tests that passed before now fail: %s"
+                        % (len(newly), ", ".join(newly[:3]))) if newly else None,
+                "baseline_was_red": any(s in ("failure", "error") for s in before_ids.values())}
     fewer = max(0, (baseline.get("tests_run") or 0) - (after.get("tests_run") or 0))
     worse_f = (after.get("failures") or 0) - (baseline.get("failures") or 0)
     worse_e = (after.get("errors") or 0) - (baseline.get("errors") or 0)

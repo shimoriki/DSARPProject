@@ -1,0 +1,62 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.UnivariateStatistic\"}], \"rationale\": \"invert the dependency of UnivariateStatistic on moment classes\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive.moment org.apache.commons.math4.legacy.stat.descriptive.UnivariateStatistic",
+      "already an interface"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 904,
+    "completion_tokens": 63
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.UnivariateStatistic\"}], \"rationale\": \"inverted edge to break the cycle\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive.moment org.apache.commons.math4.legacy.stat.descriptive.UnivariateStatistic",
+      "already an interface"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 969,
+    "completion_tokens": 60
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.UnivariateStatistic\"}], \"rationale\": \"Invert edge to break the cycle\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive.moment org.apache.commons.math4.legacy.stat.descriptive.UnivariateStatistic",
+      "already an interface"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 969,
+    "completion_tokens": 60
+   }
+  ],
+  "refused": []
+ }
+]

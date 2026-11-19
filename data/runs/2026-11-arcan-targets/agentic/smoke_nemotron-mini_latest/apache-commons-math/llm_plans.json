@@ -1,0 +1,64 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.SynchronizedMultivariateSummaryStatistics\",\n      \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"\n    },\n    {\n      \"op\": \"invertEdge\",\n      \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive.SynchronizedMultivariateSummaryStatistics\",\n      \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics\"\n    }\n  ],\n  \"rationale\": \"Remove a Java package cycle by moving the SynchronizedMultivariateSummaryStatistics class from org.apache.commons.math4.legacy.stat.descriptive.moment to org.apache.commons.math4.legacy.stat.descriptive.\"\n}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.math4.legacy.stat.descriptive.SynchronizedMultivariateSummaryStatistics",
+      "refused: move rule"
+     ],
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive.SynchronizedMultivariateSummaryStatistics org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics",
+      "unknown package"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1162,
+    "completion_tokens": 210
+   },
+   {
+    "text": "{\"operations\": [], \"rationale\": \"The requested operation is not allowed. The 'moveClass' operation is not allowed to move a class into another Maven module.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1288,
+    "completion_tokens": 36
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"}], \"rationale\": \"Remove the cycle by moving the class to a package outside the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1207,
+    "completion_tokens": 78
+   }
+  ],
+  "refused": [
+   "org.apache.commons.math4.legacy.stat.descriptive.SynchronizedMultivariateSummaryStatistics"
+  ]
+ }
+]

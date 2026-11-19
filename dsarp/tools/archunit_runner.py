@@ -126,6 +126,12 @@ def novel_cycles(before: Set[frozenset], after: Set[frozenset]) -> List[List[str
     return sorted(sorted(c) for c in after if not any(c <= b for b in before))
 
 
+def regression_rule(frm: str, to: str) -> str:
+    """An ArchUnit rule that fails if a removed package edge comes back."""
+    return ('noClasses().that().resideInAPackage("%s")\n'
+            '    .should().dependOnClassesThat().resideInAPackage("%s");' % (frm, to))
+
+
 def edge_map(result: Dict[str, Any]) -> Dict[tuple, int]:
     """Every package edge in the run, mapped to how many classes carry it.
 

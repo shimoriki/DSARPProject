@@ -1,0 +1,79 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\", \"to\": \"org.apache.commons.text\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.XmlEncoderStringLookup\", \"to\": \"org.apache.commons.text\"}], \"rationale\": \"Moving the two lookup classes into the text package removes all dependencies from lookup to text, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.lookup.XmlDecoderStringLookup",
+      "org.apache.commons.text"
+     ],
+     [
+      "move",
+      "org.apache.commons.text.lookup.XmlEncoderStringLookup",
+      "org.apache.commons.text"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 783,
+    "completion_tokens": 5948
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringEscapeUtils\", \"to\": \"org.apache.commons.text.lookup\"}], \"rationale\": \"Moving StringEscapeUtils to the lookup package removes both lookup\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1025,
+    "completion_tokens": 5145
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.XmlDecoderStringLookup\", \"to\": \"org.apache.commons.text\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.XmlEncoderStringLookup\", \"to\": \"org.apache.commons.text\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"}], \"rationale\": \"Moving the four classes that create cross\u2011package dependencies eliminates all edges between the two packages, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.lookup.XmlDecoderStringLookup",
+      "org.apache.commons.text"
+     ],
+     [
+      "move",
+      "org.apache.commons.text.lookup.XmlEncoderStringLookup",
+      "org.apache.commons.text"
+     ],
+     [
+      "move",
+      "org.apache.commons.text.StrLookup",
+      "org.apache.commons.text.lookup"
+     ],
+     [
+      "move",
+      "org.apache.commons.text.StringSubstitutor",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 803,
+    "completion_tokens": 5003
+   }
+  ],
+  "refused": []
+ }
+]

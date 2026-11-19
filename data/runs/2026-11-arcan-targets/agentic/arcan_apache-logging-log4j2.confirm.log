@@ -1,0 +1,19 @@
+﻿java level 8, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.logging.log4j.io', 'org.apache.logging.log4j.io.internal']: stage=no_plan level=0 left=None
+['org.apache.logging.log4j.layout.template.json', 'org.apache.logging.log4j.layout.template.json.resolver']: stage=judged level=2 left=0
+['org.apache.logging.log4j.test', 'org.apache.logging.log4j.test.junit']: stage=judged level=2 left=0
+['org.apache.log4j', 'org.apache.log4j.bridge', 'org.apache.log4j.builders', 'org.apache.log4j.builders.appender', 'org.apache.log4j.builders.filter', 'org.apache.log4j.builders.layout', 'org.apache.log4j.builders.rewrite', 'org.apache.log4j.builders.rolling', 'org.apache.log4j.config', 'org.apache.log4j.helpers', 'org.apache.log4j.or', 'org.apache.log4j.rewrite', 'org.apache.log4j.spi', 'org.apache.log4j.xml']: stage=no_plan level=0 left=None
+{
+ "targets": 4,
+ "levels": {
+  "0": 2,
+  "2": 2
+ },
+ "states": {
+  "n/a": 2,
+  "FAIL": 2
+ },
+ "dissolved": 0,
+ "success": 0,
+ "success_without_api_break": 0
+}

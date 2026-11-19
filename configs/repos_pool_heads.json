@@ -1,0 +1,202 @@
+{
+ "apache/commons-beanutils": {
+  "split": "discovery",
+  "head": "fd731667fbc50e704f567185a94b1659d8cfcac5",
+  "note": ""
+ },
+ "apache/commons-configuration": {
+  "split": "holdout",
+  "head": "f5ab68aeb5044ded0ea067c1ec31383700d551b8",
+  "note": ""
+ },
+ "apache/commons-compress": {
+  "split": "discovery",
+  "head": "69a29b75922f7e525412dc6b7454b70d1f2be2bd",
+  "note": ""
+ },
+ "apache/commons-dbcp": {
+  "split": "discovery",
+  "head": "7b07108c22b9ed5a461e045ff2baca3b46eae22a",
+  "note": ""
+ },
+ "apache/commons-pool": {
+  "split": "discovery",
+  "head": "ad6feea94127ba04a29cf931fdd89118f45420f3",
+  "note": ""
+ },
+ "apache/commons-math": {
+  "split": "holdout",
+  "head": "e253f396ba47edf008f60c903c4623496c7eef49",
+  "note": ""
+ },
+ "apache/commons-net": {
+  "split": "discovery",
+  "head": "e7f3792d2a3aa75f4775ff7a799f1eaaebd91557",
+  "note": ""
+ },
+ "apache/commons-vfs": {
+  "split": "discovery",
+  "head": "5c9340679899e874f99982af523b41d643dbbede",
+  "note": ""
+ },
+ "apache/commons-jexl": {
+  "split": "holdout",
+  "head": "4c022d7d556b2745d9dcea00fccef3c8c38a9ad6",
+  "note": ""
+ },
+ "apache/commons-imaging": {
+  "split": "holdout",
+  "head": "116f4cf772c7af8e2f90b517f7d32ae43440fea3",
+  "note": ""
+ },
+ "apache/commons-fileupload": {
+  "split": "discovery",
+  "head": "1a245e428786a2a47cc2fda1e5147f29975f5fed",
+  "note": ""
+ },
+ "apache/commons-dbutils": {
+  "split": "holdout",
+  "head": "5f462f673a9b7b97e580373b632b0219034f753a",
+  "note": ""
+ },
+ "apache/commons-exec": {
+  "split": "holdout",
+  "head": "4a27212367272c91da8dc01732f9c20be964de48",
+  "note": ""
+ },
+ "apache/commons-jxpath": {
+  "split": "discovery",
+  "head": "acc387755290144b04797781f9a1291f9f590310",
+  "note": ""
+ },
+ "apache/commons-rng": {
+  "split": "holdout",
+  "head": "2ac8087c7b4ae15eaf68b762c53900f5058b37fb",
+  "note": ""
+ },
+ "apache/commons-numbers": {
+  "split": "discovery",
+  "head": "b839749b5cbba8960925774ad5574e4fea3ce75b",
+  "note": ""
+ },
+ "apache/commons-geometry": {
+  "split": "holdout",
+  "head": "b0ef1db2e1ea8f7162e43f8e7eb0657427791612",
+  "note": ""
+ },
+ "apache/commons-statistics": {
+  "split": "discovery",
+  "head": "bfcc6e62e2960512ff699809434d5d7774bf16dd",
+  "note": ""
+ },
+ "apache/commons-crypto": {
+  "split": "discovery",
+  "head": "6f6667436a2ae2df72799809140036927663111a",
+  "note": ""
+ },
+ "apache/commons-digester": {
+  "split": "discovery",
+  "head": "58bac0b34d88575673e48a9a5dc33a89c1d72a1b",
+  "note": ""
+ },
+ "apache/commons-scxml": {
+  "split": "discovery",
+  "head": "4cc059ff9d256454b1facc3a8b97192bd730220c",
+  "note": ""
+ },
+ "apache/commons-jcs": {
+  "split": "holdout",
+  "head": "1dd9d2140d8e9131e46e009ff52af8fe1b4e235f",
+  "note": ""
+ },
+ "apache/commons-logging": {
+  "split": "holdout",
+  "head": "b6d354dacec2e33c4456f67b3f0420fc33420891",
+  "note": ""
+ },
+ "apache/commons-bcel": {
+  "split": "discovery",
+  "head": "bb86e5547a5371485fb266972c66b2b0e6d29b03",
+  "note": ""
+ },
+ "apache/httpcomponents-core": {
+  "split": "discovery",
+  "head": "9983b0361bd69f6b2b0e17bc514da46c527a57fb",
+  "note": ""
+ },
+ "apache/httpcomponents-client": {
+  "split": "discovery",
+  "head": "6335ff1a091d46edabfbebf227a28c27742c7115",
+  "note": ""
+ },
+ "apache/zookeeper": {
+  "split": "holdout",
+  "head": "be742482253da3a4237a496b81a37845995d0433",
+  "note": ""
+ },
+ "apache/curator": {
+  "split": "discovery",
+  "head": "0d09f025051f3a4def75bdeb472b0e7a20a0b12b",
+  "note": ""
+ },
+ "apache/maven-resolver": {
+  "split": "discovery",
+  "head": "9a834503cc3939ce9a70444fdc28fcde719f6088",
+  "note": ""
+ },
+ "apache/shiro": {
+  "split": "holdout",
+  "head": "0a1740ca25adc2f5c683604118e4d935b2bf2c34",
+  "note": ""
+ },
+ "apache/velocity-engine": {
+  "split": "holdout",
+  "head": "6f6290c32d44a403b5afe58af268cb43db69d951",
+  "note": ""
+ },
+ "apache/mina": {
+  "split": "holdout",
+  "head": "7cb583db4ff9795ea7c98db16c36990e847d1899",
+  "note": ""
+ },
+ "apache/mina-sshd": {
+  "split": "holdout",
+  "head": "fc47398a278849349df64dbe7affec01365bfc4a",
+  "note": ""
+ },
+ "apache/johnzon": {
+  "split": "holdout",
+  "head": "3db56720a6449039d14bb11a43b99d9acbb83ecd",
+  "note": ""
+ },
+ "apache/parquet-java": {
+  "split": "discovery",
+  "head": "c3b3481dd07a2d724e4bbbc16609c2aef00c97d8",
+  "note": ""
+ },
+ "apache/xmlgraphics-fop": {
+  "split": "discovery",
+  "head": "1301bcf7411d36ddb12dfadbb9fb4e85f78063f8",
+  "note": ""
+ },
+ "apache/xmlgraphics-batik": {
+  "split": "discovery",
+  "head": "0d9a9b91931ea7512ee79292f940a10899fee66a",
+  "note": ""
+ },
+ "apache/santuario-xml-security-java": {
+  "split": "holdout",
+  "head": "c1f99bf3fec5c704b2e54210bf1bd481103fa254",
+  "note": ""
+ },
+ "apache/wss4j": {
+  "split": "holdout",
+  "head": "b9616ae7f98814cc564f206b8c858d125476b2bb",
+  "note": "GitHub name is apache/ws-wss4j; split kept from the name fixed before cloning"
+ },
+ "apache/wicket": {
+  "split": "holdout",
+  "head": "6a05e9acffa24bfabeaf7c5a5b7547f3795696f8",
+  "note": ""
+ }
+}

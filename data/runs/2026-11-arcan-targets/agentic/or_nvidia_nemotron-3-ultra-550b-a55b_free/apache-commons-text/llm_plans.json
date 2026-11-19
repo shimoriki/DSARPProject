@@ -1,0 +1,43 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.text.StringEscapeUtils",
+    "org.apache.commons.text.lookup"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringEscapeUtils\", \"to\": \"org.apache.commons.text.lookup\"}], \"rationale\": \"Moving StringEscapeUtils to the lookup package eliminates the two dependencies from lookup to text, breaking the cycle with a single operation.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StringEscapeUtils",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 855,
+    "completion_tokens": 2821
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": []
+ }
+]

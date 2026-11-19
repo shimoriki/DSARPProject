@@ -1,0 +1,63 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\"}], \"rationale\": \"Inverting the sole dependency from descriptive to moment reverses the only edge in that direction, breaking the package cycle with a single operation.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "constructed by org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 926,
+    "completion_tokens": 3667
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\"}], \"rationale\": \"Moving the sole class responsible for the descriptive->moment dependency into moment eliminates that package edge, breaking the two-package cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1008,
+    "completion_tokens": 9376
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\"}], \"rationale\": \"Invert the single dependency from descriptive to moment by making VectorialCovariance implement an interface in descriptive, eliminating the package cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "constructed by org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 959,
+    "completion_tokens": 3871
+   }
+  ],
+  "refused": []
+ }
+]

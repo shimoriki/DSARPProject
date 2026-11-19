@@ -1,0 +1,67 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"Moving DefaultExecutor into launcher removes both class edges of the cheapest package edge org.apache.commons.exec -> org.apache.commons.exec.launcher, which is the only outgoing edge of org.apache.commons.exec, leaving just launcher -> environment -> exec and launcher -> exec, an acyclic graph.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 939,
+    "completion_tokens": 8981
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncher\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\"}], \"rationale\": \"Inverting both org.apache.commons.exec -> launcher dependencies removes the only edge feeding every cycle, leaving environment->exec, launcher->exec, launcher->environment, which is acyclic.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncher",
+      "already an interface"
+     ],
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "consumer and implementation in different source roots"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 983,
+    "completion_tokens": 6426
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"Moving DefaultExecutor (the only source of the org.apache.commons.exec -> launcher edges) into launcher leaves only launcher -> exec, launcher -> environment, and environment -> exec edges, which is acyclic, and no outside package is pulled into a cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 1014,
+    "completion_tokens": 2809
+   }
+  ],
+  "refused": []
+ }
+]

@@ -1,0 +1,6 @@
+﻿java level 8, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.logging.log4j.io', 'org.apache.logging.log4j.io.internal']: 0 moves, 0 inversions, predicted left 2
+['org.apache.logging.log4j.layout.template.json', 'org.apache.logging.log4j.layout.template.json.resolver']: 2 moves, 0 inversions, predicted left 0
+['org.apache.logging.log4j.test', 'org.apache.logging.log4j.test.junit']: 1 moves, 0 inversions, predicted left 0
+['org.apache.log4j', 'org.apache.log4j.bridge', 'org.apache.log4j.builders', 'org.apache.log4j.builders.appender', 'org.apache.log4j.builders.filter', 'org.apache.log4j.builders.layout', 'org.apache.log4j.builders.rewrite', 'org.apache.log4j.builders.rolling', 'org.apache.log4j.config', 'org.apache.log4j.helpers', 'org.apache.log4j.or', 'org.apache.log4j.rewrite', 'org.apache.log4j.spi', 'org.apache.log4j.xml']: 0 moves, 0 inversions, predicted left 14
+frozen: C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\agentic\arcan_apache-logging-log4j2\preregistration.json

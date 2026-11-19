@@ -1,0 +1,125 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.SemiVariance",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ],
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ],
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedMean",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ],
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedVariance",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.SemiVariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedMean\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedVariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"},\n  {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.AbstractUnivariateStatistic\"},\n  {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.UnivariateStatistic\"},\n  {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.WeightedEvaluation\"}\n],\n\"rationale\": \"This plan breaks the cycle by moving descriptive moment classes to the descriptive package and inverting their edges to the moment package, ensuring no class in the cycle remains dependent on another within the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive.moment org.apache.commons.math4.legacy.stat.descriptive.UnivariateStatistic",
+      "already an interface"
+     ],
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive.moment org.apache.commons.math4.legacy.stat.descriptive.WeightedEvaluation",
+      "already an interface"
+     ]
+    ],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.SemiVariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedMean",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedVariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ],
+     [
+      "invert",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment",
+      "org.apache.commons.math4.legacy.stat.descriptive.AbstractUnivariateStatistic"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 1168,
+    "completion_tokens": 429
+   },
+   {
+    "text": "{\"operations\": [], \"rationale\": \"No further refactorings are needed as the packages are already free of cycles.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1267,
+    "completion_tokens": 26
+   },
+   {
+    "text": "{\"operations\": [\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.SemiVariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedMean\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedVariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"}\n],\n\"rationale\": \"By moving the moment package's classes into the descriptive package, we break the cycle as the dependent package (descriptive) now has interfaces implemented by the moved classes, thus inverting the dependency edges.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.SemiVariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedMean",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.WeightedVariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 1215,
+    "completion_tokens": 269
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": []
+ }
+]

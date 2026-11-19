@@ -1,0 +1,111 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.text.StrLookup",
+    "org.apache.commons.text.lookup"
+   ],
+   [
+    "org.apache.commons.text.StringSubstitutor",
+    "org.apache.commons.text.lookup"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"}], \"rationale\": \"Moving StrLookup and StringSubstitutor to the lookup package eliminates all dependencies from the text package to lookup, breaking the package cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StrLookup",
+      "org.apache.commons.text.lookup"
+     ],
+     [
+      "move",
+      "org.apache.commons.text.StringSubstitutor",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 783,
+    "completion_tokens": 8620
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"}], \"rationale\": \"Moving StrLookup and StringSubstitutor into the lookup package removes all three text\u2192lookup dependencies, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StrLookup",
+      "org.apache.commons.text.lookup"
+     ],
+     [
+      "move",
+      "org.apache.commons.text.StringSubstitutor",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 803,
+    "completion_tokens": 2723
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.StringLookup\", \"to\": \"org.apache.commons.text\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.lookup.StringLookupFactory\", \"to\": \"org.apache.commons.text\"}], \"rationale\": \"Moving the two lookup classes into the text package eliminates all dependencies from text to lookup, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.lookup.StringLookup",
+      "org.apache.commons.text"
+     ],
+     [
+      "move",
+      "org.apache.commons.text.lookup.StringLookupFactory",
+      "org.apache.commons.text"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 803,
+    "completion_tokens": 3072
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": [],
+  "arcan": {
+   "measured": true,
+   "in_before": true,
+   "left": [
+    [
+     "org.apache.commons.text",
+     "org.apache.commons.text.lookup"
+    ]
+   ],
+   "added": [],
+   "dissolved": false,
+   "by_type": {
+    "Cyclic Dependency": 33,
+    "Unstable Dependency": 1
+   },
+   "why": "Arcan still reports [['org.apache.commons.text', 'org.apache.commons.text.lookup']]"
+  }
+ }
+]

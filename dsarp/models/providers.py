@@ -10,15 +10,19 @@ The interface is whatever `refactoring/ai_recipes.propose()` already duck-types 
     provider.generate(prompt, max_tokens=..., temperature=..., json_mode=...) -> .text
 
 Nothing more. Kept deliberately small — a provider that can also stream, count tokens or
-retry is a provider with three more ways to be wrong at 3am.
+retry is a provider with three more ways to be wrong at 3am. The one exception: HTTP 429 is
+retried with backoff, because hosted free tiers rate-limit and a lost call reads as a weak model.
 """
 from __future__ import annotations
 
 import json
 import os
+import sys
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from typing import Any, Dict, Optional, Protocol
 
 # Ollama's default port. vLLM serves 8000, llama.cpp 8080 — override via config/--base-url.
@@ -60,21 +64,66 @@ class LocalProvider:
     """Any OpenAI-compatible endpoint served from this machine."""
 
     def __init__(self, model: str, base_url: str = DEFAULT_BASE_URL,
-                 timeout: int = 300, system: str = "", api_key: str = "dsarp-local"):
+                 timeout: int = 300, system: str = "", api_key: str = "dsarp-local",
+                 retries: int = 6, uncapped: bool = False, min_interval: float = 0,
+                 max_wait: float = 300):
         self.model = model
         self.name = model
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.system = system
         self.api_key = api_key
+        # Hosted free tiers answer 429 when their shared pool is busy; a call that gave up at
+        # once read as a model that could not plan (Gemma 4 on OpenRouter, 0 rounds of 3).
+        self.retries = retries
+        # Reasoning models spend hidden tokens before the answer: Cohere's code model used all
+        # 800 thinking and returned nothing. Uncapped leaves the limit to the server's capacity.
+        self.uncapped = uncapped
+        # Throttle: at least this many seconds between calls, so a per-minute limit is never hit.
+        self.min_interval = min_interval
+        # A 429 whose reset is further off than this is a spent quota (daily cap), not a busy
+        # pool: fail at once with the reset time instead of sleeping for hours.
+        self.max_wait = max_wait
+        self._last_call = None
+
+    def _throttle(self) -> None:
+        if self.min_interval and self._last_call is not None:
+            gap = self.min_interval - (time.monotonic() - self._last_call)
+            if gap > 0:
+                time.sleep(gap)
+        self._last_call = time.monotonic()
+
+    @staticmethod
+    def _wait_for(headers, attempt: int) -> float:
+        """Seconds the server asks us to wait: Retry-After (seconds or HTTP date), else
+        X-RateLimit-Reset (epoch ms, OpenRouter's form, or s), else 2, 4, 8 ... capped at 60."""
+        headers = headers or {}
+        after = headers.get("Retry-After")
+        if after:
+            try:
+                return max(0.0, float(after))
+            except ValueError:
+                try:
+                    return max(0.0, parsedate_to_datetime(after).timestamp() - time.time())
+                except (TypeError, ValueError):
+                    pass
+        reset = headers.get("X-RateLimit-Reset")
+        if reset:
+            try:
+                at = float(reset)
+                return max(0.0, (at / 1000 if at > 1e11 else at) - time.time())
+            except ValueError:
+                pass
+        return min(60, 2 ** (attempt + 1))
 
     def generate(self, prompt: str, max_tokens: int = 600, temperature: float = 0.1,
                  json_mode: bool = False) -> Completion:
         messages = ([{"role": "system", "content": self.system}] if self.system else [])
         messages.append({"role": "user", "content": prompt})
         payload: Dict[str, Any] = {"model": self.model, "messages": messages,
-                                   "max_tokens": max_tokens, "temperature": temperature,
-                                   "stream": False}
+                                   "temperature": temperature, "stream": False}
+        if not self.uncapped:
+            payload["max_tokens"] = max_tokens
         if json_mode:
             # Ollama, vLLM and llama.cpp all honour this; a server that does not simply
             # ignores it and the caller's own JSON extraction still runs.
@@ -84,11 +133,36 @@ class LocalProvider:
             data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json",
                      "Authorization": f"Bearer {self.api_key}"})
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                body = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.URLError as e:
-            raise RuntimeError(f"local model at {self.base_url} unreachable: {e}") from e
+        for attempt in range(self.retries + 1):
+            self._throttle()
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    body = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as e:
+                if e.code != 429 or attempt == self.retries:
+                    raise RuntimeError(f"local model at {self.base_url} unreachable: {e}") from e
+                wait = self._wait_for(e.headers, attempt)
+                h = e.headers or {}
+                limit = "limit %s, remaining %s" % (h.get("X-RateLimit-Limit"),
+                                                    h.get("X-RateLimit-Remaining"))
+                if wait > self.max_wait:
+                    raise RuntimeError(f"{self.model} rate limit resets in {wait:.0f}s, over "
+                                       f"max_wait {self.max_wait:.0f}s ({limit})") from e
+                print(f"429 from {self.model}: waiting {wait:.0f}s ({limit})",
+                      file=sys.stderr, flush=True)
+                time.sleep(wait)
+            except (urllib.error.URLError, ConnectionResetError, ConnectionAbortedError) as e:
+                # A dropped connection mid-call (WinError 10054, RemoteDisconnected) is a flaky
+                # host: retry with backoff. Refused means nothing is listening: fail at once.
+                reason = getattr(e, "reason", e)
+                if (not isinstance(reason, (ConnectionResetError, ConnectionAbortedError))
+                        or attempt == self.retries):
+                    raise RuntimeError(f"local model at {self.base_url} unreachable: {e}") from e
+                wait = min(60, 2 ** (attempt + 1))
+                print(f"connection dropped by {self.model}: retrying in {wait}s ({e})",
+                      file=sys.stderr, flush=True)
+                time.sleep(wait)
         try:
             text = body["choices"][0]["message"]["content"]
         except (KeyError, IndexError) as e:

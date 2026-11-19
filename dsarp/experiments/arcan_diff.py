@@ -49,6 +49,39 @@ def cycle_sets(arcan_dir: Path, level: str) -> Set[frozenset]:
     return out
 
 
+def _by_size(sets) -> List[List[str]]:
+    return sorted((sorted(s) for s in sets), key=lambda s: (len(s), s))
+
+
+def cycle_clusters(arcan_dir: Path, level: str = "package") -> List[List[str]]:
+    """Refactoring targets as Arcan sees them: its cycles, overlapping ones merged into one tangle
+    (Commons Exec's {exec, launcher} and {exec, environment, launcher} are one problem). Smallest
+    first. A planner given these works on smells Arcan reports, not on the class graph's guess."""
+    clusters: List[set] = []
+    for c in cycle_sets(arcan_dir, level):
+        joined = set(c)
+        for k in [k for k in clusters if k & joined]:
+            joined |= k
+            clusters.remove(k)
+        clusters.append(joined)
+    return _by_size(clusters)
+
+
+def cycles_dissolved(members: List[str], before_dir: Path, after_dir: Path,
+                     level: str = "package") -> Dict[str, Any]:
+    """Did Arcan stop reporting this target? Dissolved means no cycle after the change holds two
+    or more of its members: a surviving sub-cycle, or the same members cycling through a new
+    package, is the smell still there. Arcan writes the table even with zero cycles, so a
+    missing one after means Arcan did not run on the change: unmeasured, never dissolved."""
+    target = set(members)
+    measured = (Path(after_dir) / CYCLE_FILES[level]).is_file()
+    before, after = cycle_sets(before_dir, level), cycle_sets(after_dir, level)
+    in_before = any(len(c & target) >= 2 for c in before)
+    left = [c for c in after if len(c & target) >= 2]
+    return {"measured": measured, "in_before": in_before, "left": _by_size(left),
+            "added": _by_size(after - before), "dissolved": measured and in_before and not left}
+
+
 def unstable_pairs(arcan_dir: Path) -> Set[Tuple[str, str]]:
     out = set()
     for name in ("UD.csv", "UD30.csv"):

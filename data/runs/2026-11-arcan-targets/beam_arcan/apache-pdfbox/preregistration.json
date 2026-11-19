@@ -1,0 +1,105 @@
+{
+ "selection": {
+  "max_size": 15,
+  "limit": 10,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "moves",
+  "repair": false,
+  "targets": "arcan"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.pdfbox.examples.signature",
+    "org.apache.pdfbox.examples.signature.cert"
+   ],
+   "size": 2,
+   "predicted_left": 0,
+   "dissolves": true,
+   "moves": [
+    [
+     "org.apache.pdfbox.examples.signature.cert.CRLVerifier",
+     "org.apache.pdfbox.examples.signature"
+    ],
+    [
+     "org.apache.pdfbox.examples.signature.cert.CertificateVerifier",
+     "org.apache.pdfbox.examples.signature"
+    ],
+    [
+     "org.apache.pdfbox.examples.signature.cert.OcspHelper",
+     "org.apache.pdfbox.examples.signature"
+    ]
+   ],
+   "candidates": 6,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.xmpbox",
+    "org.apache.xmpbox.schema",
+    "org.apache.xmpbox.type"
+   ],
+   "size": 3,
+   "predicted_left": 3,
+   "dissolves": false,
+   "moves": [],
+   "candidates": 74,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.fontbox.cff",
+    "org.apache.fontbox.ttf",
+    "org.apache.fontbox.ttf.gsub",
+    "org.apache.fontbox.type1"
+   ],
+   "size": 4,
+   "predicted_left": 2,
+   "dissolves": false,
+   "moves": [
+    [
+     "org.apache.fontbox.ttf.CmapLookup",
+     "org.apache.fontbox.ttf.gsub"
+    ],
+    [
+     "org.apache.fontbox.type1.Type1CharStringReader",
+     "org.apache.fontbox.cff"
+    ]
+   ],
+   "candidates": 15,
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.pdfbox.debugger",
+    "org.apache.pdfbox.debugger.pagepane",
+    "org.apache.pdfbox.debugger.streampane",
+    "org.apache.pdfbox.debugger.treestatus",
+    "org.apache.pdfbox.debugger.ui",
+    "org.apache.pdfbox.debugger.ui.textsearcher"
+   ],
+   "size": 6,
+   "predicted_left": 5,
+   "dissolves": false,
+   "moves": [
+    [
+     "org.apache.pdfbox.debugger.PDFDebugger",
+     "org.apache.pdfbox.debugger.pagepane"
+    ]
+   ],
+   "candidates": 55,
+   "refused": [
+    "org.apache.pdfbox.debugger.pagepane.PagePane"
+   ]
+  }
+ ]
+}

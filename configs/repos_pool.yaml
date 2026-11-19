@@ -1,0 +1,47 @@
+# Repo pool for the mixed-operator study (spec section 9), fixed 2026-11-03 before any repo was cloned.
+# Split rule: sha256('apache/<name>') first hex digit 0-7 -> discovery, 8-f -> holdout.
+# Repos already used in pilots or confirmatory runs are discovery regardless of hash.
+used_discovery: [pdfbox, tika, commons-validator, logging-log4j2, struts, karaf, opennlp,
+  commons-collections, maven, guava, commons-csv, commons-email, commons-codec, commons-cli,
+  commons-text, commons-io, commons-lang]
+repositories:
+  - {project_id: apache-commons-beanutils, repo_url: https://github.com/apache/commons-beanutils, split: discovery}
+  - {project_id: apache-commons-configuration, repo_url: https://github.com/apache/commons-configuration, split: holdout}
+  - {project_id: apache-commons-compress, repo_url: https://github.com/apache/commons-compress, split: discovery}
+  - {project_id: apache-commons-dbcp, repo_url: https://github.com/apache/commons-dbcp, split: discovery}
+  - {project_id: apache-commons-pool, repo_url: https://github.com/apache/commons-pool, split: discovery}
+  - {project_id: apache-commons-math, repo_url: https://github.com/apache/commons-math, split: holdout}
+  - {project_id: apache-commons-net, repo_url: https://github.com/apache/commons-net, split: discovery}
+  - {project_id: apache-commons-vfs, repo_url: https://github.com/apache/commons-vfs, split: discovery}
+  - {project_id: apache-commons-jexl, repo_url: https://github.com/apache/commons-jexl, split: holdout}
+  - {project_id: apache-commons-imaging, repo_url: https://github.com/apache/commons-imaging, split: holdout}
+  - {project_id: apache-commons-fileupload, repo_url: https://github.com/apache/commons-fileupload, split: discovery}
+  - {project_id: apache-commons-dbutils, repo_url: https://github.com/apache/commons-dbutils, split: holdout}
+  - {project_id: apache-commons-exec, repo_url: https://github.com/apache/commons-exec, split: holdout}
+  - {project_id: apache-commons-jxpath, repo_url: https://github.com/apache/commons-jxpath, split: discovery}
+  - {project_id: apache-commons-rng, repo_url: https://github.com/apache/commons-rng, split: holdout}
+  - {project_id: apache-commons-numbers, repo_url: https://github.com/apache/commons-numbers, split: discovery}
+  - {project_id: apache-commons-geometry, repo_url: https://github.com/apache/commons-geometry, split: holdout}
+  - {project_id: apache-commons-statistics, repo_url: https://github.com/apache/commons-statistics, split: discovery}
+  - {project_id: apache-commons-crypto, repo_url: https://github.com/apache/commons-crypto, split: discovery}
+  - {project_id: apache-commons-digester, repo_url: https://github.com/apache/commons-digester, split: discovery}
+  - {project_id: apache-commons-scxml, repo_url: https://github.com/apache/commons-scxml, split: discovery}
+  - {project_id: apache-commons-jcs, repo_url: https://github.com/apache/commons-jcs, split: holdout}
+  - {project_id: apache-commons-logging, repo_url: https://github.com/apache/commons-logging, split: holdout}
+  - {project_id: apache-commons-bcel, repo_url: https://github.com/apache/commons-bcel, split: discovery}
+  - {project_id: apache-httpcomponents-core, repo_url: https://github.com/apache/httpcomponents-core, split: discovery}
+  - {project_id: apache-httpcomponents-client, repo_url: https://github.com/apache/httpcomponents-client, split: discovery}
+  - {project_id: apache-zookeeper, repo_url: https://github.com/apache/zookeeper, split: holdout}
+  - {project_id: apache-curator, repo_url: https://github.com/apache/curator, split: discovery}
+  - {project_id: apache-maven-resolver, repo_url: https://github.com/apache/maven-resolver, split: discovery}
+  - {project_id: apache-shiro, repo_url: https://github.com/apache/shiro, split: holdout}
+  - {project_id: apache-velocity-engine, repo_url: https://github.com/apache/velocity-engine, split: holdout}
+  - {project_id: apache-mina, repo_url: https://github.com/apache/mina, split: holdout}
+  - {project_id: apache-mina-sshd, repo_url: https://github.com/apache/mina-sshd, split: holdout}
+  - {project_id: apache-johnzon, repo_url: https://github.com/apache/johnzon, split: holdout}
+  - {project_id: apache-parquet-java, repo_url: https://github.com/apache/parquet-java, split: discovery}
+  - {project_id: apache-xmlgraphics-fop, repo_url: https://github.com/apache/xmlgraphics-fop, split: discovery}
+  - {project_id: apache-xmlgraphics-batik, repo_url: https://github.com/apache/xmlgraphics-batik, split: discovery}
+  - {project_id: apache-santuario-xml-security-java, repo_url: https://github.com/apache/santuario-xml-security-java, split: holdout}
+  - {project_id: apache-wss4j, repo_url: https://github.com/apache/ws-wss4j, split: holdout}
+  - {project_id: apache-wicket, repo_url: https://github.com/apache/wicket, split: holdout}

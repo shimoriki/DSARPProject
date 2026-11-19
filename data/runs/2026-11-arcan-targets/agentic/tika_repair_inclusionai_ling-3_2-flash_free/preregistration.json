@@ -1,0 +1,92 @@
+{
+ "selection": {
+  "max_size": 3,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "inclusionai/ling-3.2-flash:free"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.tika.eval.core.langid",
+    "org.apache.tika.eval.core.textstats",
+    "org.apache.tika.eval.core.tokens"
+   ],
+   "size": 3,
+   "moves": [
+    [
+     "org.apache.tika.eval.core.langid.LanguageIDWrapper",
+     "org.apache.tika.eval.core.textstats"
+    ],
+    [
+     "org.apache.tika.eval.core.tokens.TokenCounter",
+     "org.apache.tika.eval.core.textstats"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.eval.core.textstats\", \"impl\": \"org.apache.tika.eval.core.langid.LanguageIDWrapper\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.eval.core.tokens\", \"impl\": \"org.apache.tika.eval.core.textstats.TokenCountPriorityQueue\"}], \"rationale\": \"Inverting the textstats\u2192langid edge and the tokens\u2192textstats edge removes both two-package cycles, leaving only the acyclic chain langid\u2192textstats\u2192tokens with two operations.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.tika.eval.core.textstats org.apache.tika.eval.core.langid.LanguageIDWrapper",
+       "constructed by org.apache.tika.eval.core.textstats.CompositeTextStatsCalculator"
+      ],
+      [
+       "invertEdge org.apache.tika.eval.core.tokens org.apache.tika.eval.core.textstats.TokenCountPriorityQueue",
+       "the consumer declares nothing of that type"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1784,
+     "completion_tokens": 8639
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.eval.core.langid.LanguageIDWrapper\", \"to\": \"org.apache.tika.eval.core.textstats\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.eval.core.tokens.TokenCounter\", \"to\": \"org.apache.tika.eval.core.textstats\"}], \"rationale\": \"Moving LanguageIDWrapper into textstats empties langid and eliminates both langid<->textstats edges, while moving TokenCounter into textstats removes the only tokens->textstats edge, leaving a one-way textstats->tokens dependency with no cycles.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.eval.core.langid.LanguageIDWrapper",
+       "org.apache.tika.eval.core.textstats"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.tokens.TokenCounter",
+       "org.apache.tika.eval.core.textstats"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 1894,
+     "completion_tokens": 16010
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": []
+  }
+ ]
+}

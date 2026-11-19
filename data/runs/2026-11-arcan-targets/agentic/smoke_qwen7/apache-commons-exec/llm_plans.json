@@ -1,0 +1,89 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.launcher.CommandLauncherImpl\",\n      \"to\": \"org.apache.commons.exec.environment\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.launcher.Java13CommandLauncher\",\n      \"to\": \"org.apache.commons.exec.environment\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.launcher.OS2CommandLauncher\",\n      \"to\": \"org.apache.commons.exec.environment\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.launcher.VmsCommandLauncher\",\n      \"to\": \"org.apache.commons.exec.environment\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.launcher.WinNTCommandLauncher\",\n      \"to\": \"org.apache.commons.exec.environment\"\n    }\n  ],\n  \"rationale\": \"Move classes that depend on CommandLine to the environment package to break the cycle.\"\n}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherImpl",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.Java13CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.OS2CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.VmsCommandLauncher",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.WinNTCommandLauncher",
+      "org.apache.commons.exec.environment"
+     ]
+    ],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 898,
+    "completion_tokens": 226
+   },
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.environment.DefaultProcessingEnvironment\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.exec.environment.EnvironmentUtils\",\n      \"to\": \"org.apache.commons.exec.launcher\"\n    }\n  ],\n  \"rationale\": \"Moving DefaultProcessingEnvironment and EnvironmentUtils to org.apache.commons.exec.launcher breaks the cycle by removing dependencies from org.apache.commons.exec.environment to org.apache.commons.exec.launcher.\"\n}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.environment.DefaultProcessingEnvironment",
+      "refused: move rule"
+     ],
+     [
+      "moveClass org.apache.commons.exec.environment.EnvironmentUtils",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 925,
+    "completion_tokens": 125
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherImpl\", \"to\": \"org.apache.commons.exec.environment\"}], \"rationale\": \"Moving CommandLauncherImpl to org.apache.commons.exec.environment breaks the cycle by inverting the dependency between org.apache.commons.exec.launcher and org.apache.commons.exec.environment.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherImpl",
+      "org.apache.commons.exec.environment"
+     ]
+    ],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 956,
+    "completion_tokens": 74
+   }
+  ],
+  "refused": []
+ }
+]

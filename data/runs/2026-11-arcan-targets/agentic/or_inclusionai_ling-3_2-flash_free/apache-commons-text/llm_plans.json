@@ -1,0 +1,58 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.text.StringEscapeUtils",
+    "org.apache.commons.text.lookup"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text.lookup\", \"impl\": \"org.apache.commons.text.StringEscapeUtils\"}], \"rationale\": \"Both org.apache.commons.text.lookup -> org.apache.commons.text edges target StringEscapeUtils, so inverting that one dependency removes every back-edge and breaks the cycle in a single operation.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text.lookup org.apache.commons.text.StringEscapeUtils",
+      "5 public instance methods, 45 statics, utility-shaped name"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 853,
+    "completion_tokens": 5712
+   },
+   {
+    "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.commons.text.StringEscapeUtils\",\"to\":\"org.apache.commons.text.lookup\"}],\"rationale\":\"Moving org.apache.commons.text.StringEscapeUtils into org.apache.commons.text.lookup removes the only reverse package edges, leaving a one-way dependency from org.apache.commons.text to org.apache.commons.text.lookup.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StringEscapeUtils",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 907,
+    "completion_tokens": 17448
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": []
+ }
+]

@@ -1,0 +1,81 @@
+{
+ "selection": {
+  "max_size": 3,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "qwen2.5-coder:7b"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.tika.parser.geo.topic",
+    "org.apache.tika.parser.geo.topic.gazetteer"
+   ],
+   "size": 2,
+   "moves": [
+    [
+     "org.apache.tika.parser.geo.topic.GeoParserConfig",
+     "org.apache.tika.parser.geo.topic.gazetteer"
+    ],
+    [
+     "org.apache.tika.parser.geo.topic.GeoTag",
+     "org.apache.tika.parser.geo.topic.gazetteer"
+    ],
+    [
+     "org.apache.tika.parser.geo.topic.NameEntityExtractor",
+     "org.apache.tika.parser.geo.topic.gazetteer"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.parser.geo.topic.GeoParserConfig\",\n      \"to\": \"org.apache.tika.parser.geo.topic.gazetteer\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.parser.geo.topic.GeoTag\",\n      \"to\": \"org.apache.tika.parser.geo.topic.gazetteer\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.parser.geo.topic.NameEntityExtractor\",\n      \"to\": \"org.apache.tika.parser.geo.topic.gazetteer\"\n    }\n  ],\n  \"rationale\": \"Move GeoParserConfig, GeoTag, and NameEntityExtractor to the gazetteer package to break the cycle.\"\n}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.parser.geo.topic.GeoParserConfig",
+       "org.apache.tika.parser.geo.topic.gazetteer"
+      ],
+      [
+       "move",
+       "org.apache.tika.parser.geo.topic.GeoTag",
+       "org.apache.tika.parser.geo.topic.gazetteer"
+      ],
+      [
+       "move",
+       "org.apache.tika.parser.geo.topic.NameEntityExtractor",
+       "org.apache.tika.parser.geo.topic.gazetteer"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 574,
+     "completion_tokens": 175
+    }
+   ],
+   "dry_run": {
+    "ok": false,
+    "refused": null,
+    "why": "model build failed for java: ModelBuildingException: The import org.apache.tika.config.TikaComponent cannot be resolved at C:\\Users\\Rohit\\AppData\\Local\\Temp\\claude\\7c1264f4a932da85\\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\\scratchpad\\agentic\\tika\\work\\copy\\tika-parsers\\tika-parsers-ml\\tika-parser-nlp-mod"
+   },
+   "refused": []
+  }
+ ]
+}

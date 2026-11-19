@@ -1,0 +1,14 @@
+﻿java level 8, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.commons.compress.harmony.internal', 'org.apache.commons.compress.harmony.pack200']: 0 moves, 0 inversions, predicted left 2
+py.exe : 429 from baidu/ernie-5.5-flash-preview:free: waiting 2s (limit None, remaining None)
+At C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\agentic\ru
+n_arcan_repos.ps1:30 char:5
++     & py -m dsarp.agentic.run $tree $O --targets-from $T @llm --freez ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (429 from baidu/...remaining None):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+429 from baidu/ernie-5.5-flash-preview:free: waiting 4s (limit None, remaining None)
+429 from baidu/ernie-5.5-flash-preview:free: waiting 8s (limit None, remaining None)
+['org.apache.commons.compress.harmony.unpack200', 'org.apache.commons.compress.harmony.unpack200.bytecode', 'org.apache.commons.compress.harmony.unpack200.bytecode.forms']: 1 moves, 0 inversions, predicted left 3
+frozen: C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\agentic\arcan_apache-commons-compress\preregistration.json

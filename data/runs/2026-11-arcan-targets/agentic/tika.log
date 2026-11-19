@@ -1,0 +1,49 @@
+== freeze 22:05
+java level 17, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.tika.eval.app', 'org.apache.tika.eval.app.reports']: 0 moves, 0 inversions, predicted left 2
+['org.apache.tika.parser.geo.topic', 'org.apache.tika.parser.geo.topic.gazetteer']: 3 moves, 0 inversions, predicted left 0
+['org.apache.tika.config.loader', 'org.apache.tika.serialization', 'org.apache.tika.serialization.serdes']: 7 moves, 0 inversions, predicted left 2
+['org.apache.tika.server.core', 'org.apache.tika.server.core.resource', 'org.apache.tika.server.core.writer']: 1 moves, 0 inversions, predicted left 3 (model call failed: timed out)
+['org.apache.tika.eval.core.langid', 'org.apache.tika.eval.core.textstats', 'org.apache.tika.eval.core.tokens']: 0 moves, 0 inversions, predicted left 3
+frozen: C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\agentic\tika\preregistration.json
+== confirm budget 0 22:50
+java level 17, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.tika.eval.app', 'org.apache.tika.eval.app.reports']: stage=no_plan level=0 left=None
+['org.apache.tika.parser.geo.topic', 'org.apache.tika.parser.geo.topic.gazetteer']: stage=build level=1 left=None
+['org.apache.tika.config.loader', 'org.apache.tika.serialization', 'org.apache.tika.serialization.serdes']: stage=judged level=4b left=2
+['org.apache.tika.server.core', 'org.apache.tika.server.core.resource', 'org.apache.tika.server.core.writer']: stage=judged level=2 left=3
+['org.apache.tika.eval.core.langid', 'org.apache.tika.eval.core.textstats', 'org.apache.tika.eval.core.tokens']: stage=no_plan level=0 left=None
+{
+ "targets": 5,
+ "levels": {
+  "0": 2,
+  "1": 1,
+  "4b": 1,
+  "2": 1
+ },
+ "states": {
+  "n/a": 2,
+  "FAIL": 2,
+  "PASS": 1
+ },
+ "dissolved": 0,
+ "success": 1,
+ "success_without_api_break": 0
+}
+== repair arm 00:56
+repair targets: 1
+java level 17, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.tika.parser.geo.topic', 'org.apache.tika.parser.geo.topic.gazetteer']: stage=build level=1 left=None
+{
+ "targets": 1,
+ "levels": {
+  "1": 1
+ },
+ "states": {
+  "FAIL": 1
+ },
+ "dissolved": 0,
+ "success": 0,
+ "success_without_api_break": 0
+}
+== done 01:41
