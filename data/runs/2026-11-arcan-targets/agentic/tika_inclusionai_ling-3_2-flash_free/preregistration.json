@@ -1,0 +1,344 @@
+{
+ "selection": {
+  "max_size": 3,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "inclusionai/ling-3.2-flash:free"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.tika.eval.app",
+    "org.apache.tika.eval.app.reports"
+   ],
+   "size": 2,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 2,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.eval.app\", \"impl\": \"org.apache.tika.eval.app.reports.ResultsReporter\"}], \"rationale\": \"Inverting the single app->reports edge (TikaEvalCLI -> ResultsReporter) makes reports depend on app only, so the two-package cycle disappears with one operation.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.tika.eval.app org.apache.tika.eval.app.reports.ResultsReporter",
+       "consumer and implementation in different source roots"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 625,
+     "completion_tokens": 3105
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.eval.app.reports.ResultsReporter\", \"to\": \"org.apache.tika.eval.app\"}], \"rationale\": \"Moving ResultsReporter into org.apache.tika.eval.app makes all three class edges (TikaEvalCLI->ResultsReporter, ResultsReporter->ExtractComparer, ResultsReporter->ExtractProfiler) intra-package, removing both package edges and the cycle in one operation.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.tika.eval.app.reports.ResultsReporter",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 681,
+     "completion_tokens": 3839
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.eval.app\", \"impl\": \"org.apache.tika.eval.app.reports.ResultsReporter\"}], \"rationale\": \"Inverting the only app-to-reports edge (TikaEvalCLI's dependency on ResultsReporter) leaves reports depending on app but not vice versa, breaking the cycle with one operation.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.tika.eval.app org.apache.tika.eval.app.reports.ResultsReporter",
+       "consumer and implementation in different source roots"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 671,
+     "completion_tokens": 3395
+    }
+   ],
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.parser.geo.topic",
+    "org.apache.tika.parser.geo.topic.gazetteer"
+   ],
+   "size": 2,
+   "moves": [
+    [
+     "org.apache.tika.parser.geo.topic.GeoParserConfig",
+     "org.apache.tika.parser.geo.topic.gazetteer"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.parser.geo.topic.gazetteer\", \"impl\": \"org.apache.tika.parser.geo.topic.GeoParserConfig\"}], \"rationale\": \"The only back-edge is GeoGazetteerClient (gazetteer) depending on GeoParserConfig (topic); inverting it makes GeoParserConfig implement an interface in gazetteer, removing the gazetteer->topic dependency and leaving only topic->gazetteer, breaking the cycle in one operation.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.tika.parser.geo.topic.gazetteer org.apache.tika.parser.geo.topic.GeoParserConfig",
+       "constructed by org.apache.tika.parser.geo.topic.gazetteer.GeoGazetteerClient"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 616,
+     "completion_tokens": 1151
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.parser.geo.topic.GeoParserConfig\", \"to\": \"org.apache.tika.parser.geo.topic.gazetteer\"}], \"rationale\": \"Moving GeoParserConfig into the gazetteer package makes the only reverse edge (GeoGazetteerClient -> GeoParserConfig) intra-package, leaving solely topic->gazetteer dependencies and thus no cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.parser.geo.topic.GeoParserConfig",
+       "org.apache.tika.parser.geo.topic.gazetteer"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 699,
+     "completion_tokens": 8778
+    }
+   ],
+   "dry_run": {
+    "ok": false,
+    "refused": null,
+    "why": "model build failed for java: ModelBuildingException: The import org.apache.tika.config.TikaComponent cannot be resolved at C:\\Users\\Rohit\\AppData\\Local\\Temp\\claude\\7c1264f4a932da85\\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\\scratchpad\\agentic\\tika_inclusionai_ling-3_2-flash_free\\work\\copy\\tika-parsers\\tik"
+   },
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.config.loader",
+    "org.apache.tika.serialization",
+    "org.apache.tika.serialization.serdes"
+   ],
+   "size": 3,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 3,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "",
+     "parse_errors": [
+      "no JSON object in the answer"
+     ],
+     "rejected": [],
+     "kept": [],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1613,
+     "completion_tokens": 21451
+    },
+    {
+     "text": "",
+     "parse_errors": [
+      "no JSON object in the answer"
+     ],
+     "rejected": [],
+     "kept": [],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1658,
+     "completion_tokens": 27593
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.ComponentNameResolver\", \"to\": \"org.apache.tika.config.loader\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.config.loader.TikaLoader\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.config.loader.TikaObjectMapperFactory\", \"to\": \"org.apache.tika.serialization\"}], \"rationale\": \"These three moves eliminate every config.loader->serialization edge (the four ComponentNameResolver edges become intra-package, and TikaLoader/TikaObjectMapperFactory edges become intra-serialization), leaving only serialization->serdes, serialization->config.loader and serdes->config.loader edges, which is acyclic.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.serialization.ComponentNameResolver",
+       "org.apache.tika.config.loader"
+      ],
+      [
+       "move",
+       "org.apache.tika.config.loader.TikaLoader",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.config.loader.TikaObjectMapperFactory",
+       "org.apache.tika.serialization"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1502,
+     "completion_tokens": 19014
+    }
+   ],
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.server.core",
+    "org.apache.tika.server.core.resource",
+    "org.apache.tika.server.core.writer"
+   ],
+   "size": 3,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 3,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "",
+     "parse_errors": [
+      "no JSON object in the answer"
+     ],
+     "rejected": [],
+     "kept": [],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1982,
+     "completion_tokens": 15842
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.server.core.TikaServerProcess\", \"to\": \"org.apache.tika.server.core.resource\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.server.core\", \"impl\": \"org.apache.tika.server.core.resource.TikaServerResource\"}], \"rationale\": \"Moving TikaServerProcess into .resource removes 16 core\u2192resource and all 8 core\u2192writer edges, and inverting the last core\u2192resource edge (ServerStatusResource\u2192TikaServerResource) leaves only resource\u2192core, resource\u2192writer and writer\u2192core, which is acyclic.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.tika.server.core org.apache.tika.server.core.resource.TikaServerResource",
+       "already an interface"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.server.core.TikaServerProcess",
+       "org.apache.tika.server.core.resource"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1830,
+     "completion_tokens": 12769
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.server.core.TikaServerProcess\", \"to\": \"org.apache.tika.server.core.resource\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.server.core.ServerStatusResource\", \"to\": \"org.apache.tika.server.core.resource\"}], \"rationale\": \"TikaServerProcess and ServerStatusResource are the only sources of core->resource and core->writer edges, so moving both into resource leaves core with no outgoing edges, reducing the graph to resource->core, resource->writer and writer->core, which is acyclic.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.server.core.TikaServerProcess",
+       "org.apache.tika.server.core.resource"
+      ],
+      [
+       "move",
+       "org.apache.tika.server.core.ServerStatusResource",
+       "org.apache.tika.server.core.resource"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1848,
+     "completion_tokens": 14250
+    }
+   ],
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.eval.core.langid",
+    "org.apache.tika.eval.core.textstats",
+    "org.apache.tika.eval.core.tokens"
+   ],
+   "size": 3,
+   "moves": [
+    [
+     "org.apache.tika.eval.core.langid.LanguageIDWrapper",
+     "org.apache.tika.eval.core.textstats"
+    ],
+    [
+     "org.apache.tika.eval.core.tokens.TokenCounter",
+     "org.apache.tika.eval.core.textstats"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.eval.core.textstats\", \"impl\": \"org.apache.tika.eval.core.langid.LanguageIDWrapper\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.eval.core.tokens\", \"impl\": \"org.apache.tika.eval.core.textstats.TokenCountPriorityQueue\"}], \"rationale\": \"Inverting the textstats\u2192langid edge and the tokens\u2192textstats edge removes both two-package cycles, leaving only the acyclic chain langid\u2192textstats\u2192tokens with two operations.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.tika.eval.core.textstats org.apache.tika.eval.core.langid.LanguageIDWrapper",
+       "constructed by org.apache.tika.eval.core.textstats.CompositeTextStatsCalculator"
+      ],
+      [
+       "invertEdge org.apache.tika.eval.core.tokens org.apache.tika.eval.core.textstats.TokenCountPriorityQueue",
+       "the consumer declares nothing of that type"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1784,
+     "completion_tokens": 8639
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.eval.core.langid.LanguageIDWrapper\", \"to\": \"org.apache.tika.eval.core.textstats\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.eval.core.tokens.TokenCounter\", \"to\": \"org.apache.tika.eval.core.textstats\"}], \"rationale\": \"Moving LanguageIDWrapper into textstats empties langid and eliminates both langid<->textstats edges, while moving TokenCounter into textstats removes the only tokens->textstats edge, leaving a one-way textstats->tokens dependency with no cycles.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.eval.core.langid.LanguageIDWrapper",
+       "org.apache.tika.eval.core.textstats"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.tokens.TokenCounter",
+       "org.apache.tika.eval.core.textstats"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 1894,
+     "completion_tokens": 16010
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": []
+  }
+ ]
+}

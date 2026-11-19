@@ -1,0 +1,74 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\"}], \"rationale\": \"Invert the only P1\\u2192\\u202fP2 dependency to break the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "constructed by org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 867,
+    "completion_tokens": 3637
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.WeightedEvaluation\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.SemiVariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"}], \"rationale\": \"Moving the three classes that create cross\u2011package dependencies eliminates all edges between the two packages, breaking the cycle with the fewest moves.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.WeightedEvaluation",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.SemiVariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 946,
+    "completion_tokens": 5809
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\"}], \"rationale\": \"Moving MultivariateSummaryStatistics into the moment package removes the only P1\\u2192\\u202fP2 edge, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 900,
+    "completion_tokens": 2101
+   }
+  ],
+  "refused": []
+ }
+]

@@ -1,0 +1,21 @@
+﻿java level 11, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.pdfbox.examples.signature', 'org.apache.pdfbox.examples.signature.cert']: stage=no_plan level=0 left=None
+['org.apache.xmpbox', 'org.apache.xmpbox.schema', 'org.apache.xmpbox.type']: stage=no_plan level=0 left=None
+['org.apache.fontbox.cff', 'org.apache.fontbox.ttf', 'org.apache.fontbox.ttf.gsub', 'org.apache.fontbox.type1']: stage=build level=1 left=None
+['org.apache.pdfbox.debugger', 'org.apache.pdfbox.debugger.pagepane', 'org.apache.pdfbox.debugger.streampane', 'org.apache.pdfbox.debugger.treestatus', 'org.apache.pdfbox.debugger.ui', 'org.apache.pdfbox.debugger.ui.textsearcher']: stage=judged level=4a left=4
+{
+ "targets": 4,
+ "levels": {
+  "0": 2,
+  "1": 1,
+  "4a": 1
+ },
+ "states": {
+  "n/a": 2,
+  "FAIL": 1,
+  "PASS": 1
+ },
+ "dissolved": 0,
+ "success": 1,
+ "success_without_api_break": 0
+}

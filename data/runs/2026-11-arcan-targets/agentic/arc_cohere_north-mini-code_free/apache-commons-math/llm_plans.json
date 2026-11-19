@@ -1,0 +1,88 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\"}], \"rationale\": \"Moving MultivariateSummaryStatistics into the moment package eliminates the only dependency from the descriptive package to moment, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 867,
+    "completion_tokens": 3152
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive.moment\"}], \"rationale\": \"Moving MultivariateSummaryStatistics into the moment package eliminates the only P1\u2192P2 dependency, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 900,
+    "completion_tokens": 2638
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"}], \"rationale\": \"Moving VectorialCovariance out of its current package eliminates the only outgoing edge from the descriptive package, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 900,
+    "completion_tokens": 1776
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": [],
+  "arcan": {
+   "measured": true,
+   "in_before": true,
+   "left": [],
+   "added": [],
+   "dissolved": true,
+   "by_type": {
+    "Cyclic Dependency": 98,
+    "Unstable Dependency": 17,
+    "Hub-Like Dependency": 2
+   },
+   "why": null
+  }
+ }
+]

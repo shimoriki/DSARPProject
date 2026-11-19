@@ -1,0 +1,17 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [],
+  "why": "model call failed: google/gemma-4-26b-a4b-it:free rate limit resets in 9665s, over max_wait 300s (limit 50, remaining 0)",
+  "refused": []
+ }
+]

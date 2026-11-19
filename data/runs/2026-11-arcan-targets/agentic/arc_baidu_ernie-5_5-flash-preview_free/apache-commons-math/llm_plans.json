@@ -1,0 +1,71 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\"}], \"rationale\": \"The cycle has only one descriptive->moment edge (MultivariateSummaryStatistics using VectorialCovariance), so inverting it removes that direction entirely, leaving only moment->descriptive edges and breaking the cycle in a single operation.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "constructed by org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 896,
+    "completion_tokens": 1953
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"}], \"rationale\": \"Moving the leaf class VectorialCovariance into the descriptive package removes the sole descriptive\u2192moment edge (its only referencer, MultivariateSummaryStatistics, becomes an intra-package dependency) while the moment\u2192descriptive edges remain one-directional, leaving no cycle; moving MultivariateSummaryStatistics instead would fail because SynchronizedMultivariateSummaryStatistics still subclasses it and would recreate the edge.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 975,
+    "completion_tokens": 5714
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": [],
+  "arcan": {
+   "measured": true,
+   "in_before": true,
+   "left": [],
+   "added": [],
+   "dissolved": true,
+   "by_type": {
+    "Cyclic Dependency": 98,
+    "Unstable Dependency": 17,
+    "Hub-Like Dependency": 2
+   },
+   "why": null
+  }
+ }
+]

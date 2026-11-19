@@ -1,0 +1,10 @@
+﻿py.exe : 429 from inclusionai/ling-3.2-flash:free: waiting 2s (limit None, remaining None)
+At C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\agentic\sm
+oke_openrouter2.ps1:15 char:5
++     & py hpc\smoke.py $m $repos "$s\agentic\or_$tag" --base-url https ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (429 from inclus...remaining None):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+429 from inclusionai/ling-3.2-flash:free: waiting 2s (limit None, remaining None)
+429 from inclusionai/ling-3.2-flash:free: waiting 2s (limit None, remaining None)

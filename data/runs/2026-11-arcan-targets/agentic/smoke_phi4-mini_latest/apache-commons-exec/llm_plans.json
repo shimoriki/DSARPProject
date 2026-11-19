@@ -1,0 +1,68 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\n  \"operations\": [\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.CommandLine\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecuteResultHandler\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.ExecuteResultHandler\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.ExecuteStreamHandler\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.ExecuteWatchdog\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.Executor\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.InputStreamPumper\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.ProcessDestroyer\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.PumpStreamHandler\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.StreamPumper\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.ThreadUtil\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.TimeoutObserver\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.Watchdog\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.environment.DefaultProcessingEnvironment\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.environment.EnvironmentUtils\", \"to\": \"org.apache.commons.exec.environ",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 871,
+    "completion_tokens": 800
+   },
+   {
+    "text": "{\n  \"operations\": [\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.environment\"},\n    {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec.environment\", \"impl\": \"org.apache.commons.exec.DefaultExecutor\"}\n  ],\n  \"rationale\": \"Moving DefaultExecutor to environment package and inverting the edge reduces the cycle.\"\n}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [
+     [
+      "invert",
+      "org.apache.commons.exec.environment",
+      "org.apache.commons.exec.DefaultExecutor"
+     ]
+    ],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 898,
+    "completion_tokens": 89
+   },
+   {
+    "text": "{\n  \"operations\": [\n    {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"},\n    {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec.launcher\", \"impl\": \"org.apache.commons.exec.environment\"}\n  ],\n  \"rationale\": \"Moved DefaultExecutor to launcher package to break the cycle, then inverted the edge to remove the dependency.\"\n}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ],
+     [
+      "invertEdge org.apache.commons.exec.launcher org.apache.commons.exec.environment",
+      "unknown class"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 912,
+    "completion_tokens": 95
+   }
+  ],
+  "refused": []
+ }
+]

@@ -1,0 +1,71 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"Moving DefaultExecutor out of org.apache.commons.exec removes the only edge from that package to org.apache.commons.exec.launcher, breaking the cycle and leaving the remaining dependencies acyclic.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 917,
+    "completion_tokens": 3996
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncher\", \"to\": \"org.apache.commons.exec\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\", \"to\": \"org.apache.commons.exec\"}], \"rationale\": \"Moving CommandLauncher and CommandLauncherFactory into org.apache.commons.exec removes the only exec-to-launcher dependencies, leaving launcher-to-environment-to-exec and launcher-to-exec edges acyclic.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.launcher.CommandLauncher",
+      "refused: move rule"
+     ],
+     [
+      "moveClass org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 959,
+    "completion_tokens": 13789
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncher\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\"}], \"rationale\": \"Reverse both org.apache.commons.exec to org.apache.commons.exec.launcher dependencies from DefaultExecutor (on CommandLauncher and CommandLauncherFactory); that edge is on every cycle, and the reversed launcher-to-exec edges already exist, so the cycle is broken with the minimum two operations.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncher",
+      "already an interface"
+     ],
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "consumer and implementation in different source roots"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 978,
+    "completion_tokens": 13196
+   }
+  ],
+  "refused": []
+ }
+]

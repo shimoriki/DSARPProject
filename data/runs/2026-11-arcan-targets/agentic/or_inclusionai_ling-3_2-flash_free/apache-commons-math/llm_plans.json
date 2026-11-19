@@ -1,0 +1,43 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\", \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"}], \"rationale\": \"Moving VectorialCovariance into the descriptive package removes the only descriptive->moment edge, leaving just moment->descriptive dependencies so no cycle remains.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 930,
+    "completion_tokens": 6719
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": []
+ }
+]

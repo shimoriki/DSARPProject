@@ -1,0 +1,8 @@
+﻿py.exe : not frozen: the baseline skipped ['Struts 2 Showcase Webapp', 'Struts 2 Assembly']
+At C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\beam_arcan
+.ps1:19 char:5
++     & py -m dsarp.experiments.scc_dissolve "$repos\$r" $o @flags --fr ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (not frozen: the...ts 2 Assembly']:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

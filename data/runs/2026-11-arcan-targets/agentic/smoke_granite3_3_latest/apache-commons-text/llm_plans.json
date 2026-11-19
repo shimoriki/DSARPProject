@@ -1,0 +1,99 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.text.StrLookup",
+    "org.apache.commons.text.lookup"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"},\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringSubstitutor\", \"to\": \"org.apache.commons.text.lookup\"},\n  {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text.lookup\", \"impl\": \"org.apache.commons.text.StrLookup\"},\n  {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text.lookup\", \"impl\": \"org.apache.commons.text.StringSubstitutor\"}\n],\n\"rationale\": \"This plan reduces the cycle by moving StrLookup and StringSubstitutor from org.apache.commons.text to org.apache.commons.text.lookup, then inverting their edges to establish a dependency from the lookup package to the moved classes.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text.lookup org.apache.commons.text.StrLookup",
+      "the consumer declares nothing of that type"
+     ],
+     [
+      "invertEdge org.apache.commons.text.lookup org.apache.commons.text.StringSubstitutor",
+      "the consumer declares nothing of that type"
+     ]
+    ],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StrLookup",
+      "org.apache.commons.text.lookup"
+     ],
+     [
+      "move",
+      "org.apache.commons.text.StringSubstitutor",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1115,
+    "completion_tokens": 217
+   },
+   {
+    "text": "{\"operations\": [\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"},\n  {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text.lookup\", \"impl\": \"org.apache.commons.text.StrLookup\"}\n],\n\"rationale\": \"By moving StrLookup to the lookup package and inverting its edge, we break the cycle between org.apache.commons.text and org.apache.commons.text.lookup.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text.lookup org.apache.commons.text.StrLookup",
+      "the consumer declares nothing of that type"
+     ]
+    ],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StrLookup",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1210,
+    "completion_tokens": 125
+   },
+   {
+    "text": "{\"operations\": [\n  {\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StrLookup\", \"to\": \"org.apache.commons.text.lookup\"},\n  {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.text.lookup\", \"impl\": \"org.apache.commons.text.StrLookup\"}\n],\n\"rationale\": \"By moving StrLookup to the lookup package and inverting its edge, we break the cycle between org.apache.commons.text and org.apache.commons.text.lookup, as the former no longer directly depends on the latter.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text.lookup org.apache.commons.text.StrLookup",
+      "the consumer declares nothing of that type"
+     ]
+    ],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StrLookup",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1177,
+    "completion_tokens": 136
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": []
+ }
+]

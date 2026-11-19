@@ -1,0 +1,21 @@
+﻿java level 11, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.pdfbox.examples.signature', 'org.apache.pdfbox.examples.signature.cert']: 0 moves, 0 inversions, predicted left 2
+py.exe : 429 from baidu/ernie-5.5-flash-preview:free: waiting 2s (limit None, remaining None)
+At C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\agentic\ru
+n_arcan_repos.ps1:30 char:5
++     & py -m dsarp.agentic.run $tree $O --targets-from $T @llm --freez ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (429 from baidu/...remaining None):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+['org.apache.xmpbox', 'org.apache.xmpbox.schema', 'org.apache.xmpbox.type']: 0 moves, 0 inversions, predicted left 3
+429 from baidu/ernie-5.5-flash-preview:free: waiting 2s (limit None, remaining None)
+429 from baidu/ernie-5.5-flash-preview:free: waiting 4s (limit None, remaining None)
+429 from baidu/ernie-5.5-flash-preview:free: waiting 8s (limit None, remaining None)
+429 from baidu/ernie-5.5-flash-preview:free: waiting 2s (limit None, remaining None)
+429 from baidu/ernie-5.5-flash-preview:free: waiting 2s (limit None, remaining None)
+429 from baidu/ernie-5.5-flash-preview:free: waiting 4s (limit None, remaining None)
+429 from baidu/ernie-5.5-flash-preview:free: waiting 8s (limit None, remaining None)
+['org.apache.fontbox.cff', 'org.apache.fontbox.ttf', 'org.apache.fontbox.ttf.gsub', 'org.apache.fontbox.type1']: 1 moves, 1 inversions, predicted left 2
+['org.apache.pdfbox.debugger', 'org.apache.pdfbox.debugger.pagepane', 'org.apache.pdfbox.debugger.streampane', 'org.apache.pdfbox.debugger.treestatus', 'org.apache.pdfbox.debugger.ui', 'org.apache.pdfbox.debugger.ui.textsearcher']: 3 moves, 0 inversions, predicted left 4
+frozen: C:\Users\Rohit\AppData\Local\Temp\claude\7c1264f4a932da85\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\scratchpad\agentic\arcan_apache-pdfbox\preregistration.json

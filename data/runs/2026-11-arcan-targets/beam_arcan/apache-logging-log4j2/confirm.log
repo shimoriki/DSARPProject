@@ -1,0 +1,25 @@
+﻿java level 8, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+baseline tests: {'tests_run': 11075, 'failures': 233, 'errors': 98, 'partial': False, 'skipped_modules': []}
+target size 2: 0 moves, predicted left 2
+  stage=no_plan level=0 left=None 
+target size 2: 2 moves, predicted left 0
+  stage=judged level=4c left=0 
+target size 2: 1 moves, predicted left 0
+  stage=judged level=4c left=0 
+target size 14: 4 moves, predicted left 10
+  stage=judged level=4a left=10 
+{
+ "targets": 4,
+ "levels": {
+  "0": 1,
+  "4c": 2,
+  "4a": 1
+ },
+ "states": {
+  "n/a": 1,
+  "PASS": 3
+ },
+ "dissolved": 2,
+ "success": 3,
+ "success_without_api_break": 1
+}

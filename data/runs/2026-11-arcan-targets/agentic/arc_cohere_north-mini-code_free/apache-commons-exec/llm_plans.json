@@ -1,0 +1,78 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.environment\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.CommandLauncherImpl\", \"to\": \"org.apache.commons.exec.environment\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.launcher.Java13CommandLauncher\", \"to\": \"org.apache.commons.exec.environment\"}], \"rationale\": \"Moving three classes that contribute to the package cycles out of their original packages breaks all cycles with minimal operations.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.exec.launcher.CommandLauncherImpl",
+      "org.apache.commons.exec.environment"
+     ],
+     [
+      "move",
+      "org.apache.commons.exec.launcher.Java13CommandLauncher",
+      "org.apache.commons.exec.environment"
+     ]
+    ],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 863,
+    "completion_tokens": 19811
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncher\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\"}], \"rationale\": \"Inverting the two exec\\u2192launcher dependencies removes all outgoing edges from exec, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncher",
+      "already an interface"
+     ],
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "consumer and implementation in different source roots"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 904,
+    "completion_tokens": 10712
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"Moving DefaultExecutor out of its original package removes the two exec\u2192launcher dependencies, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 933,
+    "completion_tokens": 3912
+   }
+  ],
+  "refused": []
+ }
+]

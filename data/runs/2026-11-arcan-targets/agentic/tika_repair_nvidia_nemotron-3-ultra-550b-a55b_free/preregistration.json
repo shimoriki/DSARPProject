@@ -1,0 +1,247 @@
+{
+ "selection": {
+  "max_size": 3,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.tika.parser.geo.topic",
+    "org.apache.tika.parser.geo.topic.gazetteer"
+   ],
+   "size": 2,
+   "moves": [
+    [
+     "org.apache.tika.parser.geo.topic.GeoParserConfig",
+     "org.apache.tika.parser.geo.topic.gazetteer"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.parser.geo.topic.GeoParserConfig\", \"to\": \"org.apache.tika.parser.geo.topic.gazetteer\"}], \"rationale\": \"Moving GeoParserConfig to the gazetteer package removes the sole dependency from gazetteer to topic, leaving only topic-to-gazetteer dependencies and breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.parser.geo.topic.GeoParserConfig",
+       "org.apache.tika.parser.geo.topic.gazetteer"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 584,
+     "completion_tokens": 3519
+    }
+   ],
+   "dry_run": {
+    "ok": false,
+    "refused": null,
+    "why": "model build failed for java: ModelBuildingException: The import org.apache.tika.config.TikaComponent cannot be resolved at C:\\Users\\Rohit\\AppData\\Local\\Temp\\claude\\7c1264f4a932da85\\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\\scratchpad\\agentic\\tika_nvidia_nemotron-3-ultra-550b-a55b_free\\work\\copy\\tika-pars"
+   },
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.config.loader",
+    "org.apache.tika.serialization",
+    "org.apache.tika.serialization.serdes"
+   ],
+   "size": 3,
+   "moves": [
+    [
+     "org.apache.tika.config.loader.TikaLoader",
+     "org.apache.tika.serialization"
+    ],
+    [
+     "org.apache.tika.config.loader.TikaObjectMapperFactory",
+     "org.apache.tika.serialization"
+    ],
+    [
+     "org.apache.tika.serialization.ComponentNameResolver",
+     "org.apache.tika.config.loader"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 3,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.ComponentNameResolver\", \"to\": \"org.apache.tika.config.loader\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.config.loader.TikaLoader\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.config.loader.TikaObjectMapperFactory\", \"to\": \"org.apache.tika.serialization\"}], \"rationale\": \"Moving ComponentNameResolver to config.loader and TikaLoader and TikaObjectMapperFactory to serialization removes all config.loader->serialization dependencies, breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.serialization.ComponentNameResolver",
+       "org.apache.tika.config.loader"
+      ],
+      [
+       "move",
+       "org.apache.tika.config.loader.TikaLoader",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.config.loader.TikaObjectMapperFactory",
+       "org.apache.tika.serialization"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1450,
+     "completion_tokens": 34629
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.ComponentNameResolver\", \"to\": \"org.apache.tika.config.loader\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.config.loader.TikaLoader\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.config.loader.TikaObjectMapperFactory\", \"to\": \"org.apache.tika.serialization\"}], \"rationale\": \"Moving ComponentNameResolver to config.loader and moving TikaLoader and TikaObjectMapperFactory to serialization eliminates all cycles by making config.loader a sink with no outgoing dependencies.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.serialization.ComponentNameResolver",
+       "org.apache.tika.config.loader"
+      ],
+      [
+       "move",
+       "org.apache.tika.config.loader.TikaLoader",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.config.loader.TikaObjectMapperFactory",
+       "org.apache.tika.serialization"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1484,
+     "completion_tokens": 24312
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.ComponentNameResolver\", \"to\": \"org.apache.tika.config.loader\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.config.loader.TikaLoader\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.config.loader.TikaObjectMapperFactory\", \"to\": \"org.apache.tika.serialization\"}], \"rationale\": \"Moving ComponentNameResolver to config.loader and TikaLoader and TikaObjectMapperFactory to serialization eliminates all cycles by making config.loader a sink package with no outgoing dependencies.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.serialization.ComponentNameResolver",
+       "org.apache.tika.config.loader"
+      ],
+      [
+       "move",
+       "org.apache.tika.config.loader.TikaLoader",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.config.loader.TikaObjectMapperFactory",
+       "org.apache.tika.serialization"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1484,
+     "completion_tokens": 24723
+    }
+   ],
+   "dry_run": {
+    "ok": false,
+    "refused": null,
+    "why": "model build failed for java: ModelBuildingException: The import org.apache.tika.metadata.writefilter.MetadataWriteFilterFactory cannot be resolved at C:\\Users\\Rohit\\AppData\\Local\\Temp\\claude\\7c1264f4a932da85\\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\\scratchpad\\agentic\\tika_nvidia_nemotron-3-ultra-550b-a5"
+   },
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.eval.core.langid",
+    "org.apache.tika.eval.core.textstats",
+    "org.apache.tika.eval.core.tokens"
+   ],
+   "size": 3,
+   "moves": [
+    [
+     "org.apache.tika.eval.core.langid.LanguageIDWrapper",
+     "org.apache.tika.eval.core.textstats"
+    ],
+    [
+     "org.apache.tika.eval.core.tokens.TokenCounter",
+     "org.apache.tika.eval.core.textstats"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.eval.core.langid.LanguageIDWrapper\", \"to\": \"org.apache.tika.eval.core.textstats\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.tika.eval.core.tokens\", \"impl\": \"org.apache.tika.eval.core.textstats.TokenCountPriorityQueue\"}], \"rationale\": \"Move LanguageIDWrapper to textstats to eliminate the mutual dependency between langid and textstats, and invert the TokenCounter->TokenCountPriorityQueue edge to remove the tokens->textstats dependency.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.tika.eval.core.tokens org.apache.tika.eval.core.textstats.TokenCountPriorityQueue",
+       "the consumer declares nothing of that type"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.eval.core.langid.LanguageIDWrapper",
+       "org.apache.tika.eval.core.textstats"
+      ]
+     ],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1767,
+     "completion_tokens": 7356
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.eval.core.langid.LanguageIDWrapper\", \"to\": \"org.apache.tika.eval.core.textstats\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.eval.core.tokens.TokenCounter\", \"to\": \"org.apache.tika.eval.core.textstats\"}], \"rationale\": \"Move LanguageIDWrapper to textstats to eliminate langid package and break langid-textstats cycle; move TokenCounter to textstats to remove tokens->textstats dependency and break textstats-tokens cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.eval.core.langid.LanguageIDWrapper",
+       "org.apache.tika.eval.core.textstats"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.tokens.TokenCounter",
+       "org.apache.tika.eval.core.textstats"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 1826,
+     "completion_tokens": 7342
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": []
+  }
+ ]
+}

@@ -1,0 +1,14 @@
+﻿java level 11, JDK C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
+['org.apache.fontbox.cff', 'org.apache.fontbox.ttf', 'org.apache.fontbox.ttf.gsub', 'org.apache.fontbox.type1']: stage=judged level=4b left=2
+{
+ "targets": 1,
+ "levels": {
+  "4b": 1
+ },
+ "states": {
+  "PASS": 1
+ },
+ "dissolved": 0,
+ "success": 1,
+ "success_without_api_break": 0
+}

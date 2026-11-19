@@ -1,0 +1,13 @@
+﻿apache-commons-exec jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 27s
+['org.apache.commons.exec', 'org.apache.commons.exec.environment', 'org.apache.commons.exec.launcher']: 0 moves, 0 inversions, predicted left 3
+  ['org.apache.commons.exec', 'org.apache.commons.exec.environment', 'org.apache.commons.exec.launcher'] predicted=False dry_run=None arcan_dissolved=False rounds=3 
+apache-commons-math jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 93s
+['org.apache.commons.math4.legacy.stat.descriptive', 'org.apache.commons.math4.legacy.stat.descriptive.moment']: 0 moves, 0 inversions, predicted left 2
+  ['org.apache.commons.math4.legacy.stat.descriptive', 'org.apache.commons.math4.legacy.stat.descriptive.moment'] predicted=False dry_run=None arcan_dissolved=False rounds=3 
+apache-commons-text jdk (8, WindowsPath('C:/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot'))
+  prepared in 32s
+['org.apache.commons.text', 'org.apache.commons.text.lookup']: 1 moves, 0 inversions, predicted left 0
+  ['org.apache.commons.text', 'org.apache.commons.text.lookup'] predicted=True dry_run=True arcan_dissolved=True rounds=2 
+MODEL CHECK nvidia/nemotron-3-ultra-550b-a55b:free: 1 of 3 (bar 2, Arcan-verified)

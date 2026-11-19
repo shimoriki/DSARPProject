@@ -1,0 +1,18 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [],
+  "why": "model call failed: [WinError 10054] An existing connection was forcibly closed by the remote host",
+  "refused": []
+ }
+]

@@ -1,0 +1,34 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"Moving DefaultExecutor to the launcher package removes the exec\u2192launcher dependencies, breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 917,
+    "completion_tokens": 8069
+   }
+  ],
+  "why": "model call failed: [WinError 10054] An existing connection was forcibly closed by the remote host",
+  "refused": []
+ }
+]

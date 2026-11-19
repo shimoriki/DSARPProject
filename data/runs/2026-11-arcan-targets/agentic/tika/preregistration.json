@@ -1,0 +1,511 @@
+{
+ "selection": {
+  "max_size": 3,
+  "limit": 5,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "qwen2.5-coder:7b"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.tika.eval.app",
+    "org.apache.tika.eval.app.reports"
+   ],
+   "size": 2,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 2,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.app.reports.ResultsReporter\",\n      \"to\": \"org.apache.tika.eval.app\"\n    }\n  ],\n  \"rationale\": \"Move ResultsReporter to org.apache.tika.eval.app to break the cycle between org.apache.tika.eval.app and org.apache.tika.eval.app.reports.\"\n}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.tika.eval.app.reports.ResultsReporter",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 599,
+     "completion_tokens": 87
+    },
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.app.reports.ResultsReporter\",\n      \"to\": \"org.apache.tika.eval.app\"\n    }\n  ],\n  \"rationale\": \"Move ResultsReporter to org.apache.tika.eval.app to break the cycle.\"\n}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.tika.eval.app.reports.ResultsReporter",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 642,
+     "completion_tokens": 71
+    },
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.app.reports.ResultsReporter\",\n      \"to\": \"org.apache.tika.eval.app\"\n    }\n  ],\n  \"rationale\": \"Move ResultsReporter to org.apache.tika.eval.app to break the cycle.\"\n}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.tika.eval.app.reports.ResultsReporter",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 642,
+     "completion_tokens": 71
+    }
+   ],
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.parser.geo.topic",
+    "org.apache.tika.parser.geo.topic.gazetteer"
+   ],
+   "size": 2,
+   "moves": [
+    [
+     "org.apache.tika.parser.geo.topic.GeoParserConfig",
+     "org.apache.tika.parser.geo.topic.gazetteer"
+    ],
+    [
+     "org.apache.tika.parser.geo.topic.GeoTag",
+     "org.apache.tika.parser.geo.topic.gazetteer"
+    ],
+    [
+     "org.apache.tika.parser.geo.topic.NameEntityExtractor",
+     "org.apache.tika.parser.geo.topic.gazetteer"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 0,
+   "dissolves": true,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.parser.geo.topic.GeoParserConfig\",\n      \"to\": \"org.apache.tika.parser.geo.topic.gazetteer\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.parser.geo.topic.GeoTag\",\n      \"to\": \"org.apache.tika.parser.geo.topic.gazetteer\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.parser.geo.topic.NameEntityExtractor\",\n      \"to\": \"org.apache.tika.parser.geo.topic.gazetteer\"\n    }\n  ],\n  \"rationale\": \"Move GeoParserConfig, GeoTag, and NameEntityExtractor to the gazetteer package to break the cycle.\"\n}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.parser.geo.topic.GeoParserConfig",
+       "org.apache.tika.parser.geo.topic.gazetteer"
+      ],
+      [
+       "move",
+       "org.apache.tika.parser.geo.topic.GeoTag",
+       "org.apache.tika.parser.geo.topic.gazetteer"
+      ],
+      [
+       "move",
+       "org.apache.tika.parser.geo.topic.NameEntityExtractor",
+       "org.apache.tika.parser.geo.topic.gazetteer"
+      ]
+     ],
+     "predicted_left": 0,
+     "pulled_in": 0,
+     "prompt_tokens": 574,
+     "completion_tokens": 175
+    }
+   ],
+   "dry_run": {
+    "ok": false,
+    "refused": null,
+    "why": "model build failed for java: ModelBuildingException: The import org.apache.tika.config.TikaComponent cannot be resolved at C:\\Users\\Rohit\\AppData\\Local\\Temp\\claude\\7c1264f4a932da85\\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\\scratchpad\\agentic\\tika\\work\\copy\\tika-parsers\\tika-parsers-ml\\tika-parser-nlp-mod"
+   },
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.config.loader",
+    "org.apache.tika.serialization",
+    "org.apache.tika.serialization.serdes"
+   ],
+   "size": 3,
+   "moves": [
+    [
+     "org.apache.tika.serialization.serdes.DefaultDetectorSerializer",
+     "org.apache.tika.serialization"
+    ],
+    [
+     "org.apache.tika.serialization.serdes.DefaultParserSerializer",
+     "org.apache.tika.serialization"
+    ],
+    [
+     "org.apache.tika.serialization.serdes.MetadataDeserializer",
+     "org.apache.tika.serialization"
+    ],
+    [
+     "org.apache.tika.serialization.serdes.MetadataSerializer",
+     "org.apache.tika.serialization"
+    ],
+    [
+     "org.apache.tika.serialization.serdes.ParseContextDeserializer",
+     "org.apache.tika.serialization"
+    ],
+    [
+     "org.apache.tika.serialization.serdes.ParseContextSerializer",
+     "org.apache.tika.serialization"
+    ],
+    [
+     "org.apache.tika.serialization.serdes.SpiCompositeSerializer",
+     "org.apache.tika.serialization"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 2,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.serialization.serdes.MetadataSerializer\",\n      \"to\": \"org.apache.tika.serialization\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.serialization.serdes.MetadataDeserializer\",\n      \"to\": \"org.apache.tika.serialization\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.serialization.serdes.DefaultDetectorSerializer\",\n      \"to\": \"org.apache.tika.serialization\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.serialization.serdes.DefaultParserSerializer\",\n      \"to\": \"org.apache.tika.serialization\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.serialization.serdes.SpiCompositeSerializer\",\n      \"to\": \"org.apache.tika.serialization\"\n    }\n  ],\n  \"rationale\": \"Move classes that form a cycle with org.apache.tika.serialization.serdes to org.apache.tika.serialization to break the cycle.\"\n}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.MetadataSerializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.MetadataDeserializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.DefaultDetectorSerializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.DefaultParserSerializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.SpiCompositeSerializer",
+       "org.apache.tika.serialization"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1308,
+     "completion_tokens": 235
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.MetadataSerializer\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.MetadataDeserializer\", \"to\": \"org.apache.tika.serialization\"}], \"rationale\": \"Moving MetadataSerializer and MetadataDeserializer to org.apache.tika.serialization breaks the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.MetadataSerializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.MetadataDeserializer",
+       "org.apache.tika.serialization"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1338,
+     "completion_tokens": 89
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.DefaultDetectorSerializer\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.DefaultParserSerializer\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.MetadataDeserializer\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.MetadataSerializer\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.ParseContextDeserializer\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.ParseContextSerializer\", \"to\": \"org.apache.tika.serialization\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.tika.serialization.serdes.SpiCompositeSerializer\", \"to\": \"org.apache.tika.serialization\"}], \"rationale\": \"Move all classes from org.apache.tika.serialization.serdes to org.apache.tika.serialization to break the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.DefaultDetectorSerializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.DefaultParserSerializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.MetadataDeserializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.MetadataSerializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.ParseContextDeserializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.ParseContextSerializer",
+       "org.apache.tika.serialization"
+      ],
+      [
+       "move",
+       "org.apache.tika.serialization.serdes.SpiCompositeSerializer",
+       "org.apache.tika.serialization"
+      ]
+     ],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1338,
+     "completion_tokens": 256
+    }
+   ],
+   "dry_run": {
+    "ok": false,
+    "refused": null,
+    "why": "model build failed for java: ModelBuildingException: The import org.apache.tika.metadata.writefilter.MetadataWriteFilterFactory cannot be resolved at C:\\Users\\Rohit\\AppData\\Local\\Temp\\claude\\7c1264f4a932da85\\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\\scratchpad\\agentic\\tika\\work\\copy\\tika-serialization\\sr"
+   },
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.server.core",
+    "org.apache.tika.server.core.resource",
+    "org.apache.tika.server.core.writer"
+   ],
+   "size": 3,
+   "moves": [
+    [
+     "org.apache.tika.server.core.TikaServerProcess",
+     "org.apache.tika.server.core.resource"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 3,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.server.core.TikaServerProcess\",\n      \"to\": \"org.apache.tika.server.core.resource\"\n    }\n  ],\n  \"rationale\": \"Moving TikaServerProcess to org.apache.tika.server.core.resource breaks the cycle by removing the direct dependency from org.apache.tika.server.core to org.apache.tika.server.core.resource and org.apache.tika.server.core.writer.\"\n}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.server.core.TikaServerProcess",
+       "org.apache.tika.server.core.resource"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1750,
+     "completion_tokens": 102
+    }
+   ],
+   "why": "model call failed: timed out",
+   "dry_run": {
+    "ok": false,
+    "refused": null,
+    "why": "model build failed for java: ModelBuildingException: The import org.apache.tika.pipes.core.extractor.EmbeddedDocumentBytesConfig cannot be resolved at C:\\Users\\Rohit\\AppData\\Local\\Temp\\claude\\7c1264f4a932da85\\b84a0f2f-f4e0-4fcd-9594-7acbff568f0e\\scratchpad\\agentic\\tika\\work\\copy\\tika-server\\tika-ser"
+   },
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.tika.eval.core.langid",
+    "org.apache.tika.eval.core.textstats",
+    "org.apache.tika.eval.core.tokens"
+   ],
+   "size": 3,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 3,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.StringStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.CompositeTextStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.LanguageAwareTokenCountStats\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TextProfileSignature\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenCountPriorityQueue\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenCountStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenEntropy\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenLengths\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TopNTokens\",\n      \"to\": \"org.apache.tika.eval.core.langid\"\n    }\n  ],\n  \"rationale\": \"Move classes that have direct dependencies on classes in the 'org.apache.tika.eval.core.langid' package to that package to break the cycle.\"\n}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.tika.eval.core.textstats.StringStatsCalculator",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.CompositeTextStatsCalculator",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.LanguageAwareTokenCountStats",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.TextProfileSignature",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.TokenCountPriorityQueue",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.TokenCountStatsCalculator",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.TokenEntropy",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.TokenLengths",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.TopNTokens",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1693,
+     "completion_tokens": 437
+    },
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.StringStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.CompositeTextStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.LanguageAwareTokenCountStats\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TextProfileSignature\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenCountPriorityQueue\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenCountStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenEntropy\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenLengths\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TopNTokens\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    }\n  ],\n  \"rationale\": \"Moved all classes from org.apache.tika.eval.core.textstats to org.apache.tika.eval.core.tokens to break the cycle.\"\n}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.StringStatsCalculator",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.CompositeTextStatsCalculator",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.LanguageAwareTokenCountStats",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TextProfileSignature",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TokenCountPriorityQueue",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TokenCountStatsCalculator",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TokenEntropy",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TokenLengths",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TopNTokens",
+       "org.apache.tika.eval.core.tokens"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1904,
+     "completion_tokens": 424
+    },
+    {
+     "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.StringStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.CompositeTextStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenCountPriorityQueue\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenCountStatsCalculator\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenEntropy\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenLengths\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TopNTokens\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenCounts\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.tika.eval.core.textstats.TokenIntPair\",\n      \"to\": \"org.apache.tika.eval.core.tokens\"\n    }\n  ],\n  \"rationale\": \"Move classes that form the cycle to the 'org.apache.tika.eval.core.tokens' package to break the cycle.\"\n}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.tika.eval.core.textstats.TokenCounts",
+       "unknown class"
+      ],
+      [
+       "moveClass org.apache.tika.eval.core.textstats.TokenIntPair",
+       "unknown class"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.StringStatsCalculator",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.CompositeTextStatsCalculator",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TokenCountPriorityQueue",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TokenCountStatsCalculator",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TokenEntropy",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TokenLengths",
+       "org.apache.tika.eval.core.tokens"
+      ],
+      [
+       "move",
+       "org.apache.tika.eval.core.textstats.TopNTokens",
+       "org.apache.tika.eval.core.tokens"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1728,
+     "completion_tokens": 419
+    }
+   ],
+   "refused": []
+  }
+ ]
+}

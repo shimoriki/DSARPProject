@@ -1,0 +1,81 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.text.StringEscapeUtils",
+    "org.apache.commons.text.lookup"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\":[{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.text.lookup\",\"impl\":\"org.apache.commons.text.StringEscapeUtils\"}],\"rationale\":\"Inverting the lookup package's dependency on StringEscapeUtils removes both lookup-to-text edges, leaving only text-to-lookup edges and breaking the cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.text.lookup org.apache.commons.text.StringEscapeUtils",
+      "5 public instance methods, 45 statics, utility-shaped name"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 817,
+    "completion_tokens": 4799
+   },
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1062,
+    "completion_tokens": 99492
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.text.StringEscapeUtils\", \"to\": \"org.apache.commons.text.lookup\"}], \"rationale\": \"Moving StringEscapeUtils into the lookup package makes XmlDecoderStringLookup and XmlEncoderStringLookup reference it within their own package, removing both lookup\u2192text edges and leaving only the text\u2192lookup direction, so the cycle is broken in a single move.\"}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.text.StringEscapeUtils",
+      "org.apache.commons.text.lookup"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 844,
+    "completion_tokens": 6484
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": [],
+  "arcan": {
+   "measured": true,
+   "in_before": true,
+   "left": [],
+   "added": [],
+   "dissolved": true,
+   "by_type": {
+    "Cyclic Dependency": 32
+   },
+   "why": null
+  }
+ }
+]

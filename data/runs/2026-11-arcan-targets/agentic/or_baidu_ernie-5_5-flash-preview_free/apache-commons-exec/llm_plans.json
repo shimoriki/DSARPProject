@@ -1,0 +1,64 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncher\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\"}], \"rationale\": \"Every cycle runs through the exec\u2192launcher back-edge (carried only by DefaultExecutor\u2192CommandLauncher and DefaultExecutor\u2192CommandLauncherFactory), so inverting both flips them to launcher\u2192exec, leaving environment\u2192exec, launcher\u2192exec and launcher\u2192environment, which is acyclic (moving DefaultExecutor itself is unsafe since DaemonExecutor in exec would re-create exec\u2192launcher).\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncher",
+      "already an interface"
+     ],
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "consumer and implementation in different source roots"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 872,
+    "completion_tokens": 32715
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"DefaultExecutor is the sole origin of the exec\u2192launcher edge, so relocating it into launcher deletes that edge, and since every cycle passes through exec\u2192launcher the leftover edges (launcher\u2192environment, launcher\u2192exec, environment\u2192exec) form an acyclic chain launcher\u2192environment\u2192exec.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 939,
+    "completion_tokens": 8816
+   },
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 1157,
+    "completion_tokens": 93810
+   }
+  ],
+  "refused": []
+ }
+]

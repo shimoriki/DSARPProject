@@ -1,0 +1,52 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ],
+   [
+    "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialMean",
+    "org.apache.commons.math4.legacy.stat.descriptive"
+   ]
+  ],
+  "inversions": [],
+  "predicted_left": 0,
+  "dissolves": true,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\n  \"operations\": [\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\",\n      \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"\n    },\n    {\n      \"op\": \"moveClass\",\n      \"class\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialMean\",\n      \"to\": \"org.apache.commons.math4.legacy.stat.descriptive\"\n    }\n  ],\n  \"rationale\": \"Moving VectorialCovariance and VectorialMean to the 'org.apache.commons.math4.legacy.stat.descriptive' package breaks the cycle.\"\n}",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ],
+     [
+      "move",
+      "org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialMean",
+      "org.apache.commons.math4.legacy.stat.descriptive"
+     ]
+    ],
+    "predicted_left": 0,
+    "pulled_in": 0,
+    "prompt_tokens": 908,
+    "completion_tokens": 145
+   }
+  ],
+  "dry_run": {
+   "ok": true,
+   "refused": null,
+   "why": null
+  },
+  "refused": []
+ }
+]

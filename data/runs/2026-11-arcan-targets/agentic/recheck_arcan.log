@@ -1,0 +1,28 @@
+﻿  baidu_ernie-5_5-flash-preview_free apache-commons-exec predicted=False arcan=False 
+  baidu_ernie-5_5-flash-preview_free apache-commons-math predicted=False arcan=False 
+  baidu_ernie-5_5-flash-preview_free apache-commons-text predicted=False arcan=False 
+RECHECK baidu_ernie-5_5-flash-preview_free: predicted 0, Arcan-verified 0
+  cohere_north-mini-code_free apache-commons-exec predicted=False arcan=False 
+  cohere_north-mini-code_free apache-commons-math predicted=False arcan=False 
+  cohere_north-mini-code_free apache-commons-text predicted=False arcan=False 
+RECHECK cohere_north-mini-code_free: predicted 0, Arcan-verified 0
+  google_gemma-4-26b-a4b-it_free apache-commons-exec predicted=False arcan=False 
+  google_gemma-4-26b-a4b-it_free apache-commons-math predicted=False arcan=False 
+  google_gemma-4-26b-a4b-it_free apache-commons-text predicted=False arcan=False 
+RECHECK google_gemma-4-26b-a4b-it_free: predicted 0, Arcan-verified 0
+  google_gemma-4-31b-it_free apache-commons-exec predicted=False arcan=False 
+  google_gemma-4-31b-it_free apache-commons-math predicted=False arcan=False 
+  google_gemma-4-31b-it_free apache-commons-text predicted=False arcan=False 
+RECHECK google_gemma-4-31b-it_free: predicted 0, Arcan-verified 0
+  inclusionai_ling-3_2-flash_free apache-commons-exec predicted=False arcan=False 
+  inclusionai_ling-3_2-flash_free apache-commons-math predicted=True arcan=True 
+  inclusionai_ling-3_2-flash_free apache-commons-text predicted=True arcan=True 
+RECHECK inclusionai_ling-3_2-flash_free: predicted 2, Arcan-verified 2
+  nvidia_nemotron-3-ultra-550b-a55b_free apache-commons-exec predicted=False arcan=False 
+  nvidia_nemotron-3-ultra-550b-a55b_free apache-commons-math predicted=True arcan=True 
+  nvidia_nemotron-3-ultra-550b-a55b_free apache-commons-text predicted=True arcan=True 
+RECHECK nvidia_nemotron-3-ultra-550b-a55b_free: predicted 2, Arcan-verified 2
+  nvidia_nemotron-3_5-super-vl_free apache-commons-exec predicted=False arcan=False 
+  nvidia_nemotron-3_5-super-vl_free apache-commons-math predicted=False arcan=False 
+  nvidia_nemotron-3_5-super-vl_free apache-commons-text predicted=False arcan=False 
+RECHECK nvidia_nemotron-3_5-super-vl_free: predicted 0, Arcan-verified 0

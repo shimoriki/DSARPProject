@@ -1,0 +1,223 @@
+{
+ "selection": {
+  "max_size": 3,
+  "limit": 2,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "baidu/ernie-5.5-flash-preview:free"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.commons.compress.harmony.internal",
+    "org.apache.commons.compress.harmony.pack200"
+   ],
+   "size": 2,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 2,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\":[{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.internal\",\"impl\":\"org.apache.commons.compress.harmony.pack200.Pack200Exception\"}],\"rationale\":\"Inverting the internal-to-Pack200Exception dependency removes both internal-to-pack200 class edges, leaving only pack200-to-internal and breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.commons.compress.harmony.internal org.apache.commons.compress.harmony.pack200.Pack200Exception",
+       "exception type"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 959,
+     "completion_tokens": 3592
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.pack200\",\"impl\":\"org.apache.commons.compress.harmony.internal.AttributeLayoutParser\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.pack200\",\"impl\":\"org.apache.commons.compress.harmony.internal.AttributeLayoutUtils\"}],\"rationale\":\"Inverting both pack200-to-internal dependencies removes all edges from pack200 to internal, leaving only internal-to-pack200 and thus breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.commons.compress.harmony.pack200 org.apache.commons.compress.harmony.internal.AttributeLayoutParser",
+       "already an interface"
+      ],
+      [
+       "invertEdge org.apache.commons.compress.harmony.pack200 org.apache.commons.compress.harmony.internal.AttributeLayoutUtils",
+       "constructed by org.apache.commons.compress.harmony.pack200.NewAttributeBands"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1010,
+     "completion_tokens": 12375
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.compress.harmony.internal.AttributeLayoutUtils\", \"to\": \"org.apache.commons.compress.harmony.pack200\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.compress.harmony.internal\", \"impl\": \"org.apache.commons.compress.harmony.pack200.Pack200Exception\"}], \"rationale\": \"Moving AttributeLayoutUtils to pack200 removes the construction dependency, allowing inversion of the remaining internal-to-pack200 edge via Pack200Exception to break the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.commons.compress.harmony.internal org.apache.commons.compress.harmony.pack200.Pack200Exception",
+       "exception type"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.commons.compress.harmony.internal.AttributeLayoutUtils",
+       "org.apache.commons.compress.harmony.pack200"
+      ]
+     ],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1046,
+     "completion_tokens": 13422
+    }
+   ],
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.commons.compress.harmony.unpack200",
+    "org.apache.commons.compress.harmony.unpack200.bytecode",
+    "org.apache.commons.compress.harmony.unpack200.bytecode.forms"
+   ],
+   "size": 3,
+   "moves": [
+    [
+     "org.apache.commons.compress.harmony.unpack200.bytecode.ByteCode",
+     "org.apache.commons.compress.harmony.unpack200.bytecode.forms"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 3,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.compress.harmony.unpack200.bytecode.ByteCode\", \"to\": \"org.apache.commons.compress.harmony.unpack200.bytecode.forms\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.compress.harmony.unpack200.bytecode.OperandManager\", \"to\": \"org.apache.commons.compress.harmony.unpack200\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.compress.harmony.unpack200.bytecode.CPNameAndType\", \"to\": \"org.apache.commons.compress.harmony.unpack200\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.compress.harmony.unpack200.bytecode.ClassConstantPool\", \"to\": \"org.apache.commons.compress.harmony.unpack200\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.commons.compress.harmony.unpack200.bytecode.CodeAttribute\", \"to\": \"org.apache.commons.compress.harmony.unpack200\"}], \"rationale\": \"Moving ByteCode to forms removes the only bytecode-to-forms edge and one bytecode-to-root edge, while moving OperandManager, CPNameAndType, ClassConstantPool, and CodeAttribute to the root package eliminates all remaining bytecode-to-root edges, leaving an acyclic package graph.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.commons.compress.harmony.unpack200.bytecode.OperandManager",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.commons.compress.harmony.unpack200.bytecode.CPNameAndType",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.commons.compress.harmony.unpack200.bytecode.ClassConstantPool",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.commons.compress.harmony.unpack200.bytecode.CodeAttribute",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.commons.compress.harmony.unpack200.bytecode.ByteCode",
+       "org.apache.commons.compress.harmony.unpack200.bytecode.forms"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 3595,
+     "completion_tokens": 20371
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.unpack200.bytecode\",\"impl\":\"org.apache.commons.compress.harmony.unpack200.Segment\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.unpack200.bytecode\",\"impl\":\"org.apache.commons.compress.harmony.unpack200.SegmentUtils\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.unpack200.bytecode\",\"impl\":\"org.apache.commons.compress.harmony.unpack200.SegmentConstantPool\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.unpack200.bytecode.forms\",\"impl\":\"org.apache.commons.compress.harmony.unpack200.SegmentConstantPool\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.unpack200.bytecode\",\"impl\":\"org.apache.commons.compress.harmony.unpack200.bytecode.forms.ByteCodeForm\"}],\"rationale\":\"Inverting these five dependencies removes all edges from bytecode and forms back to unpack200 and the single bytecode-to-forms edge, leaving an acyclic graph.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.commons.compress.harmony.unpack200.bytecode org.apache.commons.compress.harmony.unpack200.Segment",
+       "constructed by org.apache.commons.compress.harmony.unpack200.bytecode.CodeAttribute"
+      ],
+      [
+       "invertEdge org.apache.commons.compress.harmony.unpack200.bytecode org.apache.commons.compress.harmony.unpack200.SegmentUtils",
+       "already an interface"
+      ],
+      [
+       "invertEdge org.apache.commons.compress.harmony.unpack200.bytecode.forms org.apache.commons.compress.harmony.unpack200.SegmentConstantPool",
+       "the consumer declares nothing of that type"
+      ],
+      [
+       "invertEdge org.apache.commons.compress.harmony.unpack200.bytecode org.apache.commons.compress.harmony.unpack200.bytecode.forms.ByteCodeForm",
+       "constructed by org.apache.commons.compress.harmony.unpack200.bytecode.ByteCode"
+      ]
+     ],
+     "kept": [
+      [
+       "invert",
+       "org.apache.commons.compress.harmony.unpack200.bytecode",
+       "org.apache.commons.compress.harmony.unpack200.SegmentConstantPool"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 3721,
+     "completion_tokens": 20405
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.commons.compress.harmony.unpack200.SegmentUtils\",\"to\":\"org.apache.commons.compress.harmony.unpack200.bytecode\"},{\"op\":\"moveClass\",\"class\":\"org.apache.commons.compress.harmony.unpack200.bytecode.forms.ByteCodeForm\",\"to\":\"org.apache.commons.compress.harmony.unpack200.bytecode\"},{\"op\":\"moveClass\",\"class\":\"org.apache.commons.compress.harmony.unpack200.bytecode.CodeAttribute\",\"to\":\"org.apache.commons.compress.harmony.unpack200\"},{\"op\":\"moveClass\",\"class\":\"org.apache.commons.compress.harmony.unpack200.SegmentConstantPool\",\"to\":\"org.apache.commons.compress.harmony.unpack200.bytecode\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.unpack200.bytecode\",\"impl\":\"org.apache.commons.compress.harmony.unpack200.CodeAttribute\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.commons.compress.harmony.unpack200.bytecode\",\"impl\":\"org.apache.commons.compress.harmony.unpack200.Segment\"}],\"rationale\":\"Moving the bytecode package's external dependencies into it and inverting the remaining Segment and CodeAttribute edges makes bytecode a sink, leaving the acyclic order forms -> unpack200 -> bytecode.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.commons.compress.harmony.unpack200.bytecode.CodeAttribute",
+       "refused: move rule"
+      ],
+      [
+       "invertEdge org.apache.commons.compress.harmony.unpack200.bytecode org.apache.commons.compress.harmony.unpack200.CodeAttribute",
+       "unknown class"
+      ],
+      [
+       "invertEdge org.apache.commons.compress.harmony.unpack200.bytecode org.apache.commons.compress.harmony.unpack200.Segment",
+       "constructed by org.apache.commons.compress.harmony.unpack200.bytecode.CodeAttribute"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.commons.compress.harmony.unpack200.SegmentUtils",
+       "org.apache.commons.compress.harmony.unpack200.bytecode"
+      ],
+      [
+       "move",
+       "org.apache.commons.compress.harmony.unpack200.bytecode.forms.ByteCodeForm",
+       "org.apache.commons.compress.harmony.unpack200.bytecode"
+      ],
+      [
+       "move",
+       "org.apache.commons.compress.harmony.unpack200.SegmentConstantPool",
+       "org.apache.commons.compress.harmony.unpack200.bytecode"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 3778,
+     "completion_tokens": 59960
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": []
+  }
+ ]
+}

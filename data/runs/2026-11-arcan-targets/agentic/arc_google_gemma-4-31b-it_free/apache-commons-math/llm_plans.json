@@ -1,0 +1,17 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [],
+  "why": "model call failed: local model at https://openrouter.ai/api unreachable: HTTP Error 429: Too Many Requests",
+  "refused": []
+ }
+]

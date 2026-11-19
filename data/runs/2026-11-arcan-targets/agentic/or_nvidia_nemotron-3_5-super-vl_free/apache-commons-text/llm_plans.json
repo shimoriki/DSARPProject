@@ -1,0 +1,17 @@
+[
+ {
+  "component": [
+   "org.apache.commons.text",
+   "org.apache.commons.text.lookup"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [],
+  "why": "model call failed: The read operation timed out",
+  "refused": []
+ }
+]

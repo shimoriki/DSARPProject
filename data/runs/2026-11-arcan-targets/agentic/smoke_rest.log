@@ -1,0 +1,14 @@
+== granite3.3:latest 01:41
+
+MODEL CHECK granite3.3:latest: 1 of 3 (bar 2)
+== phi4-mini:latest 02:12
+MODEL CHECK phi4-mini:latest: 1 of 3 (bar 2)
+== llama3.2:latest 02:36
+MODEL CHECK llama3.2:latest: 0 of 3 (bar 2)
+== nemotron-mini:latest 02:48
+MODEL CHECK nemotron-mini:latest: 0 of 3 (bar 2)
+== qwen2.5-coder:3b 03:02
+MODEL CHECK qwen2.5-coder:3b: 1 of 3 (bar 2)
+== done 03:17
+
+

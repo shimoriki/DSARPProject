@@ -1,0 +1,71 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.commons.exec.DefaultExecutor\",\"to\":\"org.apache.commons.exec.launcher\"}],\"rationale\":\"Moving DefaultExecutor into the launcher package removes the only edges from exec to launcher, breaking all cycles among the three packages.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 872,
+    "completion_tokens": 7303
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncher\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.exec\", \"impl\": \"org.apache.commons.exec.launcher.CommandLauncherFactory\"}], \"rationale\": \"Both cycles traverse the exec\u2192launcher edge, which is carried solely by DefaultExecutor's references to CommandLauncher and CommandLauncherFactory, so inverting both reverses them into launcher\u2192exec and leaves the acyclic order launcher \u2192 environment \u2192 exec.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncher",
+      "already an interface"
+     ],
+     [
+      "invertEdge org.apache.commons.exec org.apache.commons.exec.launcher.CommandLauncherFactory",
+      "consumer and implementation in different source roots"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 912,
+    "completion_tokens": 11801
+   },
+   {
+    "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.commons.exec.DefaultExecutor\",\"to\":\"org.apache.commons.exec.launcher\"},{\"op\":\"moveClass\",\"class\":\"org.apache.commons.exec.DaemonExecutor\",\"to\":\"org.apache.commons.exec.launcher\"}],\"rationale\":\"Moving DefaultExecutor and its subclass DaemonExecutor into the launcher package removes all dependencies from exec to launcher, leaving the package graph acyclic.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ],
+     [
+      "moveClass org.apache.commons.exec.DaemonExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 939,
+    "completion_tokens": 17868
+   }
+  ],
+  "refused": []
+ }
+]

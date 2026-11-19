@@ -1,0 +1,451 @@
+{
+ "selection": {
+  "max_size": 6,
+  "limit": 4,
+  "order": "SCC size ascending"
+ },
+ "arm": {
+  "engine": "text",
+  "facades": true,
+  "operators": "mixed",
+  "repair": false,
+  "planner": "llm",
+  "model": "baidu/ernie-5.5-flash-preview:free"
+ },
+ "invalid_rule": "INVALID counts as not-success and is reported on its own row",
+ "flake_rule": "a newly failing test's class reruns 3 times on each tree; regression when the candidate fails more reruns than the baseline",
+ "graph": "jdeps class edges, one directory at a time, nested classes folded",
+ "arcan_sha256": "e7a84ff83e1e595c0be6d9516f8b9457bc35f41fbef12ed9469277dbb903cca9",
+ "oracle_sha256": "768158115e7865597b025295df9008c9227e187bfd7336a480f1699dec1046ef",
+ "plans": [
+  {
+   "component": [
+    "org.apache.pdfbox.examples.signature",
+    "org.apache.pdfbox.examples.signature.cert"
+   ],
+   "size": 2,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 2,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\":[{\"op\":\"invertEdge\",\"consumer\":\"org.apache.pdfbox.examples.signature.cert\",\"impl\":\"org.apache.pdfbox.examples.signature.SigUtils\"}],\"rationale\":\"Inverting the cert package's dependency on SigUtils removes all edges from cert back to signature, leaving only signature -> cert and thus breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.pdfbox.examples.signature.cert org.apache.pdfbox.examples.signature.SigUtils",
+       "the consumer declares nothing of that type"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 772,
+     "completion_tokens": 3453
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.examples.signature.SigUtils\", \"to\": \"org.apache.pdfbox.examples.signature.cert\"}], \"rationale\": \"All three cert\u2192signature edges target SigUtils, so relocating SigUtils into the cert package turns them into intra-package edges and removes that direction, leaving only signature\u2192cert and thus no cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.pdfbox.examples.signature.SigUtils",
+       "org.apache.pdfbox.examples.signature.cert"
+      ]
+     ],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 831,
+     "completion_tokens": 6652
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.pdfbox.examples.signature.SigUtils\",\"to\":\"org.apache.pdfbox.examples.signature.cert\"}],\"rationale\":\"Moving SigUtils into the cert package makes all cert-to-signature dependencies internal, leaving only signature-to-cert edges and breaking the cycle.\"}",
+     "parse_errors": [],
+     "rejected": [],
+     "kept": [
+      [
+       "move",
+       "org.apache.pdfbox.examples.signature.SigUtils",
+       "org.apache.pdfbox.examples.signature.cert"
+      ]
+     ],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 800,
+     "completion_tokens": 2182
+    }
+   ],
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.xmpbox",
+    "org.apache.xmpbox.schema",
+    "org.apache.xmpbox.type"
+   ],
+   "size": 3,
+   "moves": [],
+   "inversions": [],
+   "predicted_left": 3,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.xmpbox.type.TypeMapping\", \"to\": \"org.apache.xmpbox.schema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.AdobePDFSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.DublinCoreSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.PDFAExtensionSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.PDFAIdentificationSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.PhotoshopSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.XMPBasicJobTicketSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.XMPBasicSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.XMPMediaManagementSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.XMPPageTextSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.XMPRightsManagementSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.XMPSchema\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.XmpSchemaException\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.type.StructuredType\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.xmpbox\", \"impl\": \"org.apache.xmpbox.schema.TypeMapping\"}], \"rationale\": \"Moving TypeMapping into the schema package eliminates all 14 type\u2192schema edges in one step, and inverting XMPMetadata's 14 outgoing dependencies (12 schema classes, StructuredType, and TypeMapping) reverses them into permitted schema/type\u2192core edges, yielding the acyclic order schema \u2192 type \u2192 core.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.xmpbox.type.TypeMapping",
+       "refused: move rule"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.AdobePDFSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.DublinCoreSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.PDFAExtensionSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.PDFAIdentificationSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.PhotoshopSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.XMPBasicJobTicketSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.XMPBasicSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.XMPMediaManagementSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.XMPPageTextSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.XMPRightsManagementSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.XMPSchema",
+       "constructed by org.apache.xmpbox.XMPMetadata"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.XmpSchemaException",
+       "exception type"
+      ],
+      [
+       "invertEdge org.apache.xmpbox org.apache.xmpbox.schema.TypeMapping",
+       "unknown class"
+      ]
+     ],
+     "kept": [
+      [
+       "invert",
+       "org.apache.xmpbox",
+       "org.apache.xmpbox.type.StructuredType"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 2318,
+     "completion_tokens": 41833
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.xmpbox.type.TypeMapping\",\"to\":\"org.apache.xmpbox.schema\"},{\"op\":\"moveClass\",\"class\":\"org.apache.xmpbox.XMPMetadata\",\"to\":\"org.apache.xmpbox.schema\"},{\"op\":\"invertEdge\",\"consumer\":\"org.apache.xmpbox.type\",\"impl\":\"org.apache.xmpbox.XMPMetadata\"}],\"rationale\":\"Moving TypeMapping and XMPMetadata into schema removes the A->B and A->C edges and the TypeMapping->schema edges, while inverting the remaining type->XMPMetadata edges leaves the acyclic order schema -> type -> xmpbox.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.xmpbox.type.TypeMapping",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.xmpbox.XMPMetadata",
+       "refused: move rule"
+      ],
+      [
+       "invertEdge org.apache.xmpbox.type org.apache.xmpbox.XMPMetadata",
+       "constructed by org.apache.xmpbox.type.AbstractComplexProperty"
+      ]
+     ],
+     "kept": [],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 2726,
+     "completion_tokens": 32376
+    },
+    {
+     "text": "",
+     "parse_errors": [
+      "no JSON object in the answer"
+     ],
+     "rejected": [],
+     "kept": [],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 2335,
+     "completion_tokens": 73989
+    }
+   ],
+   "refused": []
+  },
+  {
+   "component": [
+    "org.apache.fontbox.cff",
+    "org.apache.fontbox.ttf",
+    "org.apache.fontbox.ttf.gsub",
+    "org.apache.fontbox.type1"
+   ],
+   "size": 4,
+   "moves": [
+    [
+     "org.apache.fontbox.type1.Type1CharStringReader",
+     "org.apache.fontbox.cff"
+    ]
+   ],
+   "inversions": [
+    [
+     "org.apache.fontbox.cff",
+     "org.apache.fontbox.ttf.FontHeaders"
+    ]
+   ],
+   "predicted_left": 2,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.fontbox.type1.Type1CharStringReader\",\"to\":\"org.apache.fontbox.cff\"},{\"op\":\"moveClass\",\"class\":\"org.apache.fontbox.cff.CFFParser\",\"to\":\"org.apache.fontbox.ttf\"},{\"op\":\"moveClass\",\"class\":\"org.apache.fontbox.ttf.GlyphSubstitutionTable\",\"to\":\"org.apache.fontbox.ttf.gsub\"}],\"rationale\":\"Moving Type1CharStringReader to cff removes the cff-to-type1 edges, moving CFFParser to ttf removes the cff-to-ttf edge, and moving GlyphSubstitutionTable to gsub removes the ttf-to-gsub edge, leaving the remaining package graph acyclic.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.fontbox.cff.CFFParser",
+       "refused: move rule"
+      ],
+      [
+       "moveClass org.apache.fontbox.ttf.GlyphSubstitutionTable",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.fontbox.type1.Type1CharStringReader",
+       "org.apache.fontbox.cff"
+      ]
+     ],
+     "predicted_left": 3,
+     "pulled_in": 0,
+     "prompt_tokens": 1831,
+     "completion_tokens": 18748
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.fontbox.cff\", \"impl\": \"org.apache.fontbox.ttf.FontHeaders\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.fontbox.type1.Type1CharStringReader\", \"to\": \"org.apache.fontbox.cff\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.fontbox.ttf\", \"impl\": \"org.apache.fontbox.ttf.gsub.GlyphSubstitutionDataExtractor\"}], \"rationale\": \"Inverting the single cff\u2192ttf and ttf\u2192gsub edges and moving Type1CharStringReader into cff eliminates all three 2-cycles with the minimum three operations.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.fontbox.ttf org.apache.fontbox.ttf.gsub.GlyphSubstitutionDataExtractor",
+       "the consumer declares nothing of that type"
+      ]
+     ],
+     "kept": [
+      [
+       "invert",
+       "org.apache.fontbox.cff",
+       "org.apache.fontbox.ttf.FontHeaders"
+      ],
+      [
+       "move",
+       "org.apache.fontbox.type1.Type1CharStringReader",
+       "org.apache.fontbox.cff"
+      ]
+     ],
+     "predicted_left": 2,
+     "pulled_in": 0,
+     "prompt_tokens": 1895,
+     "completion_tokens": 23505
+    },
+    {
+     "text": "",
+     "parse_errors": [
+      "no JSON object in the answer"
+     ],
+     "rejected": [],
+     "kept": [],
+     "predicted_left": 4,
+     "pulled_in": 0,
+     "prompt_tokens": 1830,
+     "completion_tokens": 123584
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": [
+    "org.apache.fontbox.cff.CFFParser"
+   ]
+  },
+  {
+   "component": [
+    "org.apache.pdfbox.debugger",
+    "org.apache.pdfbox.debugger.pagepane",
+    "org.apache.pdfbox.debugger.streampane",
+    "org.apache.pdfbox.debugger.treestatus",
+    "org.apache.pdfbox.debugger.ui",
+    "org.apache.pdfbox.debugger.ui.textsearcher"
+   ],
+   "size": 6,
+   "moves": [
+    [
+     "org.apache.pdfbox.debugger.PDFDebugger",
+     "org.apache.pdfbox.debugger.ui"
+    ],
+    [
+     "org.apache.pdfbox.debugger.treestatus.TreeStatus",
+     "org.apache.pdfbox.debugger.ui"
+    ],
+    [
+     "org.apache.pdfbox.debugger.treestatus.TreeStatusPane",
+     "org.apache.pdfbox.debugger.ui"
+    ]
+   ],
+   "inversions": [],
+   "predicted_left": 4,
+   "dissolves": false,
+   "planner": "llm",
+   "rounds": [
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.debugger.PDFDebugger\", \"to\": \"org.apache.pdfbox.debugger.ui\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.debugger.pagepane.PagePane\", \"to\": \"org.apache.pdfbox.debugger.ui\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.debugger.streampane.StreamPane\", \"to\": \"org.apache.pdfbox.debugger.ui\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.debugger.treestatus.TreeStatus\", \"to\": \"org.apache.pdfbox.debugger.ui\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.debugger.treestatus.TreeStatusPane\", \"to\": \"org.apache.pdfbox.debugger.ui\"}], \"rationale\": \"Moving PDFDebugger and the four classes that form the remaining two-cycles into the ui package eliminates all inter-package cycles, leaving a DAG among the remaining packages.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.pdfbox.debugger.pagepane.PagePane",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.pdfbox.debugger.PDFDebugger",
+       "org.apache.pdfbox.debugger.ui"
+      ],
+      [
+       "move",
+       "org.apache.pdfbox.debugger.streampane.StreamPane",
+       "org.apache.pdfbox.debugger.ui"
+      ],
+      [
+       "move",
+       "org.apache.pdfbox.debugger.treestatus.TreeStatus",
+       "org.apache.pdfbox.debugger.ui"
+      ],
+      [
+       "move",
+       "org.apache.pdfbox.debugger.treestatus.TreeStatusPane",
+       "org.apache.pdfbox.debugger.ui"
+      ]
+     ],
+     "predicted_left": 4,
+     "pulled_in": 0,
+     "prompt_tokens": 2445,
+     "completion_tokens": 40040
+    },
+    {
+     "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.debugger.PDFDebugger\", \"to\": \"org.apache.pdfbox.debugger.ui\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.debugger.treestatus.TreeStatus\", \"to\": \"org.apache.pdfbox.debugger.ui\"}, {\"op\": \"moveClass\", \"class\": \"org.apache.pdfbox.debugger.treestatus.TreeStatusPane\", \"to\": \"org.apache.pdfbox.debugger.ui\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.pdfbox.debugger.ui\", \"impl\": \"org.apache.pdfbox.debugger.pagepane.PagePane\"}, {\"op\": \"invertEdge\", \"consumer\": \"org.apache.pdfbox.debugger.ui\", \"impl\": \"org.apache.pdfbox.debugger.streampane.StreamPane\"}], \"rationale\": \"Moving PDFDebugger (the sole class in debugger) plus the two treestatus classes into ui internalizes the dense debugger/ui/treestatus cycles and empties debugger and treestatus, and inverting ui's remaining outward edges to PagePane and StreamPane leaves pagepane, streampane, and textsearcher depending only on ui, so no package remains in a cycle.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "invertEdge org.apache.pdfbox.debugger.ui org.apache.pdfbox.debugger.pagepane.PagePane",
+       "refused by Spoon"
+      ],
+      [
+       "invertEdge org.apache.pdfbox.debugger.ui org.apache.pdfbox.debugger.streampane.StreamPane",
+       "constructed by org.apache.pdfbox.debugger.PDFDebugger"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.pdfbox.debugger.PDFDebugger",
+       "org.apache.pdfbox.debugger.ui"
+      ],
+      [
+       "move",
+       "org.apache.pdfbox.debugger.treestatus.TreeStatus",
+       "org.apache.pdfbox.debugger.ui"
+      ],
+      [
+       "move",
+       "org.apache.pdfbox.debugger.treestatus.TreeStatusPane",
+       "org.apache.pdfbox.debugger.ui"
+      ]
+     ],
+     "predicted_left": 4,
+     "pulled_in": 0,
+     "prompt_tokens": 2511,
+     "completion_tokens": 63019
+    },
+    {
+     "text": "{\"operations\":[{\"op\":\"moveClass\",\"class\":\"org.apache.pdfbox.debugger.PDFDebugger\",\"to\":\"org.apache.pdfbox.debugger.ui\"},{\"op\":\"moveClass\",\"class\":\"org.apache.pdfbox.debugger.pagepane.PagePane\",\"to\":\"org.apache.pdfbox.debugger.ui\"},{\"op\":\"moveClass\",\"class\":\"org.apache.pdfbox.debugger.streampane.StreamPane\",\"to\":\"org.apache.pdfbox.debugger.ui\"},{\"op\":\"moveClass\",\"class\":\"org.apache.pdfbox.debugger.treestatus.TreeStatus\",\"to\":\"org.apache.pdfbox.debugger.ui\"},{\"op\":\"moveClass\",\"class\":\"org.apache.pdfbox.debugger.treestatus.TreeStatusPane\",\"to\":\"org.apache.pdfbox.debugger.ui\"}],\"rationale\":\"Moving PDFDebugger and the four classes that form the remaining 2-cycles into the ui package turns all cyclic edges into self-edges, leaving only the acyclic dependencies streampane -> ui, streampane -> textsearcher, and textsearcher -> ui.\"}",
+     "parse_errors": [],
+     "rejected": [
+      [
+       "moveClass org.apache.pdfbox.debugger.pagepane.PagePane",
+       "refused: move rule"
+      ]
+     ],
+     "kept": [
+      [
+       "move",
+       "org.apache.pdfbox.debugger.PDFDebugger",
+       "org.apache.pdfbox.debugger.ui"
+      ],
+      [
+       "move",
+       "org.apache.pdfbox.debugger.streampane.StreamPane",
+       "org.apache.pdfbox.debugger.ui"
+      ],
+      [
+       "move",
+       "org.apache.pdfbox.debugger.treestatus.TreeStatus",
+       "org.apache.pdfbox.debugger.ui"
+      ],
+      [
+       "move",
+       "org.apache.pdfbox.debugger.treestatus.TreeStatusPane",
+       "org.apache.pdfbox.debugger.ui"
+      ]
+     ],
+     "predicted_left": 4,
+     "pulled_in": 0,
+     "prompt_tokens": 2552,
+     "completion_tokens": 36635
+    }
+   ],
+   "dry_run": {
+    "ok": true,
+    "refused": null,
+    "why": null
+   },
+   "refused": [
+    "org.apache.pdfbox.debugger.pagepane.PagePane"
+   ]
+  }
+ ]
+}

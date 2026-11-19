@@ -1,0 +1,44 @@
+[
+ {
+  "component": [
+   "org.apache.commons.exec",
+   "org.apache.commons.exec.environment",
+   "org.apache.commons.exec.launcher"
+  ],
+  "size": 3,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 3,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"Moving DefaultExecutor out of its original package removes the exec\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2192\\u2",
+    "parse_errors": [],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 1103,
+    "completion_tokens": 5433
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"moveClass\", \"class\": \"org.apache.commons.exec.DefaultExecutor\", \"to\": \"org.apache.commons.exec.launcher\"}], \"rationale\": \"Moving DefaultExecutor out of exec removes its dependencies on launcher classes, breaking the exec\u2192launcher edge and thus all cycles.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "moveClass org.apache.commons.exec.DefaultExecutor",
+      "refused: move rule"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 3,
+    "pulled_in": 0,
+    "prompt_tokens": 890,
+    "completion_tokens": 4092
+   }
+  ],
+  "why": "model call failed: [WinError 10054] An existing connection was forcibly closed by the remote host",
+  "refused": []
+ }
+]

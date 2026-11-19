@@ -1,0 +1,59 @@
+[
+ {
+  "component": [
+   "org.apache.commons.math4.legacy.stat.descriptive",
+   "org.apache.commons.math4.legacy.stat.descriptive.moment"
+  ],
+  "size": 2,
+  "moves": [],
+  "inversions": [],
+  "predicted_left": 2,
+  "dissolves": false,
+  "planner": "llm",
+  "rounds": [
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\"}], \"rationale\": \"Inverting the single descriptive->moment edge on VectorialCovariance leaves every dependency pointing moment->descriptive, eliminating the cycle with one operation.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "constructed by org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 930,
+    "completion_tokens": 2557
+   },
+   {
+    "text": "",
+    "parse_errors": [
+     "no JSON object in the answer"
+    ],
+    "rejected": [],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 1125,
+    "completion_tokens": 12611
+   },
+   {
+    "text": "{\"operations\": [{\"op\": \"invertEdge\", \"consumer\": \"org.apache.commons.math4.legacy.stat.descriptive\", \"impl\": \"org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance\"}], \"rationale\": \"Inverting the only descriptive-to-moment edge (MultivariateSummaryStatistics -> VectorialCovariance) makes VectorialCovariance depend on a new interface in descriptive, leaving solely moment-to-descriptive dependencies and thus no cycle.\"}",
+    "parse_errors": [],
+    "rejected": [
+     [
+      "invertEdge org.apache.commons.math4.legacy.stat.descriptive org.apache.commons.math4.legacy.stat.descriptive.moment.VectorialCovariance",
+      "constructed by org.apache.commons.math4.legacy.stat.descriptive.MultivariateSummaryStatistics"
+     ]
+    ],
+    "kept": [],
+    "predicted_left": 2,
+    "pulled_in": 0,
+    "prompt_tokens": 972,
+    "completion_tokens": 3057
+   }
+  ],
+  "refused": []
+ }
+]
